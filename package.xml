@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+<name>semantic_SLAM</name>
+<version>1.0.0</version>
+<description>
+This package is a general Partcle-filter-SLAM library
+</description>
+<author email="hriday.bavle@upm.es">Hriday Bavle</author>
+<maintainer email="hriday.bavle@upm.es">Hriday Bavle</maintainer>
+<license>BSD</license>
+<url>TODO</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>image_transport</depend>
+
+</package>
+
+
