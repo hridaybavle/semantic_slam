@@ -16,6 +16,7 @@ This package is a general Partcle-filter-SLAM library
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>image_transport</depend>
+  <depend>particle_filter</depend>
 
 </package>
 
