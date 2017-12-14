@@ -13,8 +13,9 @@ semantic_SLAM::~semantic_SLAM()
 
 void semantic_SLAM::init()
 {
-    imu_data_available_ = false;
+    imu_data_available_, vo_data_available_ = false;
     prev_time_ = 0;
+    VO_pose_.resize(6);
     particle_filter_obj_.init(state_size_);
     return;
 
@@ -30,10 +31,14 @@ void semantic_SLAM::run()
     time_diff = current_time_ - prev_time_;
     //std::cout << "time diff " << time_diff << std::endl;
 
-    if(imu_data_available_)
+    if(vo_data_available_)
     {
-        particle_filter_obj_.prediction(time_diff, imu_world_acc_mat_, imu_world_ang_vel_);
-        imu_data_available_ = false;
+        Eigen::VectorXf VO_pose;
+        VO_pose.resize(6), VO_pose.setZero();
+        getVOPose(VO_pose);
+
+        std::cout << "VO_pose data " << VO_pose << std::endl;
+        particle_filter_obj_.predictionVO(time_diff, VO_pose);
     }
 
     prev_time_ = current_time_;
@@ -49,27 +54,78 @@ void semantic_SLAM::open(ros::NodeHandle n)
 
 void semantic_SLAM::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg)
 {
+    Eigen::Vector4f camera_pose_local_mat, camera_pose_world_mat;
+    Eigen::Vector4f camera_ang_local_mat, camera_ang_world_mat;
 
-    Eigen::Vector4f camera_pose_mat, world_pose_mat;
+    /* Calculating Roll, Pitch, Yaw */
+    tf::Quaternion q(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w);
+    tf::Matrix3x3 m(q);
+
+    //convert quaternion to euler angels
+    double yaw, pitch, roll;
+    m.getEulerYPR(yaw, pitch, roll);
+
+    camera_ang_local_mat.setOnes(), camera_ang_world_mat.setOnes();
+
+    camera_ang_local_mat(0) = roll;
+    camera_ang_local_mat(1) = pitch;
+    camera_ang_local_mat(2) = yaw;
+
+    Eigen::Matrix4f euler_transformation_mat;
+    this->transformCameraToRobot(euler_transformation_mat);
+    camera_ang_world_mat = euler_transformation_mat * camera_ang_local_mat;
+
+    std::cout << "camera angles in world " << std::endl
+              << "roll " << camera_ang_world_mat(0) << std::endl
+              << "pitch " << camera_ang_world_mat(1) << std::endl
+              << "yaw " << camera_ang_world_mat(2) << std::endl;
+
+
     Eigen::Matrix4f transformation_mat;
-
-    camera_pose_mat.setOnes(), world_pose_mat.setOnes();
+    camera_pose_local_mat.setOnes(), camera_pose_world_mat.setOnes();
     //assume roll, pitch and yaw zero for now//
-    this->transformCameraToWorld(msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,0,0,0, transformation_mat);
+    this->transformCameraToRobot(transformation_mat);
 
-    camera_pose_mat(0) = msg.pose.position.x;
-    camera_pose_mat(1) = msg.pose.position.y;
-    camera_pose_mat(2) = msg.pose.position.z;
+    camera_pose_local_mat(0) = msg.pose.position.x;
+    camera_pose_local_mat(1) = msg.pose.position.y;
+    camera_pose_local_mat(2) = msg.pose.position.z;
 
-    world_pose_mat = transformation_mat * camera_pose_mat;
+    camera_pose_world_mat = transformation_mat * camera_pose_local_mat;
 
     std::cout << "world pose mat " << std::endl
-              << "x: " << world_pose_mat(0) << std::endl
-              << "y: " << world_pose_mat(1) << std::endl
-              << "z: " << world_pose_mat(2) << std::endl;
+              << "x: " << camera_pose_world_mat(0) << std::endl
+              << "y: " << camera_pose_world_mat(1) << std::endl
+              << "z: " << camera_pose_world_mat(2) << std::endl;
+
+    Eigen::VectorXf VO_pose;
+    VO_pose.resize(6), VO_pose.setZero();
+
+    VO_pose(0) = camera_pose_world_mat(0);
+    VO_pose(1) = camera_pose_world_mat(1);
+    VO_pose(2) = camera_pose_world_mat(2);
+    VO_pose(3) = camera_ang_world_mat(0);
+    VO_pose(4) = camera_ang_world_mat(1);
+    VO_pose(5) = camera_ang_world_mat(2);
+
+    this->setVOPose(VO_pose);
 
 
+}
 
+void semantic_SLAM::setVOPose(Eigen::VectorXf VO_pose)
+{
+     vo_pose_lock_.lock();          // locking the data when filling the received pose
+     vo_data_available_ = true;
+     this->VO_pose_ = VO_pose;
+     vo_pose_lock_.unlock();        //unlocking the data
+}
+
+void semantic_SLAM::getVOPose(Eigen::VectorXf& VO_pose)
+{
+    vo_pose_lock_.lock();           // locking the data when giving it to the filter
+    vo_data_available_ = false;
+    VO_pose = this->VO_pose_;
+    vo_pose_lock_.unlock();         // unlocking the data once the data is received
 }
 
 void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
@@ -88,10 +144,10 @@ void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
     //converting the imu acclerations in world frame
     imu_world_acc_mat_ = transformation_mat_acc_ * imu_local_acc_mat_;
 
-    std::cout << "Imu acc in world " << std::endl
-              << "ax: " << imu_world_acc_mat_(0) << std::endl
-              << "ay: " << imu_world_acc_mat_(1) << std::endl
-              << "az: " << imu_world_acc_mat_(2) << std::endl;
+    //    std::cout << "Imu acc in world " << std::endl
+    //              << "ax: " << imu_world_acc_mat_(0) << std::endl
+    //              << "ay: " << imu_world_acc_mat_(1) << std::endl
+    //              << "az: " << imu_world_acc_mat_(2) << std::endl;
 
 
     imu_local_ang_vel_(0) = msg.angular_velocity.x;
@@ -103,22 +159,20 @@ void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
     imu_world_ang_vel_ = transformation_mat_acc_ * imu_local_ang_vel_;
 
 
-    std::cout << "Imu angular vel in world " << std::endl
-              << "wx: " << imu_world_ang_vel_(0) << std::endl
-              << "wy: " << imu_world_ang_vel_(1) << std::endl
-              << "wz: " << imu_world_ang_vel_(2) << std::endl;
+    //    std::cout << "Imu angular vel in world " << std::endl
+    //              << "wx: " << imu_world_ang_vel_(0) << std::endl
+    //              << "wy: " << imu_world_ang_vel_(1) << std::endl
+    //              << "wz: " << imu_world_ang_vel_(2) << std::endl;
 
     imu_data_available_ = true;
 
 }
 
-void semantic_SLAM::transformCameraToWorld(float x, float y, float z,
-                                           float roll, float pitch, float yaw,
-                                           Eigen::Matrix4f &transformation_mat)
+void semantic_SLAM::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 {
 
-    Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, T_robot_world, translation_cam;
-    rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), T_robot_world.setZero(4,4), translation_cam.setZero(4,4);
+    Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
+    rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4);
 
     //    rot_x_cam(0,0) = 1;
     //    rot_x_cam(1,1) =  cos(-camera_pitch_angle_);
@@ -153,26 +207,26 @@ void semantic_SLAM::transformCameraToWorld(float x, float y, float z,
 
 
     //transformation from robot to world
-    T_robot_world(0,0) = cos(yaw)*cos(pitch);
-    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
+    //    T_robot_world(0,0) = cos(yaw)*cos(pitch);
+    //    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
+    //    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
 
-    T_robot_world(1,0) = sin(yaw)*cos(pitch);
-    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
+    //    T_robot_world(1,0) = sin(yaw)*cos(pitch);
+    //    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
+    //    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
 
-    T_robot_world(2,0) = -sin(pitch);
-    T_robot_world(2,1) = cos(pitch)*sin(roll);
-    T_robot_world(2,2) = cos(pitch)*cos(roll);
+    //    T_robot_world(2,0) = -sin(pitch);
+    //    T_robot_world(2,1) = cos(pitch)*sin(roll);
+    //    T_robot_world(2,2) = cos(pitch)*cos(roll);
 
     //fill the x, y and z variables over here if there is a fixed transform between the camera and the world frame
     //currently its they are all zero as the pose is obtained of the camera with respect to the world.
     //    T_robot_world(0,3) = prev_pose_x_;
     //    T_robot_world(1,3) = prev_pose_y_;
     //    T_robot_world(2,3) = prev_pose_z_;
-    T_robot_world(3,3) = 1;
+    //    T_robot_world(3,3) = 1;
 
-    transformation_mat = T_robot_world * rot_z_robot * rot_x_robot ;
+    transformation_mat = rot_z_robot * rot_x_robot ;
 
 
     //std::cout << "transformation matrix " << transformation_mat << std::endl;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <mutex>
 
 #include "ros/ros.h"
 #include "eigen3/Eigen/Eigen"
@@ -9,12 +10,15 @@
 //particle filter lib
 #include "particle_filter.h"
 
+#include "tf/transform_datatypes.h"
+
 //ROS messages
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/Imu.h"
 
+
 const float camera_pitch_angle_ = 0;
-const int state_size_ = 15;
+const int state_size_ = 6;
 
 class semantic_SLAM
 {
@@ -44,13 +48,18 @@ protected:
 
 protected:
      float pose_x_, pose_y_, pose_z_;
-     void transformCameraToWorld(float x, float y, float z, float roll, float pitch, float yaw, Eigen::Matrix4f &transformation_mat);
+     void transformCameraToRobot(Eigen::Matrix4f &transformation_mat);
      void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
-
+     void setVOPose(Eigen::VectorXf VO_pose);
+     void getVOPose(Eigen::VectorXf& VO_pose);
 
      bool imu_data_available_;
      Eigen::Matrix4f transformation_mat_acc_, transformation_mat_ang_vel_;
      Eigen::Vector4f imu_local_acc_mat_, imu_world_acc_mat_;
      Eigen::Vector4f imu_local_ang_vel_, imu_world_ang_vel_;
+
+     std::mutex vo_pose_lock_;
+     Eigen::VectorXf VO_pose_;
+     bool vo_data_available_;
 
 };
