@@ -16,13 +16,22 @@ void semantic_SLAM::init()
     imu_data_available_, vo_data_available_ = false;
     prev_time_ = 0;
     VO_pose_.resize(6);
-    particle_filter_obj_.init(state_size_);
+    particle_filter_obj_.init(state_size_, num_particles_);
+
+    filtered_pose_.resize(num_particles_);
+    for(int i= 0; i < num_particles_; ++i)
+    {
+        filtered_pose_[i].resize(state_size_);
+        filtered_pose_[i].setZero();
+    }
+
     return;
 
 }
 
 void semantic_SLAM::run()
 {
+
     current_time_ = (double) ros::Time::now().sec + ((double) ros::Time::now().nsec / (double) 1E9);
 
     //std::cout << "current time  " << current_time_ << std::endl;
@@ -37,9 +46,32 @@ void semantic_SLAM::run()
         VO_pose.resize(6), VO_pose.setZero();
         getVOPose(VO_pose);
 
-        std::cout << "VO_pose data " << VO_pose << std::endl;
-        particle_filter_obj_.predictionVO(time_diff, VO_pose);
+        //std::cout << "VO_pose data " << VO_pose << std::endl;
+        filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose);
     }
+
+
+    Eigen::VectorXf avg_pose;
+    avg_pose.resize(state_size_), avg_pose.setZero();
+    for(int i = 0; i < num_particles_; ++i)
+    {
+        avg_pose(0) += filtered_pose_[i](0);
+        avg_pose(1) += filtered_pose_[i](1);
+        avg_pose(2) += filtered_pose_[i](2);
+        avg_pose(3) += filtered_pose_[i](3);
+        avg_pose(4) += filtered_pose_[i](4);
+        avg_pose(5) += filtered_pose_[i](5);
+
+    }
+
+    avg_pose(0) = avg_pose(0)/num_particles_;
+    avg_pose(1) = avg_pose(1)/num_particles_;
+    avg_pose(2) = avg_pose(2)/num_particles_;
+    avg_pose(3) = avg_pose(3)/num_particles_;
+    avg_pose(4) = avg_pose(4)/num_particles_;
+    avg_pose(5) = avg_pose(5)/num_particles_;
+
+    std::cout << "filtered pose " << avg_pose << std::endl;
 
     prev_time_ = current_time_;
 }
@@ -114,10 +146,10 @@ void semantic_SLAM::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg
 
 void semantic_SLAM::setVOPose(Eigen::VectorXf VO_pose)
 {
-     vo_pose_lock_.lock();          // locking the data when filling the received pose
-     vo_data_available_ = true;
-     this->VO_pose_ = VO_pose;
-     vo_pose_lock_.unlock();        //unlocking the data
+    vo_pose_lock_.lock();          // locking the data when filling the received pose
+    vo_data_available_ = true;
+    this->VO_pose_ = VO_pose;
+    vo_pose_lock_.unlock();        //unlocking the data
 }
 
 void semantic_SLAM::getVOPose(Eigen::VectorXf& VO_pose)

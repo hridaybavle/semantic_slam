@@ -19,6 +19,7 @@
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
+const int num_particles_ = 10;
 
 class semantic_SLAM
 {
@@ -61,5 +62,7 @@ protected:
      std::mutex vo_pose_lock_;
      Eigen::VectorXf VO_pose_;
      bool vo_data_available_;
+
+     std::vector<Eigen::VectorXf> filtered_pose_;
 
 };
