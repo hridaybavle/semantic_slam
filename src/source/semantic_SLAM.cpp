@@ -79,8 +79,9 @@ void semantic_SLAM::run()
 void semantic_SLAM::open(ros::NodeHandle n)
 {
     //ros subsriber
-    stereo_odometry_sub_ = n.subscribe("/stereo_odometer/pose", 1, &semantic_SLAM::stereoOdometryCallback, this);
-    imu_sub_             = n.subscribe("/imu", 1, &semantic_SLAM::imuCallback, this);
+    stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_SLAM::stereoOdometryCallback, this);
+    imu_sub_               = n.subscribe("/imu", 1, &semantic_SLAM::imuCallback, this);
+    aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_SLAM::arucoObservationCallback, this);
 
 }
 
@@ -199,6 +200,23 @@ void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
     imu_data_available_ = true;
 
 }
+
+void semantic_SLAM::arucoObservationCallback(const aruco_eye_msgs::MarkerList &msg)
+{
+    aruco_pose_cam_.resize(msg.markers.size());
+
+    for (int i = 0; i < msg.markers.size(); ++i)
+    {
+        aruco_pose_cam_[i].setOnes();
+        aruco_pose_cam_[i](0) = msg.markers[i].pose.pose.position.x;
+        aruco_pose_cam_[i](1) = msg.markers[i].pose.pose.position.y;
+        aruco_pose_cam_[i](2) = msg.markers[i].pose.pose.position.z;
+
+        std::cout << "aruco marker " << i << " " << "pose " << aruco_pose_cam_[i] << std::endl;
+    }
+
+}
+
 
 void semantic_SLAM::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 {

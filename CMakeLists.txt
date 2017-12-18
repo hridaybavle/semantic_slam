@@ -40,7 +40,7 @@ set(SEMANTIC_SLAM_SLAM_HEADER_FILES
     )
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter)
+    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs)
 
 find_package(OpenCV REQUIRED)
 
@@ -60,7 +60,7 @@ endif()
 catkin_package(
     INCLUDE_DIRS ${SEMANTIC_SLAM_INCLUDE_DIR}
     LIBRARIES semantic_SLAM OpenCV 
-    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter
+    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs
     )
 
 
