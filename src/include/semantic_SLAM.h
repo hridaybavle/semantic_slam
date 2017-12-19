@@ -60,6 +60,8 @@ protected:
      void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
      void setVOPose(Eigen::VectorXf VO_pose);
      void getVOPose(Eigen::VectorXf& VO_pose);
+     void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);
+     void getArucoPose(std::vector<Eigen::Vector4f>& aruco_pose);
 
      //variables regarding imu
      bool imu_data_available_;
@@ -74,7 +76,9 @@ protected:
      std::vector<Eigen::VectorXf> filtered_pose_;
 
      //variables regarding aruco detection
-     std::vector<Eigen::Vector4f> aruco_pose_cam_;
+     std::mutex aruco_pose_lock_;
+     bool aruco_data_available_;
+     std::vector<Eigen::Vector4f> aruco_pose_;
 
 };
 

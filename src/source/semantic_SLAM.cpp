@@ -13,7 +13,7 @@ semantic_SLAM::~semantic_SLAM()
 
 void semantic_SLAM::init()
 {
-    imu_data_available_, vo_data_available_ = false;
+    imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false;
     prev_time_ = 0;
     VO_pose_.resize(6);
     particle_filter_obj_.init(state_size_, num_particles_);
@@ -51,6 +51,8 @@ void semantic_SLAM::run()
     }
 
 
+
+
     Eigen::VectorXf avg_pose;
     avg_pose.resize(state_size_), avg_pose.setZero();
     for(int i = 0; i < num_particles_; ++i)
@@ -71,7 +73,7 @@ void semantic_SLAM::run()
     avg_pose(4) = avg_pose(4)/num_particles_;
     avg_pose(5) = avg_pose(5)/num_particles_;
 
-    std::cout << "filtered pose " << avg_pose << std::endl;
+    //std::cout << "filtered pose " << avg_pose << std::endl;
 
     prev_time_ = current_time_;
 }
@@ -203,20 +205,44 @@ void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
 
 void semantic_SLAM::arucoObservationCallback(const aruco_eye_msgs::MarkerList &msg)
 {
-    aruco_pose_cam_.resize(msg.markers.size());
+    std::vector<Eigen::Vector4f> aruco_pose_cam, aruco_pose_robot;
+    aruco_pose_cam.resize(msg.markers.size()), aruco_pose_robot.resize(msg.markers.size());
+    Eigen::Matrix4f transformation_mat;
+
+    this->transformCameraToRobot(transformation_mat);
 
     for (int i = 0; i < msg.markers.size(); ++i)
     {
-        aruco_pose_cam_[i].setOnes();
-        aruco_pose_cam_[i](0) = msg.markers[i].pose.pose.position.x;
-        aruco_pose_cam_[i](1) = msg.markers[i].pose.pose.position.y;
-        aruco_pose_cam_[i](2) = msg.markers[i].pose.pose.position.z;
+        aruco_pose_cam[i].setOnes();
+        aruco_pose_robot[i].setOnes();
 
-        std::cout << "aruco marker " << i << " " << "pose " << aruco_pose_cam_[i] << std::endl;
+        aruco_pose_cam[i](0) = msg.markers[i].pose.pose.position.x;
+        aruco_pose_cam[i](1) = msg.markers[i].pose.pose.position.y;
+        aruco_pose_cam[i](2) = msg.markers[i].pose.pose.position.z;
+
+        aruco_pose_robot[i] = transformation_mat * aruco_pose_cam[i];
+
+        std::cout << "aruco marker pose in cam " << i << " " << "pose " << aruco_pose_cam[i] << std::endl;
+        std::cout << "aruco marker pose in robot " << i << " " << "pose " << aruco_pose_robot[i] << std::endl;
     }
 
 }
 
+void semantic_SLAM::setArucoPose(std::vector<Eigen::Vector4f> aruco_pose)
+{
+    aruco_pose_lock_.lock();
+    aruco_data_available_ = true;
+    this->aruco_pose_ = aruco_pose;
+    aruco_pose_lock_.unlock();
+}
+
+void semantic_SLAM::getArucoPose(std::vector<Eigen::Vector4f> &aruco_pose)
+{
+    aruco_pose_lock_.lock();
+    aruco_data_available_ = false;
+    aruco_pose = this->aruco_pose_;
+    aruco_pose_lock_.unlock();
+}
 
 void semantic_SLAM::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 {
