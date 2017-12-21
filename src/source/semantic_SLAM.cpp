@@ -16,7 +16,8 @@ void semantic_SLAM::init()
     imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false;
     prev_time_ = 0;
     VO_pose_.resize(6);
-    particle_filter_obj_.init(state_size_, num_particles_);
+    first_aruco_pose_(0) = 2, first_aruco_pose_(1) = 0, first_aruco_pose_(2) = 0.5;
+    particle_filter_obj_.init(state_size_, num_particles_, first_aruco_pose_);
 
     filtered_pose_.resize(num_particles_);
     for(int i= 0; i < num_particles_; ++i)
@@ -50,7 +51,13 @@ void semantic_SLAM::run()
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose);
     }
 
+    if(aruco_data_available_)
+    {
+        std::vector<Eigen::Vector4f> aruco_pose;
+        getArucoPose(aruco_pose);
 
+        this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_);
+    }
 
 
     Eigen::VectorXf avg_pose;
@@ -225,6 +232,8 @@ void semantic_SLAM::arucoObservationCallback(const aruco_eye_msgs::MarkerList &m
         std::cout << "aruco marker pose in cam " << i << " " << "pose " << aruco_pose_cam[i] << std::endl;
         std::cout << "aruco marker pose in robot " << i << " " << "pose " << aruco_pose_robot[i] << std::endl;
     }
+
+    this->setArucoPose(aruco_pose_robot);
 
 }
 

@@ -76,6 +76,7 @@ protected:
      std::vector<Eigen::VectorXf> filtered_pose_;
 
      //variables regarding aruco detection
+     Eigen::Vector3f first_aruco_pose_;
      std::mutex aruco_pose_lock_;
      bool aruco_data_available_;
      std::vector<Eigen::Vector4f> aruco_pose_;
