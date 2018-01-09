@@ -80,6 +80,7 @@ protected:
      std::mutex aruco_pose_lock_;
      bool aruco_data_available_;
      std::vector<Eigen::Vector4f> aruco_pose_;
+     Eigen::VectorXf final_pose_;
 
 };
 
