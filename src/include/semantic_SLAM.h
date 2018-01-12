@@ -22,7 +22,7 @@
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
-const int num_particles_ = 10;
+const int num_particles_ = 1000;
 
 class semantic_SLAM
 {

@@ -80,7 +80,7 @@ void semantic_SLAM::run()
         std::vector<Eigen::Vector4f> aruco_pose;
         getArucoPose(aruco_pose);
 
-        this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_);
+        this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
     }
 
     //std::cout << "VO pose " << this->VO_pose_ << std::endl;
