@@ -19,6 +19,10 @@
 //aruco_eye msgs
 #include "aruco_eye_msgs/MarkerList.h"
 
+//opencv
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
