@@ -16,16 +16,16 @@ void semantic_SLAM::init()
     imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false;
     prev_time_ = 0;
     VO_pose_.resize(6);
-    first_aruco_pose_(0) = 2, first_aruco_pose_(1) = 0, first_aruco_pose_(2) = 0.5;
-    particle_filter_obj_.init(state_size_, num_particles_, first_aruco_pose_);
+    first_aruco_pose_(0) = 2, first_aruco_pose_(1) = 0, first_aruco_pose_(2) = 0.56;
+    filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, first_aruco_pose_);
     final_pose_.resize(6), final_pose_.setZero();
 
-    filtered_pose_.resize(num_particles_);
-    for(int i= 0; i < num_particles_; ++i)
-    {
-        filtered_pose_[i].resize(state_size_);
-        filtered_pose_[i].setZero();
-    }
+//    filtered_pose_.resize(num_particles_);
+//    for(int i= 0; i < num_particles_; ++i)
+//    {
+//        filtered_pose_[i].resize(state_size_);
+//        filtered_pose_[i].setZero();
+//    }
 
     return;
 
@@ -50,62 +50,45 @@ void semantic_SLAM::run()
         getVOPose(VO_pose);
 
         //std::cout << "VO_pose data " << VO_pose << std::endl;
-        filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_);
+        filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_, final_pose_);
     }
 
-    //    Eigen::VectorXf avg_pose;
-    //    avg_pose.resize(state_size_), avg_pose.setZero();
-    //    for(int i = 0; i < num_particles_; ++i)
-    //    {
-    //        avg_pose(0) += filtered_pose_[i](0);
-    //        avg_pose(1) += filtered_pose_[i](1);
-    //        avg_pose(2) += filtered_pose_[i](2);
-    //        avg_pose(3) += filtered_pose_[i](3);
-    //        avg_pose(4) += filtered_pose_[i](4);
-    //        avg_pose(5) += filtered_pose_[i](5);
-
-    //    }
-
-    //    avg_pose(0) = avg_pose(0)/num_particles_;
-    //    avg_pose(1) = avg_pose(1)/num_particles_;
-    //    avg_pose(2) = avg_pose(2)/num_particles_;
-    //    avg_pose(3) = avg_pose(3)/num_particles_;
-    //    avg_pose(4) = avg_pose(4)/num_particles_;
-    //    avg_pose(5) = avg_pose(5)/num_particles_;
-
-    //    final_pose_ = avg_pose;
 
     if(aruco_data_available_)
     {
+        final_pose_.setZero();
         std::vector<Eigen::Vector4f> aruco_pose;
         getArucoPose(aruco_pose);
 
         this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
     }
 
-    cv::Mat particles_image(200, 200, CV_8UC3, cv::Scalar(255,255,255));
-    //particles_image = cv::Mat::zeros(480,640, CV_8UC3);
-    int circle_radius = 5;
+    publishParticlePoses();
 
-    std::vector<cv::Point> particle_point;
-    particle_point.clear();
-    for(int i =0; i < num_particles_; ++i)
-    {
-        particle_point.push_back(cv::Point(filtered_pose_[i](0)+100, filtered_pose_[i](1)+100));
-        cv::circle(particles_image, particle_point[i], circle_radius, cv::Scalar(255,0,0),-1);
-    }
+//    cv::Mat particles_image(200, 200, CV_8UC3, cv::Scalar(255,255,255));
+//    //particles_image = cv::Mat::zeros(480,640, CV_8UC3);
+//    int circle_radius = 5;
 
-    cv::Point avg_pose_point = cv::Point(final_pose_(0)+100, final_pose_(1)+100);
-    cv::circle(particles_image, avg_pose_point , circle_radius, cv::Scalar(0,255,0),-1);
-    //std::cout << "VO pose " << this->VO_pose_ << std::endl;
-    //std::cout << "Pose " << final_pose_ << std::endl;
+//    std::vector<cv::Point> particle_point;
+//    particle_point.clear();
+//    for(int i =0; i < num_particles_; ++i)
+//    {
+//        particle_point.push_back(cv::Point(filtered_pose_[i](0)+100, filtered_pose_[i](1)+100));
+//        cv::circle(particles_image, particle_point[i], circle_radius, cv::Scalar(255,0,0),-1);
+//    }
 
-    //cv::Point particle_point2 = cv::Point(5+240, 5+320);
-    //cv::circle(particles_image, particle_point2, circle_radius, cv::Scalar(255,0,0),-1);
+//    cv::Point avg_pose_point = cv::Point(final_pose_(0)+100, final_pose_(1)+100);
+//    cv::circle(particles_image, avg_pose_point , circle_radius, cv::Scalar(0,255,0),-1);
 
-    //particles_image = cv::Mat::zeros((480, 640,3), CV_8UC3);
-    cv::imshow("particle distribution", particles_image);
-    cv::waitKey(1);
+//    //std::cout << "VO pose " << this->VO_pose_ << std::endl;
+//    //std::cout << "Pose " << final_pose_ << std::endl;
+
+//    //cv::Point particle_point2 = cv::Point(5+240, 5+320);
+//    //cv::circle(particles_image, particle_point2, circle_radius, cv::Scalar(255,0,0),-1);
+
+//    //particles_image = cv::Mat::zeros((480, 640,3), CV_8UC3);
+//    cv::imshow("particle distribution", particles_image);
+//    cv::waitKey(1);
 
     prev_time_ = current_time_;
 }
@@ -116,6 +99,8 @@ void semantic_SLAM::open(ros::NodeHandle n)
     stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_SLAM::stereoOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu", 1, &semantic_SLAM::imuCallback, this);
     aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_SLAM::arucoObservationCallback, this);
+
+    particle_poses_pub_ = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
 
 }
 
@@ -380,4 +365,23 @@ void semantic_SLAM::transformIMUtoWorld(float ax, float ay, float az, Eigen::Mat
     transformation_mat = T_robot_world * rot_x_imu;
 
 
+}
+
+void semantic_SLAM::publishParticlePoses()
+{
+    geometry_msgs::PoseArray particle_poses_vec;
+    particle_poses_vec.header.stamp = ros::Time::now();
+    particle_poses_vec.header.frame_id = "map";
+
+    for(int i =0; i < num_particles_; ++i)
+    {
+       geometry_msgs::Pose pose;
+       pose.position.x = filtered_pose_[i](0);
+       pose.position.y = filtered_pose_[i](1);
+       pose.position.z = filtered_pose_[i](2);
+
+       particle_poses_vec.poses.push_back(pose);
+    }
+
+    particle_poses_pub_.publish(particle_poses_vec);
 }

@@ -15,6 +15,7 @@
 //ROS messages
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/Imu.h"
+#include "geometry_msgs/PoseArray.h"
 
 //aruco_eye msgs
 #include "aruco_eye_msgs/MarkerList.h"
@@ -26,7 +27,7 @@
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
-const int num_particles_ = 1000;
+const int num_particles_ = 200;
 
 class semantic_SLAM
 {
@@ -56,7 +57,8 @@ protected:
      ros::Subscriber aruco_observation_sub_;
      void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
 
-
+     ros::Publisher particle_poses_pub_;
+     void publishParticlePoses();
 protected:
      //variables regarding VO
      float pose_x_, pose_y_, pose_z_;
