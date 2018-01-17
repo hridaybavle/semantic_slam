@@ -24,10 +24,11 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
-const int num_particles_ = 200;
+const int num_particles_ = 500;
 
 class semantic_SLAM
 {

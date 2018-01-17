@@ -16,8 +16,10 @@ void semantic_SLAM::init()
     imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false;
     prev_time_ = 0;
     VO_pose_.resize(6);
-    first_aruco_pose_(0) = 2, first_aruco_pose_(1) = 0, first_aruco_pose_(2) = 0.56;
+    first_aruco_pose_(0) = 2.19, first_aruco_pose_(1) = -0.017, first_aruco_pose_(2) = 0.61;
+
     filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, first_aruco_pose_);
+
     final_pose_.resize(6), final_pose_.setZero();
 
 //    filtered_pose_.resize(num_particles_);
@@ -49,19 +51,19 @@ void semantic_SLAM::run()
 
         getVOPose(VO_pose);
 
-        //std::cout << "VO_pose data " << VO_pose << std::endl;
+        //std::cout << "VO_pose data " << VO_pose << std::endl
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_, final_pose_);
+
+        if(aruco_data_available_)
+        {
+            final_pose_.setZero();
+            std::vector<Eigen::Vector4f> aruco_pose;
+            getArucoPose(aruco_pose);
+
+            filtered_pose_ = this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
+        }
     }
 
-
-    if(aruco_data_available_)
-    {
-        final_pose_.setZero();
-        std::vector<Eigen::Vector4f> aruco_pose;
-        getArucoPose(aruco_pose);
-
-        this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
-    }
 
     publishParticlePoses();
 
