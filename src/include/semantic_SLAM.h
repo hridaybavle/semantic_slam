@@ -58,6 +58,9 @@ protected:
      ros::Subscriber aruco_observation_sub_;
      void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
 
+     ros::Subscriber slam_dunk_pose_sub_;
+     void slamdunkPoseCallback(const geometry_msgs::PoseStamped& msg);
+
      ros::Publisher particle_poses_pub_;
      void publishParticlePoses();
 protected:
@@ -69,6 +72,9 @@ protected:
      void getVOPose(Eigen::VectorXf& VO_pose);
      void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);
      void getArucoPose(std::vector<Eigen::Vector4f>& aruco_pose);
+
+     void setSlamdunkPose(Eigen::Vector3f pose);
+     void getSlamdunkPose(Eigen::Vector3f& pose);
 
      //variables regarding imu
      bool imu_data_available_;
@@ -88,6 +94,11 @@ protected:
      bool aruco_data_available_;
      std::vector<Eigen::Vector4f> aruco_pose_;
      Eigen::VectorXf final_pose_;
+
+     //variables for slamdunk pose
+     std::mutex slamdunk_pose_lock_;
+     bool slamdunk_data_available_;
+     Eigen::Vector3f slamdunk_pose_;
 
 };
 
