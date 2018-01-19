@@ -54,34 +54,34 @@ void semantic_SLAM::run()
         std::cout << "VO_pose data " << VO_pose << std::endl;
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_, final_pose_);
 
-        //        if(slamdunk_data_available_)
-        //        {
-        //            Eigen::VectorXf slamdunk_pose_simulated;
-
-        //            final_pose_.setZero();
-        //            Eigen::Vector3f slamdunk_pose;
-        //            slamdunk_pose.setZero();
-        //            getSlamdunkPose(slamdunk_pose);
-
-        //            slamdunk_pose_simulated.setZero(), slamdunk_pose_simulated.resize(6);
-        //            slamdunk_pose_simulated(0) = slamdunk_pose(0);
-        //            slamdunk_pose_simulated(1) = slamdunk_pose(1);
-        //            slamdunk_pose_simulated(2) = slamdunk_pose(2);
-
-        //            //filtered_pose_ = this->particle_filter_obj_.predictionVO(time_diff, slamdunk_pose_simulated, filtered_pose_, final_pose_);
-
-        //            filtered_pose_ = this->particle_filter_obj_.slamdunkPoseUpdate(slamdunk_pose, filtered_pose_, VO_pose_);
-        //        }
-
-
-        if(aruco_data_available_)
+        if(slamdunk_data_available_)
         {
-            final_pose_.setZero();
-            std::vector<Eigen::Vector4f> aruco_pose;
-            getArucoPose(aruco_pose);
+            Eigen::VectorXf slamdunk_pose_simulated;
 
-            filtered_pose_ = this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
+            final_pose_.setZero();
+            Eigen::Vector3f slamdunk_pose;
+            slamdunk_pose.setZero();
+            getSlamdunkPose(slamdunk_pose);
+
+            slamdunk_pose_simulated.setZero(), slamdunk_pose_simulated.resize(6);
+            slamdunk_pose_simulated(0) = slamdunk_pose(0);
+            slamdunk_pose_simulated(1) = slamdunk_pose(1);
+            slamdunk_pose_simulated(2) = slamdunk_pose(2);
+
+            //filtered_pose_ = this->particle_filter_obj_.predictionVO(time_diff, slamdunk_pose_simulated, filtered_pose_, final_pose_);
+
+            filtered_pose_ = this->particle_filter_obj_.slamdunkPoseUpdate(slamdunk_pose, filtered_pose_, VO_pose_);
         }
+
+
+        //        if(aruco_data_available_)
+        //        {
+        //            final_pose_.setZero();
+        //            std::vector<Eigen::Vector4f> aruco_pose;
+        //            getArucoPose(aruco_pose);
+
+        //            filtered_pose_ = this->particle_filter_obj_.arucoMapAndUpdate(aruco_pose, filtered_pose_, final_pose_, VO_pose_);
+        //        }
     }
 
 
