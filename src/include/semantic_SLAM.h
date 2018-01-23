@@ -63,6 +63,13 @@ protected:
 
      ros::Publisher particle_poses_pub_;
      void publishParticlePoses();
+
+     ros::Publisher final_pose_pub_;
+     void publishFinalPose();
+
+     ros::Publisher corres_vo_pose_pub_;
+     void publishCorresVOPose();
+
 protected:
      //variables regarding VO
      float pose_x_, pose_y_, pose_z_;
@@ -89,7 +96,7 @@ protected:
      std::vector<Eigen::VectorXf> filtered_pose_;
 
      //variables regarding aruco detection
-     Eigen::Vector3f first_aruco_pose_;
+     std::vector<Eigen::Vector3f> aruco_poses_;
      std::mutex aruco_pose_lock_;
      bool aruco_data_available_;
      std::vector<Eigen::Vector4f> aruco_pose_;
