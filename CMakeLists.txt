@@ -40,7 +40,7 @@ set(SEMANTIC_SLAM_SLAM_HEADER_FILES
     )
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs)
+    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs message_generation)
 
 find_package(OpenCV REQUIRED)
 
@@ -57,10 +57,20 @@ else()
   set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
 endif()
 
+add_message_files(
+  FILES
+  bebop/Ardrone3PilotingStateAttitudeChanged.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
 catkin_package(
     INCLUDE_DIRS ${SEMANTIC_SLAM_INCLUDE_DIR}
     LIBRARIES semantic_SLAM OpenCV 
-    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs
+    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter aruco_eye_msgs message_runtime
     )
 
 
@@ -81,5 +91,3 @@ add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node SEMANTIC_SLAM)
 target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
-
-

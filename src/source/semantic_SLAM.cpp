@@ -1,27 +1,35 @@
 #include "semantic_SLAM.h"
 
-semantic_SLAM::semantic_SLAM()
+semantic_slam_ros::semantic_slam_ros()
 {
     init();
     std::cout << "semantic SLAM constructor " << std::endl;
 }
 
-semantic_SLAM::~semantic_SLAM()
+semantic_slam_ros::~semantic_slam_ros()
 {
     std::cout << "semantic SLAM destructor " << std::endl;
 }
 
-void semantic_SLAM::init()
+void semantic_slam_ros::init()
 {
-    imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false, slamdunk_data_available_ = false;
+    imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false, slamdunk_data_available_ = false, bebop_imu_data_available_ = false;
+    magnetic_field_available_ = false, bebop_imu_data_ready_ = false;
     prev_time_ = 0;
+    yaw_first_ = 0;
     VO_pose_.resize(6);
     aruco_poses_.resize(2);
 
+    //    //first aruco pose
+    //    aruco_poses_[0](0) = 2.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 0.56;
+    //    //second aruco pose
+    //    aruco_poses_[1](0) = 3.51, aruco_poses_[1](1) = -1.55, aruco_poses_[1](2) = 1.38;
+
     //first aruco pose
-    aruco_poses_[0](0) = 2.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 0.56;
+    aruco_poses_[0](0) = 3.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 1.39;
     //second aruco pose
-    aruco_poses_[1](0) = 3.51, aruco_poses_[1](1) = -1.55, aruco_poses_[1](2) = 1.38;
+    aruco_poses_[1](0) = 3.0, aruco_poses_[1](1) = -1.49, aruco_poses_[1](2) = 1.39;
+
 
     filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, aruco_poses_);
 
@@ -38,7 +46,7 @@ void semantic_SLAM::init()
 
 }
 
-void semantic_SLAM::run()
+void semantic_slam_ros::run()
 {
     current_time_ = (double) ros::Time::now().sec + ((double) ros::Time::now().nsec / (double) 1E9);
 
@@ -60,6 +68,15 @@ void semantic_SLAM::run()
         std::cout << "VO_pose data " << VO_pose << std::endl;
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_, final_pose_);
 
+
+    }
+
+    if(bebop_imu_data_available_)
+    {
+        float roll, pitch, yaw;
+        getBebopIMUData(roll, pitch, yaw);
+
+        filtered_pose_ = particle_filter_obj_.bebopIMUUpdate(roll, pitch, yaw, filtered_pose_);
 
     }
 
@@ -124,13 +141,15 @@ void semantic_SLAM::run()
     prev_time_ = current_time_;
 }
 
-void semantic_SLAM::open(ros::NodeHandle n)
+void semantic_slam_ros::open(ros::NodeHandle n)
 {
     //ros subsriber
-    stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_SLAM::stereoOdometryCallback, this);
-    imu_sub_               = n.subscribe("/imu", 1, &semantic_SLAM::imuCallback, this);
-    aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_SLAM::arucoObservationCallback, this);
-    slam_dunk_pose_sub_    = n.subscribe("/pose", 1, &semantic_SLAM::slamdunkPoseCallback, this);
+    stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_slam_ros::stereoOdometryCallback, this);
+    imu_sub_               = n.subscribe("/imu", 1, &semantic_slam_ros::imuCallback, this);
+    aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_slam_ros::arucoObservationCallback, this);
+    slam_dunk_pose_sub_    = n.subscribe("/pose", 1, &semantic_slam_ros::slamdunkPoseCallback, this);
+    magnetic_field_sub_    = n.subscribe("magnetometer", 1, &semantic_slam_ros::magneticFieldCallback, this);
+    bebop_imu_sub_         = n.subscribe("/drone4/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
 
     //Publishers
     particle_poses_pub_ = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
@@ -138,7 +157,7 @@ void semantic_SLAM::open(ros::NodeHandle n)
     corres_vo_pose_pub_ = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
 }
 
-void semantic_SLAM::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg)
+void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg)
 {
     Eigen::Vector4f camera_pose_local_mat, camera_pose_world_mat;
     Eigen::Vector4f camera_ang_local_mat, camera_ang_world_mat;
@@ -198,7 +217,7 @@ void semantic_SLAM::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg
 
 }
 
-void semantic_SLAM::setVOPose(Eigen::VectorXf VO_pose)
+void semantic_slam_ros::setVOPose(Eigen::VectorXf VO_pose)
 {
     vo_pose_lock_.lock();          // locking the data when filling the received pose
     vo_data_available_ = true;
@@ -206,7 +225,7 @@ void semantic_SLAM::setVOPose(Eigen::VectorXf VO_pose)
     vo_pose_lock_.unlock();        //unlocking the data
 }
 
-void semantic_SLAM::getVOPose(Eigen::VectorXf& VO_pose)
+void semantic_slam_ros::getVOPose(Eigen::VectorXf& VO_pose)
 {
     vo_pose_lock_.lock();           // locking the data when giving it to the filter
     vo_data_available_ = false;
@@ -214,7 +233,7 @@ void semantic_SLAM::getVOPose(Eigen::VectorXf& VO_pose)
     vo_pose_lock_.unlock();         // unlocking the data once the data is received
 }
 
-void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
+void semantic_slam_ros::imuCallback(const sensor_msgs::Imu &msg)
 {
     //for converting the IMU from NED to world frame (ENU)
     transformation_mat_acc_.setZero(), transformation_mat_ang_vel_.setZero();
@@ -252,9 +271,147 @@ void semantic_SLAM::imuCallback(const sensor_msgs::Imu &msg)
 
     imu_data_available_ = true;
 
+    this->setIMUdata(msg.linear_acceleration.x, msg.linear_acceleration.y,msg.linear_acceleration.z);
+    //this->calculateRPYAngles();
+
 }
 
-void semantic_SLAM::arucoObservationCallback(const aruco_eye_msgs::MarkerList &msg)
+void semantic_slam_ros::setIMUdata(float acc_x, float acc_y, float acc_z)
+{
+    imu_lock_.lock();
+    this->acc_x_ = acc_x;
+    this->acc_y_ = acc_y;
+    this->acc_z_ = acc_z;
+    imu_lock_.unlock();
+
+}
+
+void semantic_slam_ros::getIMUdata(float &acc_x, float &acc_y, float &acc_z)
+{
+    imu_lock_.lock();
+    acc_x = this->acc_x_;
+    acc_y = this->acc_y_;
+    acc_z = this->acc_z_;
+    imu_lock_.unlock();
+
+}
+
+void semantic_slam_ros::magneticFieldCallback(const sensor_msgs::MagneticField &msg)
+{
+
+    double mag_x, mag_y, mag_z;
+    mag_x = msg.magnetic_field.x;
+    mag_y = msg.magnetic_field.y;
+    mag_z = msg.magnetic_field.z;
+
+    this->setMagData(mag_x, mag_y, mag_z);
+
+}
+
+void semantic_slam_ros::setMagData(float mag_x, float mag_y, float mag_z)
+{
+    magnetometer_data_lock_.lock();
+    magnetic_field_available_ = true;
+    this->mag_x_ = mag_x;
+    this->mag_y_ = mag_y;
+    this->mag_z_ = mag_z;
+    magnetometer_data_lock_.unlock();
+}
+
+void semantic_slam_ros::getMagData(float &mag_x, float &mag_y, float &mag_z)
+{
+    magnetometer_data_lock_.lock();
+    magnetic_field_available_ = false;
+    mag_x = this->mag_x_;
+    mag_y = this->mag_y_;
+    mag_z = this->mag_z_;
+    magnetometer_data_lock_.unlock();
+
+}
+
+void semantic_slam_ros::calculateRPYAngles()
+{
+
+    float pitch, roll, yaw;
+    float ax, ay, az;
+    float mx, my, mz;
+    float xh, yh;
+
+    if(magnetic_field_available_ = true)
+    {
+        this->getIMUdata(ax, ay, az);
+        pitch =  atan2(ax, sqrt(pow(ay,2) + pow(az,2)));
+        roll  = -atan2(ay, sqrt(pow(ax,2) + pow(az,2)));
+
+        std::cout << "roll obtained from acc: " << roll*(180/M_PI) << std::endl;
+        std::cout << "pitch obtained from acc: " << pitch*(180/M_PI) << std::endl;
+
+        this->getMagData(mx, my, mz);
+
+        float mag_norm=sqrt((mx*mx)+(my*my)+(mz*mz));
+        mx = mx / mag_norm;
+        my = my / mag_norm;
+        mz = mz / mag_norm;
+
+        xh  = mx * cos(pitch)+ my * sin(pitch)* sin(roll)+ mz*sin(pitch)*cos(roll);
+        yh  =-my * cos(roll) + mz * sin(roll);
+        yaw = atan2(yh,xh);
+
+        //keeping the yaw between zero to 2*PI
+        if (yaw < 0)
+            yaw = yaw + 2*M_PI;
+
+        std::cout << "yaw obtained from imu " << yaw*(180/M_PI) << std::endl;
+    }
+
+}
+
+void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingStateAttitudeChanged &msg)
+{
+    float roll, pitch, yaw;
+
+    if(!bebop_imu_data_ready_)
+    {
+        yaw_first_   = msg.yaw;
+        bebop_imu_data_ready_ = true;
+    }
+
+    //bebop provides the angles in NED, hence converting them to ENU
+    roll  =  msg.roll;
+    pitch = -msg.pitch;
+    yaw   = -(msg.yaw - yaw_first_);
+
+    if (yaw < 0)
+        yaw = yaw + 2*M_PI;
+    std::cout << "yaw from bebop " << yaw << std::endl;
+
+    this->setBebopIMUData(roll, pitch, yaw);
+
+}
+
+void semantic_slam_ros::setBebopIMUData(float roll, float pitch, float yaw)
+{
+    bebop_imu_lock_.lock();
+    bebop_imu_data_available_ = true;
+    bebop_imu_roll_  = roll;
+    bebop_imu_pitch_ = pitch;
+    bebop_imu_yaw_   = yaw;
+    bebop_imu_lock_.unlock();
+
+}
+
+void semantic_slam_ros::getBebopIMUData(float &roll, float &pitch, float &yaw)
+{
+
+    bebop_imu_lock_.lock();
+    bebop_imu_data_available_ = false;
+    roll  = bebop_imu_roll_;
+    pitch = bebop_imu_pitch_;
+    yaw   = bebop_imu_yaw_;
+    bebop_imu_lock_.unlock();
+}
+
+void semantic_slam_ros::arucoObservationCallback(const aruco_eye_msgs::MarkerList &msg)
 {
     std::vector<Eigen::Vector4f> aruco_pose_cam, aruco_pose_robot;
     aruco_pose_cam.resize(msg.markers.size()), aruco_pose_robot.resize(msg.markers.size());
@@ -283,7 +440,7 @@ void semantic_SLAM::arucoObservationCallback(const aruco_eye_msgs::MarkerList &m
 
 }
 
-void semantic_SLAM::setArucoPose(std::vector<Eigen::Vector4f> aruco_pose)
+void semantic_slam_ros::setArucoPose(std::vector<Eigen::Vector4f> aruco_pose)
 {
     aruco_pose_lock_.lock();
     aruco_data_available_ = true;
@@ -291,7 +448,7 @@ void semantic_SLAM::setArucoPose(std::vector<Eigen::Vector4f> aruco_pose)
     aruco_pose_lock_.unlock();
 }
 
-void semantic_SLAM::getArucoPose(std::vector<Eigen::Vector4f> &aruco_pose)
+void semantic_slam_ros::getArucoPose(std::vector<Eigen::Vector4f> &aruco_pose)
 {
     aruco_pose_lock_.lock();
     aruco_data_available_ = false;
@@ -300,7 +457,7 @@ void semantic_SLAM::getArucoPose(std::vector<Eigen::Vector4f> &aruco_pose)
 }
 
 
-void semantic_SLAM::slamdunkPoseCallback(const geometry_msgs::PoseStamped &msg)
+void semantic_slam_ros::slamdunkPoseCallback(const geometry_msgs::PoseStamped &msg)
 {
     Eigen::Vector3f slamdunk_pose;
     slamdunk_pose.setZero();
@@ -312,7 +469,7 @@ void semantic_SLAM::slamdunkPoseCallback(const geometry_msgs::PoseStamped &msg)
     setSlamdunkPose(slamdunk_pose);
 }
 
-void semantic_SLAM::setSlamdunkPose(Eigen::Vector3f pose)
+void semantic_slam_ros::setSlamdunkPose(Eigen::Vector3f pose)
 {
     slamdunk_pose_lock_.lock();
     slamdunk_data_available_ = true;
@@ -320,7 +477,7 @@ void semantic_SLAM::setSlamdunkPose(Eigen::Vector3f pose)
     slamdunk_pose_lock_.unlock();
 }
 
-void semantic_SLAM::getSlamdunkPose(Eigen::Vector3f &pose)
+void semantic_slam_ros::getSlamdunkPose(Eigen::Vector3f &pose)
 {
     slamdunk_pose_lock_.lock();
     slamdunk_data_available_ = false;
@@ -328,7 +485,7 @@ void semantic_SLAM::getSlamdunkPose(Eigen::Vector3f &pose)
     slamdunk_pose_lock_.unlock();
 }
 
-void semantic_SLAM::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
+void semantic_slam_ros::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 {
 
     Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
@@ -393,7 +550,7 @@ void semantic_SLAM::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 
 }
 
-void semantic_SLAM::transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat)
+void semantic_slam_ros::transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat)
 {
     Eigen::Matrix4f rot_x_imu, T_robot_world;
     double roll, pitch, yaw;
@@ -430,7 +587,7 @@ void semantic_SLAM::transformIMUtoWorld(float ax, float ay, float az, Eigen::Mat
 
 }
 
-void semantic_SLAM::publishParticlePoses()
+void semantic_slam_ros::publishParticlePoses()
 {
     geometry_msgs::PoseArray particle_poses_vec;
     particle_poses_vec.header.stamp = ros::Time::now();
@@ -443,13 +600,20 @@ void semantic_SLAM::publishParticlePoses()
         pose.position.y = filtered_pose_[i](1);
         pose.position.z = filtered_pose_[i](2);
 
+        //converting euler to quaternion
+        tf::Quaternion quaternion = tf::createQuaternionFromRPY(filtered_pose_[i](3),filtered_pose_[i](4),filtered_pose_[i](5));
+                pose.orientation.x = quaternion.getX();
+        pose.orientation.y = quaternion.getY();
+        pose.orientation.z = quaternion.getZ();
+        pose.orientation.w = quaternion.getW();
+
         particle_poses_vec.poses.push_back(pose);
     }
 
     particle_poses_pub_.publish(particle_poses_vec);
 }
 
-void semantic_SLAM::publishFinalPose()
+void semantic_slam_ros::publishFinalPose()
 {
     geometry_msgs::PoseStamped final_particle_pose;
     final_particle_pose.header.stamp = ros::Time::now();
@@ -459,10 +623,16 @@ void semantic_SLAM::publishFinalPose()
     final_particle_pose.pose.position.y = final_pose_(1);
     final_particle_pose.pose.position.z = final_pose_(2);
 
+    tf::Quaternion quaternion = tf::createQuaternionFromRPY(final_pose_(3),final_pose_(4),final_pose_(5));
+    final_particle_pose.pose.orientation.x = quaternion.getX();
+    final_particle_pose.pose.orientation.y = quaternion.getY();
+    final_particle_pose.pose.orientation.z = quaternion.getZ();
+    final_particle_pose.pose.orientation.w = quaternion.getW();
+
     final_pose_pub_.publish(final_particle_pose);
 }
 
-void semantic_SLAM::publishCorresVOPose()
+void semantic_slam_ros::publishCorresVOPose()
 {
     geometry_msgs::PoseStamped corres_vo_pose;
     corres_vo_pose.header.stamp = ros::Time::now();
@@ -471,6 +641,12 @@ void semantic_SLAM::publishCorresVOPose()
     corres_vo_pose.pose.position.x = VO_pose_(0);
     corres_vo_pose.pose.position.y = VO_pose_(1);
     corres_vo_pose.pose.position.z = VO_pose_(2);
+
+    tf::Quaternion quaternion = tf::createQuaternionFromRPY(VO_pose_(3),VO_pose_(4),VO_pose_(5));
+    corres_vo_pose.pose.orientation.x = quaternion.getX();
+    corres_vo_pose.pose.orientation.y = quaternion.getY();
+    corres_vo_pose.pose.orientation.z = quaternion.getZ();
+    corres_vo_pose.pose.orientation.w = quaternion.getW();
 
     corres_vo_pose_pub_.publish(corres_vo_pose);
 

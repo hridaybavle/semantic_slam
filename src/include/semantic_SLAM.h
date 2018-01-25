@@ -15,10 +15,14 @@
 //ROS messages
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/Imu.h"
+#include "sensor_msgs/MagneticField.h"
 #include "geometry_msgs/PoseArray.h"
 
 //aruco_eye msgs
 #include "aruco_eye_msgs/MarkerList.h"
+
+//bebop imu message
+#include "semantic_SLAM/Ardrone3PilotingStateAttitudeChanged.h"
 
 //opencv
 #include <opencv2/core/core.hpp>
@@ -30,12 +34,12 @@ const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
 const int num_particles_ = 500;
 
-class semantic_SLAM
+class semantic_slam_ros
 {
 
 public:
-     semantic_SLAM();
-     ~semantic_SLAM();
+     semantic_slam_ros();
+     ~semantic_slam_ros();
 
 public:
      void open(ros::NodeHandle n);
@@ -55,11 +59,19 @@ protected:
      ros::Subscriber imu_sub_;
      void imuCallback(const sensor_msgs::Imu& msg);
 
-     ros::Subscriber aruco_observation_sub_;
-     void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
+    ros::Subscriber magnetic_field_sub_;
+    void magneticFieldCallback(const sensor_msgs::MagneticField& msg);
 
-     ros::Subscriber slam_dunk_pose_sub_;
-     void slamdunkPoseCallback(const geometry_msgs::PoseStamped& msg);
+    ros::Subscriber bebop_imu_sub_;
+    void bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingStateAttitudeChanged& msg);
+    bool bebop_imu_data_ready_;
+    float yaw_first_;
+
+    ros::Subscriber aruco_observation_sub_;
+    void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
+
+    ros::Subscriber slam_dunk_pose_sub_;
+    void slamdunkPoseCallback(const geometry_msgs::PoseStamped& msg);
 
      ros::Publisher particle_poses_pub_;
      void publishParticlePoses();
@@ -82,6 +94,26 @@ protected:
 
      void setSlamdunkPose(Eigen::Vector3f pose);
      void getSlamdunkPose(Eigen::Vector3f& pose);
+
+     std::mutex bebop_imu_lock_;
+     bool bebop_imu_data_available_;
+     float bebop_imu_roll_, bebop_imu_pitch_, bebop_imu_yaw_;
+     void setBebopIMUData(float roll,float pitch, float yaw);
+     void getBebopIMUData(float& roll, float& pitch, float& yaw);
+
+     std::mutex imu_lock_;
+     float acc_x_, acc_y_, acc_z_;
+     void setIMUdata(float acc_x,float acc_y,float acc_z);
+     void getIMUdata(float& acc_x, float& acc_y, float& acc_z);
+
+     std::mutex magnetometer_data_lock_;
+     float mag_x_, mag_y_, mag_z_;
+     void setMagData(float mag_x, float mag_y, float mag_z);
+     void getMagData(float& mag_x, float& mag_y,float& mag_z);
+
+     bool magnetic_field_available_;
+     void calculateRPYAngles();
+
 
      //variables regarding imu
      bool imu_data_available_;

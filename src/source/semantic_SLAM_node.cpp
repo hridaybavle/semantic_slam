@@ -6,7 +6,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "semantic_slam");
     ros::NodeHandle n;
 
-    semantic_SLAM mySemanticSLAM;
+    semantic_slam_ros mySemanticSLAM;
     mySemanticSLAM.open(n);
 
     ros::Rate r(30);
