@@ -1,0 +1,9 @@
+<!-- Launches: altitude_from_rgbd_node -->
+<launch>
+		
+	<!--node for converting stereo images to depth -->
+	<node ns="stereo" name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc"/>
+
+	<node name="semantic_slam_node" pkg="semantic_SLAM" type="semantic_SLAM_node" output="screen" />
+
+</launch>

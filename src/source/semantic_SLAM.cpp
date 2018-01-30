@@ -13,7 +13,8 @@ semantic_slam_ros::~semantic_slam_ros()
 
 void semantic_slam_ros::init()
 {
-    imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false, slamdunk_data_available_ = false, bebop_imu_data_available_ = false;
+    imu_data_available_, vo_data_available_ = false, aruco_data_available_ = false, slamdunk_data_available_ = false, bebop_imu_data_available_ = false,
+            object_detection_available_ = false, point_cloud_available_ = false;
     magnetic_field_available_ = false, bebop_imu_data_ready_ = false;
     prev_time_ = 0;
     yaw_first_ = 0;
@@ -70,6 +71,24 @@ void semantic_slam_ros::run()
 
 
     }
+
+    //segmentation of the point_cloud
+    sensor_msgs::PointCloud2 segmented_point_cloud;
+    if(object_detection_available_)
+    {
+        if(point_cloud_available_)
+        {
+            std::vector<semantic_SLAM::ObjectInfo> object_info;
+            this->getDetectedObjectInfo(object_info);
+
+            sensor_msgs::PointCloud2 point_cloud;
+            this->getPointCloudData(point_cloud);
+
+            segmented_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info, point_cloud);
+            publishSegmentedPointCloud(segmented_point_cloud);
+        }
+    }
+
 
     if(bebop_imu_data_available_)
     {
@@ -150,11 +169,14 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     slam_dunk_pose_sub_    = n.subscribe("/pose", 1, &semantic_slam_ros::slamdunkPoseCallback, this);
     magnetic_field_sub_    = n.subscribe("magnetometer", 1, &semantic_slam_ros::magneticFieldCallback, this);
     bebop_imu_sub_         = n.subscribe("/drone4/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
+    detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
+    point_cloud_sub_       = n.subscribe("/stereo/points2", 1, &semantic_slam_ros::pointCloudCallback, this);
 
     //Publishers
-    particle_poses_pub_ = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
-    final_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
-    corres_vo_pose_pub_ = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    particle_poses_pub_         = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
+    final_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
+    corres_vo_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    segmented_point_cloud_pub_  = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
 }
 
 void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg)
@@ -381,8 +403,8 @@ void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingSt
     pitch = -msg.pitch;
     yaw   = -(msg.yaw - yaw_first_);
 
-    if (yaw < 0)
-        yaw = yaw + 2*M_PI;
+    //    if (yaw < 0)
+    //        yaw = yaw + 2*M_PI;
     std::cout << "yaw from bebop " << yaw << std::endl;
 
     this->setBebopIMUData(roll, pitch, yaw);
@@ -484,6 +506,67 @@ void semantic_slam_ros::getSlamdunkPose(Eigen::Vector3f &pose)
     pose = this->slamdunk_pose_;
     slamdunk_pose_lock_.unlock();
 }
+
+void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
+{
+    //std::cout << "objects size " << msg.objects.size() << std::endl;
+    std::vector<semantic_SLAM::ObjectInfo>  object_info;
+    object_info.resize(msg.objects.size());
+
+    for(int i =0; i < msg.objects.size(); ++i)
+    {
+        object_info[i].type   = msg.objects[i].type;
+        object_info[i].tl_x   = msg.objects[i].tl_x;
+        object_info[i].tl_y   = msg.objects[i].tl_y;
+        object_info[i].height = msg.objects[i].height;
+        object_info[i].width  = msg.objects[i].width;
+    }
+
+    this->setDetectedObjectInfo(object_info);
+}
+
+void semantic_slam_ros::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
+{
+    detected_object_lock_.lock();
+    object_detection_available_ = true;
+    this->object_info_ = object_info;
+    detected_object_lock_.unlock();
+}
+
+void semantic_slam_ros::getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> &object_info)
+{
+    detected_object_lock_.lock();
+    object_detection_available_ = false;
+    object_info = this->object_info_;
+    detected_object_lock_.unlock();
+}
+
+void semantic_slam_ros::pointCloudCallback(const sensor_msgs::PointCloud2 &msg)
+{
+    pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
+    pcl::fromROSMsg(msg, point_cloud);
+
+    this->setPointCloudData(msg);
+}
+
+void semantic_slam_ros::setPointCloudData(sensor_msgs::PointCloud2 point_cloud)
+{
+    point_cloud_lock_.lock();
+    point_cloud_available_ = true;
+    this->point_cloud_msg_ = point_cloud;
+    point_cloud_lock_.unlock();
+
+}
+
+void semantic_slam_ros::getPointCloudData(sensor_msgs::PointCloud2 &point_cloud)
+{
+    point_cloud_lock_.lock();
+    point_cloud_available_ = false;
+    point_cloud = this->point_cloud_msg_;
+    point_cloud_lock_.unlock();
+
+}
+
 
 void semantic_slam_ros::transformCameraToRobot(Eigen::Matrix4f &transformation_mat)
 {
@@ -652,5 +735,12 @@ void semantic_slam_ros::publishCorresVOPose()
 
 }
 
+void semantic_slam_ros::publishSegmentedPointCloud(sensor_msgs::PointCloud2 point_cloud_seg)
+{
+    point_cloud_seg.header.stamp = ros::Time::now();
+    point_cloud_seg.header.frame_id = "cam0_optical";
 
+    segmented_point_cloud_pub_.publish(point_cloud_seg);
+
+}
 

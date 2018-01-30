@@ -10,6 +10,9 @@
 //particle filter lib
 #include "particle_filter.h"
 
+//point cloud segmentation
+#include "plane_segmentation.h"
+
 #include "tf/transform_datatypes.h"
 
 //ROS messages
@@ -17,6 +20,14 @@
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/MagneticField.h"
 #include "geometry_msgs/PoseArray.h"
+#include "sensor_msgs/PointCloud2.h"
+
+//PCL ROS
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
+
+//PCL
+#include "pcl/point_types.h"
 
 //aruco_eye msgs
 #include "aruco_eye_msgs/MarkerList.h"
@@ -24,11 +35,16 @@
 //bebop imu message
 #include "semantic_SLAM/Ardrone3PilotingStateAttitudeChanged.h"
 
+//darknet object detector
+#include "semantic_SLAM/DetectedObjects.h"
+#include "semantic_SLAM/ObjectInfo.h"
+
 //opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/calib3d.hpp>
 
 const float camera_pitch_angle_ = 0;
 const int state_size_ = 6;
@@ -49,7 +65,11 @@ private:
     void init();
     double prev_time_, current_time_;
 
+    //particle filter class object
     particle_filter particle_filter_obj_;
+
+    //point cloud segmentation class object
+    plane_segmentation plane_segmentation_obj_;
 
      //Publishers and subscribers
 protected:
@@ -73,6 +93,12 @@ protected:
     ros::Subscriber slam_dunk_pose_sub_;
     void slamdunkPoseCallback(const geometry_msgs::PoseStamped& msg);
 
+    ros::Subscriber detected_object_sub_;
+    void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
+
+    ros::Subscriber point_cloud_sub_;
+    void pointCloudCallback(const sensor_msgs::PointCloud2& msg);
+
      ros::Publisher particle_poses_pub_;
      void publishParticlePoses();
 
@@ -82,6 +108,8 @@ protected:
      ros::Publisher corres_vo_pose_pub_;
      void publishCorresVOPose();
 
+     ros::Publisher segmented_point_cloud_pub_;
+     void publishSegmentedPointCloud(sensor_msgs::PointCloud2 point_cloud_seg);
 protected:
      //variables regarding VO
      float pose_x_, pose_y_, pose_z_;
@@ -114,6 +142,13 @@ protected:
      bool magnetic_field_available_;
      void calculateRPYAngles();
 
+     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
+     void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
+
+     void setPointCloudData(sensor_msgs::PointCloud2 point_cloud);
+     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
+
+     //void segmentPointCloudData(std::vector<semantic_SLAM::ObjectInfo> object_info, sensor_msgs::PointCloud2 point_cloud);
 
      //variables regarding imu
      bool imu_data_available_;
@@ -138,6 +173,16 @@ protected:
      std::mutex slamdunk_pose_lock_;
      bool slamdunk_data_available_;
      Eigen::Vector3f slamdunk_pose_;
+
+     //variables regarding detected object
+     std::mutex detected_object_lock_;
+     bool object_detection_available_;
+     std::vector<semantic_SLAM::ObjectInfo> object_info_;
+
+     //variables regarding the point cloud
+     std::mutex point_cloud_lock_;
+     bool point_cloud_available_;
+     sensor_msgs::PointCloud2 point_cloud_msg_;
 
 };
 
