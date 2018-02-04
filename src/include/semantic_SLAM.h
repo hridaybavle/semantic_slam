@@ -28,6 +28,8 @@
 
 //PCL
 #include "pcl/point_types.h"
+#include <pcl/visualization/pcl_visualizer.h>
+#include <vtkRenderWindow.h>
 
 //aruco_eye msgs
 #include "aruco_eye_msgs/MarkerList.h"
@@ -47,8 +49,10 @@
 #include <opencv2/calib3d.hpp>
 
 const float camera_pitch_angle_ = 0;
+const float real_sense_pitch_angle =15*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 500;
+const int num_centroids = 2;
 
 class semantic_slam_ros
 {
@@ -60,6 +64,10 @@ public:
 public:
      void open(ros::NodeHandle n);
      void run();
+
+     //pcl variables
+     //pcl viewer
+     boost::shared_ptr<pcl::visualization::PCLVisualizer> pclViewer;
 
 private:
     void init();
@@ -110,11 +118,15 @@ protected:
 
      ros::Publisher segmented_point_cloud_pub_;
      void publishSegmentedPointCloud(sensor_msgs::PointCloud2 point_cloud_seg);
+
+     ros::Publisher detected_object_point_pub_;
+     void publishFinalDetectedObjectPoint(geometry_msgs::Point final_point);
 protected:
      //variables regarding VO
      float pose_x_, pose_y_, pose_z_;
      void transformCameraToRobot(Eigen::Matrix4f &transformation_mat);
      void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
+     void transformNormalsToWorld(float roll, float pitch, float yaw, Eigen::Matrix4f &transformation_mat);
      void setVOPose(Eigen::VectorXf VO_pose);
      void getVOPose(Eigen::VectorXf& VO_pose);
      void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);
