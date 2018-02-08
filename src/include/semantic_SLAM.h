@@ -41,6 +41,7 @@
 #include "semantic_SLAM/DetectedObjects.h"
 #include "semantic_SLAM/ObjectInfo.h"
 
+#include "sensor_msgs/image_encodings.h"
 //opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -49,7 +50,7 @@
 #include <opencv2/calib3d.hpp>
 
 const float camera_pitch_angle_ = 0;
-const float real_sense_pitch_angle =15*(M_PI/180);
+const float real_sense_pitch_angle =35*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 500;
 const int num_centroids = 2;
@@ -126,7 +127,7 @@ protected:
      float pose_x_, pose_y_, pose_z_;
      void transformCameraToRobot(Eigen::Matrix4f &transformation_mat);
      void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
-     void transformNormalsToWorld(float roll, float pitch, float yaw, Eigen::Matrix4f &transformation_mat);
+     void transformNormalsToWorld(Eigen::VectorXf final_pose, Eigen::Matrix4f &transformation_mat);
      void setVOPose(Eigen::VectorXf VO_pose);
      void getVOPose(Eigen::VectorXf& VO_pose);
      void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);

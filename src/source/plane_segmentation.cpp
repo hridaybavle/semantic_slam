@@ -57,7 +57,7 @@ sensor_msgs::PointCloud2 plane_segmentation::segmentPointCloudData(std::vector<s
                     arrayPosX   = arrayPosition + point_cloud.fields[0].offset;
                     arrayPosY   = arrayPosition + point_cloud.fields[1].offset;
                     arrayPosZ   = arrayPosition + point_cloud.fields[2].offset;
-                    arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
+                    //arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
 
                     //std::cout << "arrayPosrgb " << point_cloud.fields[3].offset << std::endl;
 
@@ -65,7 +65,7 @@ sensor_msgs::PointCloud2 plane_segmentation::segmentPointCloudData(std::vector<s
                     memcpy(&X,   &point_cloud.data[arrayPosX], sizeof(float));
                     memcpy(&Y,   &point_cloud.data[arrayPosY], sizeof(float));
                     memcpy(&Z,   &point_cloud.data[arrayPosZ], sizeof(float));
-                    memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
+                    //memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
 
                     //                    for(int f =0; f < point_cloud.fields.size(); ++f)
                     //                        std::cout << "point cloud fields " << point_cloud.fields[f].name  << std::endl;
@@ -79,7 +79,7 @@ sensor_msgs::PointCloud2 plane_segmentation::segmentPointCloudData(std::vector<s
                     point.x   = X;
                     point.y   = Y;
                     point.z   = Z;
-                    point.rgb = RGB;
+                    //point.rgb = RGB;
 
                     //segmented_point_cloud_pcl->push_back(point);
                     segmented_point_cloud_pcl->at(p_u,p_v) = point;
@@ -286,15 +286,36 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         final_segmented_points_mat.at<float>(i,0) = final_segmented_points->points[i].x;
         final_segmented_points_mat.at<float>(i,1) = final_segmented_points->points[i].y;
         final_segmented_points_mat.at<float>(i,2) = final_segmented_points->points[i].z;
+
+//        std::cout << "final_segmented points pose "
+//                  << "X: " << final_segmented_points->points[i].x
+//                  << "Y: " << final_segmented_points->points[i].y
+//                  << "Z: " << final_segmented_points->points[i].z << std::endl;
     }
 
     //last kmeans for obtaining the final pose of the segmented horizontal plane
-    cv::Mat final_pose_centroid, final_pose_labels;
+    cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
     double final_pose_compactness = 0.0;
     cv::TermCriteria final_pose_criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
-    final_pose_compactness = cv::kmeans(final_segmented_points_mat, 1, final_pose_labels, final_pose_criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, final_pose_centroid);
+    final_pose_compactness = cv::kmeans(final_segmented_points_mat, 2, final_pose_labels, final_pose_criteria_kmeans, 30, cv::KMEANS_RANDOM_CENTERS, kmeans_final_pose_centroids);
 
+    final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+    if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
+    {
+        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
+        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(0,1);
+        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(0,2);
+    }
+    else
+    {
+        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(1,0);
+        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(1,1);
+        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
+    }
+
+    std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
     std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
+
     return final_pose_centroid;
 
 }

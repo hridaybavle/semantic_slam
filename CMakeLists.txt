@@ -108,3 +108,11 @@ target_link_libraries(${PROJECT_NAME}_node SEMANTIC_SLAM)
 target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
 target_link_libraries(${PROJECT_NAME}_node ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
+
+add_executable(depth_synchronization_node src/source/depth_image_synchronizer.cpp)
+add_dependencies(depth_synchronization_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(depth_synchronization_node ${OpenCV_LIBS})
+target_link_libraries(depth_synchronization_node ${catkin_LIBRARIES})
+
+
+

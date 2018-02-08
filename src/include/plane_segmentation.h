@@ -23,7 +23,7 @@
 #include <opencv2/calib3d.hpp>
 
 const int num_centroids_normals = 3;
-const int num_centroids_height = 3;
+const int num_centroids_height = 2;
 
 class plane_segmentation
 {
