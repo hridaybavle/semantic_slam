@@ -21,6 +21,7 @@
 #include "sensor_msgs/MagneticField.h"
 #include "geometry_msgs/PoseArray.h"
 #include "sensor_msgs/PointCloud2.h"
+#include "visualization_msgs/MarkerArray.h"
 
 //PCL ROS
 #include <pcl_conversions/pcl_conversions.h>
@@ -50,7 +51,7 @@
 #include <opencv2/calib3d.hpp>
 
 const float camera_pitch_angle_ = 0;
-const float real_sense_pitch_angle =35*(M_PI/180);
+const float real_sense_pitch_angle =50*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 500;
 const int num_centroids = 2;
@@ -122,6 +123,9 @@ protected:
 
      ros::Publisher detected_object_point_pub_;
      void publishFinalDetectedObjectPoint(geometry_msgs::Point final_point);
+
+     ros::Publisher mapped_objects_visualizer_pub_;
+     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
 protected:
      //variables regarding VO
      float pose_x_, pose_y_, pose_z_;
@@ -190,12 +194,15 @@ protected:
      //variables regarding detected object
      std::mutex detected_object_lock_;
      bool object_detection_available_;
-     std::vector<semantic_SLAM::ObjectInfo> object_info_;
+     std::vector<semantic_SLAM::ObjectInfo> object_info_; 
+     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec_;
 
      //variables regarding the point cloud
      std::mutex point_cloud_lock_;
      bool point_cloud_available_;
      sensor_msgs::PointCloud2 point_cloud_msg_;
+
+
 
 };
 

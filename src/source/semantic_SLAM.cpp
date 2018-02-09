@@ -3,7 +3,6 @@
 semantic_slam_ros::semantic_slam_ros()
 // : pclViewer (new pcl::visualization::PCLVisualizer ("Point cloud segmented"))
 {
-    init();
     std::cout << "semantic SLAM constructor " << std::endl;
 }
 
@@ -32,10 +31,23 @@ void semantic_slam_ros::init()
     //    //second aruco pose
     //    aruco_poses_[1](0) = 3.0, aruco_poses_[1](1) = -1.49, aruco_poses_[1](2) = 1.39;
 
-    //object pose
-    aruco_poses_[0](0) = 2.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 0.53;
 
-    filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, aruco_poses_);
+    //this is temporary will be filled from an xml file
+    //object pose
+    std::vector<particle_filter::object_info_struct_pf> mapped_object_vec;
+
+    std::vector<Eigen::Vector3f> mapped_object_pose;
+    mapped_object_pose.resize(1);
+    mapped_object_pose[0](0) = 2.0;
+    mapped_object_pose[0](1) = 0.0;
+    mapped_object_pose[0](2) = 0.53;
+
+    mapped_object_vec.resize(1);
+    mapped_object_vec[0].type = "chair";
+    mapped_object_vec[0].pose =  mapped_object_pose[0];
+
+    this->mapped_object_vec_ = mapped_object_vec;
+    filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, aruco_poses_, mapped_object_vec);
 
     final_pose_.resize(6), final_pose_.setZero();
 
@@ -83,7 +95,7 @@ void semantic_slam_ros::run()
 
         getVOPose(VO_pose);
 
-        std::cout << "VO_pose data " << VO_pose << std::endl;
+        //std::cout << "VO_pose data " << VO_pose << std::endl;
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, VO_pose, filtered_pose_, final_pose_);
 
 
@@ -223,7 +235,15 @@ void semantic_slam_ros::run()
                     final_pose_of_object_in_robot(1) = final_detected_point.y;
                     final_pose_of_object_in_robot(2) = final_detected_point.z;
 
-                    filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(final_pose_of_object_in_robot, filtered_pose_, final_pose_, VO_pose_);
+
+                    //this will be changed to add more objects, for now its a start
+                    particle_filter::object_info_struct_pf complete_obj_info;
+
+                    complete_obj_info.type = "chair";
+                    complete_obj_info.pose = final_pose_of_object_in_robot;
+
+
+                    filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
                 }
                 //                pclViewer->removeAllPointClouds();
                 //                //pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
@@ -271,6 +291,7 @@ void semantic_slam_ros::run()
     publishFinalPose();
     publishCorresVOPose();
     publishParticlePoses();
+    publishMappedObjects(mapped_object_vec_);
 
     prev_time_ = current_time_;
 
@@ -278,6 +299,8 @@ void semantic_slam_ros::run()
 
 void semantic_slam_ros::open(ros::NodeHandle n)
 {
+    init();
+
     //ros subsriber
     stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_slam_ros::stereoOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu", 1, &semantic_slam_ros::imuCallback, this);
@@ -289,11 +312,14 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     point_cloud_sub_       = n.subscribe("/points", 1, &semantic_slam_ros::pointCloudCallback, this);
 
     //Publishers
-    particle_poses_pub_         = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
-    final_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
-    corres_vo_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
-    segmented_point_cloud_pub_  = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
-    detected_object_point_pub_  = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
+    particle_poses_pub_             = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
+    final_pose_pub_                 = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
+    corres_vo_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    segmented_point_cloud_pub_      = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
+    detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
+    mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
+
+
 }
 
 void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped &msg)
@@ -951,4 +977,39 @@ void semantic_slam_ros::publishFinalDetectedObjectPoint(geometry_msgs::Point fin
 
     detected_object_point_pub_.publish(final_point_to_pub);
 
+}
+
+void semantic_slam_ros::publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec)
+{
+    visualization_msgs::MarkerArray marker_arrays;
+
+    for(int i =0; i < mapped_object_vec.size(); ++i)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time();
+        marker.header.frame_id = "map";
+        marker.ns = "my_namespace";
+        marker.pose.position.x = mapped_object_vec[i].pose(0);
+        marker.pose.position.y = mapped_object_vec[i].pose(1);
+        marker.pose.position.z = mapped_object_vec[i].pose(2);
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        marker.id = i;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.type = visualization_msgs::Marker::CYLINDER;
+        marker.scale.x = 0.1;
+        marker.scale.y = 0.1;
+        marker.scale.z = 0.5;
+        marker.color.a = 1.0; // Don't forget to set the alpha!
+        marker.color.r = 0.0;
+        marker.color.g = 1.0;
+        marker.color.b = 0.0;
+
+        marker_arrays.markers.push_back(marker);
+    }
+
+    mapped_objects_visualizer_pub_.publish(marker_arrays);
 }
