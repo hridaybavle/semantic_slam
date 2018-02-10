@@ -38,9 +38,22 @@ void semantic_slam_ros::init()
 
     std::vector<Eigen::Vector3f> mapped_object_pose;
     mapped_object_pose.resize(1);
-    mapped_object_pose[0](0) = 2.0;
+    //rosbag of lab
+    //    mapped_object_pose[0](0) = 2.0;
+    //    mapped_object_pose[0](1) = 0.0;
+    //    mapped_object_pose[0](2) = 0.53;
+
+    //rosbag of nave
+    mapped_object_pose[0](0) = 3.0;
     mapped_object_pose[0](1) = 0.0;
-    mapped_object_pose[0](2) = 0.53;
+    mapped_object_pose[0](2) = 0.44;
+
+    //second chair pose
+    //rosbag of nave
+    //    mapped_object_pose[1](0) = 5.0;
+    //    mapped_object_pose[2](1) = 1.0;
+    //    mapped_object_pose[3](2) = 0.44;
+
 
     mapped_object_vec.resize(1);
     mapped_object_vec[0].type = "chair";
@@ -302,12 +315,12 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     init();
 
     //ros subsriber
-    stereo_odometry_sub_   = n.subscribe("/stereo_odometer/pose", 1, &semantic_slam_ros::stereoOdometryCallback, this);
+    stereo_odometry_sub_   = n.subscribe("/inertial_stereo/absolute_extrinsics", 1, &semantic_slam_ros::stereoOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu", 1, &semantic_slam_ros::imuCallback, this);
     aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_slam_ros::arucoObservationCallback, this);
     slam_dunk_pose_sub_    = n.subscribe("/pose", 1, &semantic_slam_ros::slamdunkPoseCallback, this);
     magnetic_field_sub_    = n.subscribe("magnetometer", 1, &semantic_slam_ros::magneticFieldCallback, this);
-    bebop_imu_sub_         = n.subscribe("/bebop/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
+    bebop_imu_sub_         = n.subscribe("/drone4/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
     detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
     point_cloud_sub_       = n.subscribe("/points", 1, &semantic_slam_ros::pointCloudCallback, this);
 
@@ -356,9 +369,10 @@ void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped 
     //assume roll, pitch and yaw zero for now//
     this->transformCameraToRobot(transformation_mat);
 
-    camera_pose_local_mat(0) = msg.pose.position.x;
-    camera_pose_local_mat(1) = msg.pose.position.y;
-    camera_pose_local_mat(2) = msg.pose.position.z;
+    //converting to the correct camere coordinate frame as in case of stefans its inverted
+    camera_pose_local_mat(0) = -msg.pose.position.x;
+    camera_pose_local_mat(1) = -msg.pose.position.y;
+    camera_pose_local_mat(2) = -msg.pose.position.z;
 
     camera_pose_world_mat = transformation_mat * camera_pose_local_mat;
 
@@ -535,23 +549,26 @@ void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingSt
 {
     float roll, pitch, yaw;
 
-    if(!bebop_imu_data_ready_)
+    //this makes sure that the roll, pitch and yaw data is taken only after takeoff, as the yaw of the bebop changes during takeoff//
+    if(final_pose_(2) > 0.80)
     {
-        yaw_first_   = msg.yaw;
-        bebop_imu_data_ready_ = true;
+        if(!bebop_imu_data_ready_)
+        {
+            yaw_first_   = msg.yaw;
+            bebop_imu_data_ready_ = true;
+        }
+
+        //bebop provides the angles in NED, hence converting them to ENU
+        roll  =  msg.roll;
+        pitch = -msg.pitch;
+        yaw   = -(msg.yaw - yaw_first_);
+
+        //    if (yaw < 0)
+        //        yaw = yaw + 2*M_PI;
+        std::cout << "yaw from bebop " << yaw << std::endl;
+
+        this->setBebopIMUData(roll, pitch, yaw);
     }
-
-    //bebop provides the angles in NED, hence converting them to ENU
-    roll  =  msg.roll;
-    pitch = -msg.pitch;
-    yaw   = -(msg.yaw - yaw_first_);
-
-    //    if (yaw < 0)
-    //        yaw = yaw + 2*M_PI;
-    std::cout << "yaw from bebop " << yaw << std::endl;
-
-    this->setBebopIMUData(roll, pitch, yaw);
-
 }
 
 void semantic_slam_ros::setBebopIMUData(float roll, float pitch, float yaw)
