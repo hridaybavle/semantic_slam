@@ -18,82 +18,85 @@ inline bool comparator(const float lhs, const float rhs)
     return lhs > rhs;
 }
 
-sensor_msgs::PointCloud2 plane_segmentation::segmentPointCloudData(std::vector<semantic_SLAM::ObjectInfo> object_info, sensor_msgs::PointCloud2 point_cloud,
-                                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segmented_point_cloud_pcl)
+plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(semantic_SLAM::ObjectInfo object_info, sensor_msgs::PointCloud2 point_cloud,
+                                                                               sensor_msgs::PointCloud2& segmented_point_cloud)
 {
-    sensor_msgs::PointCloud2 segmented_point_cloud;
-    //pcl::PointCloud<pcl::PointXYZRGB> segmented_point_cloud_pcl;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud_pcl (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-    for (int i =0; i < object_info.size(); ++i)
+    //for (int i =0; i < object_info.size(); ++i)
+    //{
+    //if(object_info[i].type == "chair")
+    //{
+
+    float start_u = object_info.tl_x, start_v = object_info.tl_y;
+    float height = object_info.height, width = object_info.width;
+
+    segmented_point_cloud_pcl->resize(object_info.height * object_info.width);
+    segmented_point_cloud_pcl->height = object_info.height;
+    segmented_point_cloud_pcl->width = object_info.width;
+    segmented_point_cloud_pcl->is_dense = false;
+
+    std::cout << "start u " << start_u << std::endl;
+    std::cout << "start v " << start_v << std::endl;
+    std::cout << "height "  << height << std::endl;
+    std::cout << "width "   << width  << std::endl;
+
+    int p_u =0;
+    for(size_t u = start_u; u < (start_u+width); ++u)
     {
-        if(object_info[i].type == "chair")
+        //                std::cout << "pointcloud row  step " << point_cloud.row_step << std::endl;
+        //                std::cout << "pointcloud point step " << point_cloud.point_step << std::endl;
+        int p_v =0;
+        for (size_t v = start_v; v < (start_v+height); ++v)
         {
-            float start_u = object_info[i].tl_x, start_v = object_info[i].tl_y;
-            float height = object_info[i].height, width = object_info[i].width;
 
-            segmented_point_cloud_pcl->resize(object_info[i].height * object_info[i].width);
-            segmented_point_cloud_pcl->height = object_info[i].height;
-            segmented_point_cloud_pcl->width = object_info[i].width;
-            segmented_point_cloud_pcl->is_dense = false;
+            int arrayPosition = v*point_cloud.row_step + u*point_cloud.point_step;
 
-            std::cout << "start u " << start_u << std::endl;
-            std::cout << "start v " << start_v << std::endl;
-            std::cout << "height "  << height << std::endl;
-            std::cout << "width "   << width  << std::endl;
+            int arrayPosX, arrayPosY, arrayPosZ, arrayPosrgb;
 
-            int p_u =0;
-            for(size_t u = start_u; u < (start_u+width); ++u)
-            {
-                //                std::cout << "pointcloud row  step " << point_cloud.row_step << std::endl;
-                //                std::cout << "pointcloud point step " << point_cloud.point_step << std::endl;
-                int p_v =0;
-                for (size_t v = start_v; v < (start_v+height); ++v)
-                {
+            arrayPosX   = arrayPosition + point_cloud.fields[0].offset;
+            arrayPosY   = arrayPosition + point_cloud.fields[1].offset;
+            arrayPosZ   = arrayPosition + point_cloud.fields[2].offset;
+            //arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
 
-                    int arrayPosition = v*point_cloud.row_step + u*point_cloud.point_step;
+            //std::cout << "arrayPosrgb " << point_cloud.fields[3].offset << std::endl;
 
-                    int arrayPosX, arrayPosY, arrayPosZ, arrayPosrgb;
+            float X, Y, Z, RGB;
+            memcpy(&X,   &point_cloud.data[arrayPosX], sizeof(float));
+            memcpy(&Y,   &point_cloud.data[arrayPosY], sizeof(float));
+            memcpy(&Z,   &point_cloud.data[arrayPosZ], sizeof(float));
+            //memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
 
-                    arrayPosX   = arrayPosition + point_cloud.fields[0].offset;
-                    arrayPosY   = arrayPosition + point_cloud.fields[1].offset;
-                    arrayPosZ   = arrayPosition + point_cloud.fields[2].offset;
-                    //arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
+            //                    for(int f =0; f < point_cloud.fields.size(); ++f)
+            //                        std::cout << "point cloud fields " << point_cloud.fields[f].name  << std::endl;
 
-                    //std::cout << "arrayPosrgb " << point_cloud.fields[3].offset << std::endl;
+            //                    std::cout << "X position " << X << std::endl;
+            //     /camera/color/image_raw               std::cout << "Y position " << Y << std::endl;
+            //                    std::cout << "Z position " << Z << std::endl;
+            //                    std::cout << "RGB " << RGB << std::endl;
 
-                    float X, Y, Z, RGB;
-                    memcpy(&X,   &point_cloud.data[arrayPosX], sizeof(float));
-                    memcpy(&Y,   &point_cloud.data[arrayPosY], sizeof(float));
-                    memcpy(&Z,   &point_cloud.data[arrayPosZ], sizeof(float));
-                    //memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
+            pcl::PointXYZRGB point;
+            point.x   = X;
+            point.y   = Y;
+            point.z   = Z;
+            //point.rgb = RGB;
 
-                    //                    for(int f =0; f < point_cloud.fields.size(); ++f)
-                    //                        std::cout << "point cloud fields " << point_cloud.fields[f].name  << std::endl;
-
-                    //                    std::cout << "X position " << X << std::endl;
-                    //     /camera/color/image_raw               std::cout << "Y position " << Y << std::endl;
-                    //                    std::cout << "Z position " << Z << std::endl;
-                    //                    std::cout << "RGB " << RGB << std::endl;
-
-                    pcl::PointXYZRGB point;
-                    point.x   = X;
-                    point.y   = Y;
-                    point.z   = Z;
-                    //point.rgb = RGB;
-
-                    //segmented_point_cloud_pcl->push_back(point);
-                    segmented_point_cloud_pcl->at(p_u,p_v) = point;
-                    p_v++;
-                }
-                p_u++;
-            }
+            //segmented_point_cloud_pcl->push_back(point);
+            segmented_point_cloud_pcl->at(p_u,p_v) = point;
+            p_v++;
         }
+        p_u++;
     }
+    //}
+    //}
 
-    std::cout << "here 2 " << std::endl;
+    plane_segmentation::segmented_objects segmented_objects_to_return;
+    segmented_objects_to_return.type = object_info.type;
+    segmented_objects_to_return.segmented_point_cloud = segmented_point_cloud_pcl;
+
     pcl::toROSMsg(*segmented_point_cloud_pcl, segmented_point_cloud);
 
-    return segmented_point_cloud;
+    return segmented_objects_to_return;
 }
 
 pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
@@ -113,7 +116,8 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
 
 }
 
-cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat)
+cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
+                                                   Eigen::MatrixXf final_pose)
 {
 
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
@@ -177,9 +181,9 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     int filtered_centroids_counter = -1;
     for(int i = 0; i < num_centroids_normals; i++)
     {
-        if(centroids.at<float>(i,0) < normals_of_the_horizontal_plane_in_cam(0)+0.3 && centroids.at<float>(i,0) > normals_of_the_horizontal_plane_in_cam(0)-0.3
-                && centroids.at<float>(i,1) < normals_of_the_horizontal_plane_in_cam(1)+0.3 && centroids.at<float>(i,1) > normals_of_the_horizontal_plane_in_cam(1)-0.3
-                && centroids.at<float>(i,2) < normals_of_the_horizontal_plane_in_cam(2)+0.3 && centroids.at<float>(i,2) > normals_of_the_horizontal_plane_in_cam(2)-0.3)
+        if(centroids.at<float>(i,0) < normals_of_the_horizontal_plane_in_cam(0)+0.4 && centroids.at<float>(i,0) > normals_of_the_horizontal_plane_in_cam(0)-0.4
+                && centroids.at<float>(i,1) < normals_of_the_horizontal_plane_in_cam(1)+0.4 && centroids.at<float>(i,1) > normals_of_the_horizontal_plane_in_cam(1)-0.4
+                && centroids.at<float>(i,2) < normals_of_the_horizontal_plane_in_cam(2)+0.4 && centroids.at<float>(i,2) > normals_of_the_horizontal_plane_in_cam(2)-0.4)
         {
             filtered_centroids.push_back(centroids.row(i));
             filtered_centroids_counter = i;
@@ -259,7 +263,8 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     int segmented_height_label = -1;
     for(int i = 0; i < height_centroids.rows; ++i)
     {
-        //getting the label of the second height centroid
+        //getting the label of the second height centroid and also checking that the label is actually the height of the chair horizontal plain
+        //if no then return
         if(height_centroids.at<float>(i,0) == height_centroids_vec[1])
             segmented_height_label = i;
     }
@@ -287,10 +292,10 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         final_segmented_points_mat.at<float>(i,1) = final_segmented_points->points[i].y;
         final_segmented_points_mat.at<float>(i,2) = final_segmented_points->points[i].z;
 
-//        std::cout << "final_segmented points pose "
-//                  << "X: " << final_segmented_points->points[i].x
-//                  << "Y: " << final_segmented_points->points[i].y
-//                  << "Z: " << final_segmented_points->points[i].z << std::endl;
+        //        std::cout << "final_segmented points pose "
+        //                  << "X: " << final_segmented_points->points[i].x
+        //                  << "Y: " << final_segmented_points->points[i].y
+        //                  << "Z: " << final_segmented_points->points[i].z << std::endl;
     }
 
     //last kmeans for obtaining the final pose of the segmented horizontal plane

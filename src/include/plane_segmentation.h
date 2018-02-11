@@ -31,9 +31,15 @@ public:
     plane_segmentation();
     ~plane_segmentation();
 
-    sensor_msgs::PointCloud2 segmentPointCloudData(std::vector<semantic_SLAM::ObjectInfo> object_info, sensor_msgs::PointCloud2 point_cloud,
-                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segmented_point_cloud_pcl);
-     pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
-     cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat);
+    struct segmented_objects {
+        std::string type;
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud;
+    };
+
+    plane_segmentation::segmented_objects segmentPointCloudData(semantic_SLAM::ObjectInfo object_info, sensor_msgs::PointCloud2 point_cloud,
+                                                               sensor_msgs::PointCloud2& segmented_point_cloud);
+    pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
+                                   Eigen::MatrixXf final_pose);
 
 };

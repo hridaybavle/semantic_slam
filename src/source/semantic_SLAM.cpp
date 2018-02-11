@@ -37,7 +37,7 @@ void semantic_slam_ros::init()
     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec;
 
     std::vector<Eigen::Vector3f> mapped_object_pose;
-    mapped_object_pose.resize(1);
+    mapped_object_pose.resize(2);
     //rosbag of lab
     //    mapped_object_pose[0](0) = 2.0;
     //    mapped_object_pose[0](1) = 0.0;
@@ -50,18 +50,20 @@ void semantic_slam_ros::init()
 
     //second chair pose
     //rosbag of nave
-    //    mapped_object_pose[1](0) = 5.0;
-    //    mapped_object_pose[2](1) = 1.0;
-    //    mapped_object_pose[3](2) = 0.44;
+    mapped_object_pose[1](0) = 5.0;
+    mapped_object_pose[1](1) = 1.0;
+    mapped_object_pose[1](2) = 0.44;
 
 
-    mapped_object_vec.resize(1);
-    mapped_object_vec[0].type = "chair";
-    mapped_object_vec[0].pose =  mapped_object_pose[0];
+    mapped_object_vec.resize(mapped_object_pose.size());
+    for(int i = 0; i < mapped_object_vec.size(); ++i)
+    {
+        mapped_object_vec[i].type = "chair";
+        mapped_object_vec[i].pose =  mapped_object_pose[i];
+    }
 
     this->mapped_object_vec_ = mapped_object_vec;
     filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, aruco_poses_, mapped_object_vec);
-
     final_pose_.resize(6), final_pose_.setZero();
 
     //    filtered_pose_.resize(num_particles_);
@@ -130,10 +132,10 @@ void semantic_slam_ros::run()
     //-------------------------------------segmentation of the point_cloud------------------------------------------//
     sensor_msgs::PointCloud2 segmented_point_cloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud_pcl(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
     cv::Mat detected_object_postion_mat, centroids, labels;
     geometry_msgs::Point final_detected_point;
     Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
+    std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
 
     if(object_detection_available_)
     {
@@ -146,124 +148,131 @@ void semantic_slam_ros::run()
             this->getPointCloudData(point_cloud);
 
             //This segments the PC according to the received bounding box data in the 2D image
-            segmented_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info, point_cloud, segmented_point_cloud_pcl);
-
-
-            std::cout << "segmented pc size " << segmented_point_cloud_pcl->size() << std::endl;
-            if(!segmented_point_cloud_pcl->empty())
+            for (int i = 0; i < object_info.size(); ++i)
             {
-                std::cout << "segmented point cloud height " << segmented_point_cloud_pcl->height << std::endl;
+                if(object_info[i].type == "chair")
+                    segmented_objects_from_point_cloud.push_back(plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud));
+            }
 
-                //                float height, width;
-                //                height = segmented_point_cloud_pcl->height/2;
-                //                width  = segmented_point_cloud_pcl->width/2;
-                //                std::cout << "center point of the point cloud " << segmented_point_cloud_pcl->at(width, height) << std::endl;
-
-                //                geometry_msgs::Point point;
-                //                for(size_t i =0; i < segmented_point_cloud_pcl->size(); ++i)
-                //                {
-                //                    if(!(std::isnan(segmented_point_cloud_pcl->points[i].x)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y))
-                //                            && segmented_point_cloud_pcl->points[i].x < 10 && segmented_point_cloud_pcl->points[i].y < 10 && segmented_point_cloud_pcl->points[i].z < 10
-                //                            && segmented_point_cloud_pcl->points[i].z > 0)
-                //                    {
-                //                        //                        std::cout << "segmented points have no nans" << std::endl;
-                //                        //                        std::cout << "points are: " << std::endl
-                //                        //                                  << "X: " << segmented_point_cloud_pcl->points[i].x << std::endl
-                //                        //                                  << "Y: " << segmented_point_cloud_pcl->points[i].y << std::endl
-                //                        //                                  << "Z: " << segmented_point_cloud_pcl->points[i].z << std::endl;
-
-                //                        point.x = segmented_point_cloud_pcl->points[i].x;
-                //                        point.y = segmented_point_cloud_pcl->points[i].y;
-                //                        point.z = segmented_point_cloud_pcl->points[i].z;
-                //                        detected_object_position_vec.push_back(point);
-                //                    }
-
-                //                }
-
-                //                detected_object_postion_mat = cv::Mat::zeros(detected_object_position_vec.size(), 3, CV_32F);
-
-                //                for(int i=0; i < detected_object_position_vec.size(); ++i)
-                //                {
-                //                    detected_object_postion_mat.at<float>(i,0) = static_cast<float>(detected_object_position_vec[i].x);
-                //                    detected_object_postion_mat.at<float>(i,1) = static_cast<float>(detected_object_position_vec[i].y);
-                //                    detected_object_postion_mat.at<float>(i,2) = static_cast<float>(detected_object_position_vec[i].z);
-                //                }
-                //                double compactness = 0.0;
-                //                cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 50, 0.01);
-                //                compactness = cv::kmeans(detected_object_postion_mat, num_centroids, labels, criteria_kmeans, 50, cv::KMEANS_RANDOM_CENTERS, centroids);
-
-                //                std::cout << "kmeans centroid  " << centroids << std::endl;
-
-                //                if(centroids.at<float>(0,2) < centroids.at<float>(1,2) && centroids.at<float>(0,2) > 0)
-                //                {
-                //                    final_detected_point.x = centroids.at<float>(0,0);
-                //                    final_detected_point.y = centroids.at<float>(0,1);
-                //                    final_detected_point.z = centroids.at<float>(0,2);
-                //                }
-                //                else
-                //                {
-                //                    final_detected_point.x = centroids.at<float>(1,0);
-                //                    final_detected_point.y = centroids.at<float>(1,1);
-                //                    final_detected_point.z = centroids.at<float>(1,2);
-                //                }
-
-
-                //                std::cout << "final object point " << std::endl
-                //                          << "X: " << final_detected_point.x << std::endl
-                //                          << "Y: " << final_detected_point.y << std::endl
-                //                          << "Z: " << final_detected_point.z << std::endl;
-
-                //This calculates the normals of the segmented pointcloud
-                segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_point_cloud_pcl);
-
-                //inputting the current roll, pitch and yaw from the pf updated from imu
-                Eigen::Matrix4f transformation_mat;
-                this->transformNormalsToWorld(final_pose_, transformation_mat);
-
-                cv::Mat final_pose_from_horizontal_plane;
-
-                final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_point_cloud_pcl, segmented_point_cloud_normal, transformation_mat);
-
-                final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
-                if(!final_pose_from_horizontal_plane.empty())
+            for(int i = 0; i < segmented_objects_from_point_cloud.size(); ++i)
+            {
+                if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
                 {
+                    std::cout << "segmented pc size " << segmented_objects_from_point_cloud[i].segmented_point_cloud->size() << std::endl;
+                    std::cout << "segmented point cloud height " << segmented_objects_from_point_cloud[i].segmented_point_cloud->height << std::endl;
 
-                    final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane.at<float>(0,0);
-                    final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane.at<float>(0,1);
-                    final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
+                    //                float height, width;
+                    //                height = segmented_point_cloud_pcl->height/2;
+                    //                width  = segmented_point_cloud_pcl->width/2;
+                    //                std::cout << "center point of the point cloud " << segmented_point_cloud_pcl->at(width, height) << std::endl;
 
-                    final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                    std::cout << "final pose from horizontal plane in world frame " << final_detected_point_robot_frame << std::endl;
+                    //                geometry_msgs::Point point;
+                    //                for(size_t i =0; i < segmented_point_cloud_pcl->size(); ++i)
+                    //                {
+                    //                    if(!(std::isnan(segmented_point_cloud_pcl->points[i].x)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y))
+                    //                            && segmented_point_cloud_pcl->points[i].x < 10 && segmented_point_cloud_pcl->points[i].y < 10 && segmented_point_cloud_pcl->points[i].z < 10
+                    //                            && segmented_point_cloud_pcl->points[i].z > 0)
+                    //                    {
+                    //                        //                        std::cout << "segmented points have no nans" << std::endl;
+                    //                        //                        std::cout << "points are: " << std::endl
+                    //                        //                                  << "X: " << segmented_point_cloud_pcl->points[i].x << std::endl
+                    //                        //                                  << "Y: " << segmented_point_cloud_pcl->points[i].y << std::endl
+                    //                        //                                  << "Z: " << segmented_point_cloud_pcl->points[i].z << std::endl;
+
+                    //                        point.x = segmented_point_cloud_pcl->points[i].x;
+                    //                        point.y = segmented_point_cloud_pcl->points[i].y;
+                    //                        point.z = segmented_point_cloud_pcl->points[i].z;
+                    //                        detected_object_position_vec.push_back(point);
+                    //                    }
+
+                    //                }
+
+                    //                detected_object_postion_mat = cv::Mat::zeros(detected_object_position_vec.size(), 3, CV_32F);
+
+                    //                for(int i=0; i < detected_object_position_vec.size(); ++i)
+                    //                {
+                    //                    detected_object_postion_mat.at<float>(i,0) = static_cast<float>(detected_object_position_vec[i].x);
+                    //                    detected_object_postion_mat.at<float>(i,1) = static_cast<float>(detected_object_position_vec[i].y);
+                    //                    detected_object_postion_mat.at<float>(i,2) = static_cast<float>(detected_object_position_vec[i].z);
+                    //                }
+                    //                double compactness = 0.0;
+                    //                cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 50, 0.01);
+                    //                compactness = cv::kmeans(detected_object_postion_mat, num_centroids, labels, criteria_kmeans, 50, cv::KMEANS_RANDOM_CENTERS, centroids);
+
+                    //                std::cout << "kmeans centroid  " << centroids << std::endl;
+
+                    //                if(centroids.at<float>(0,2) < centroids.at<float>(1,2) && centroids.at<float>(0,2) > 0)
+                    //                {
+                    //                    final_detected_point.x = centroids.at<float>(0,0);
+                    //                    final_detected_point.y = centroids.at<float>(0,1);
+                    //                    final_detected_point.z = centroids.at<float>(0,2);
+                    //                }
+                    //                else
+                    //                {
+                    //                    final_detected_point.x = centroids.at<float>(1,0);
+                    //                    final_detected_point.y = centroids.at<float>(1,1);
+                    //                    final_detected_point.z = centroids.at<float>(1,2);
+                    //                }
 
 
-                    final_detected_point.x = final_detected_point_robot_frame(0);
-                    final_detected_point.y = final_detected_point_robot_frame(1);
-                    final_detected_point.z = final_detected_point_robot_frame(2);
-                    publishFinalDetectedObjectPoint(final_detected_point);
+                    //                std::cout << "final object point " << std::endl
+                    //                          << "X: " << final_detected_point.x << std::endl
+                    //                          << "Y: " << final_detected_point.y << std::endl
+                    //                          << "Z: " << final_detected_point.z << std::endl;
+
+                    //This calculates the normals of the segmented pointcloud
+                    pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
+                    segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
+
+                    //inputting the current roll, pitch and yaw from the pf updated from imu
+                    Eigen::Matrix4f transformation_mat;
+                    this->transformNormalsToWorld(final_pose_, transformation_mat);
+
+                    cv::Mat final_pose_from_horizontal_plane;
+                    final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_objects_from_point_cloud[i].segmented_point_cloud, segmented_point_cloud_normal,
+                                                                                                      transformation_mat, final_pose_);
+
+                    final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+                    if(!final_pose_from_horizontal_plane.empty())
+                    {
+
+                        final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane.at<float>(0,0);
+                        final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane.at<float>(0,1);
+                        final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
+
+                        final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
+                        std::cout << "final pose from horizontal plane in world frame " << final_detected_point_robot_frame << std::endl;
 
 
-                    Eigen::Vector3f final_pose_of_object_in_robot;
-
-                    final_pose_of_object_in_robot(0) = final_detected_point.x;
-                    final_pose_of_object_in_robot(1) = final_detected_point.y;
-                    final_pose_of_object_in_robot(2) = final_detected_point.z;
-
-
-                    //this will be changed to add more objects, for now its a start
-                    particle_filter::object_info_struct_pf complete_obj_info;
-
-                    complete_obj_info.type = "chair";
-                    complete_obj_info.pose = final_pose_of_object_in_robot;
+                        final_detected_point.x = final_detected_point_robot_frame(0);
+                        final_detected_point.y = final_detected_point_robot_frame(1);
+                        final_detected_point.z = final_detected_point_robot_frame(2);
+                        publishFinalDetectedObjectPoint(final_detected_point);
 
 
-                    filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
+                        Eigen::Vector3f final_pose_of_object_in_robot;
+
+                        final_pose_of_object_in_robot(0) = final_detected_point.x;
+                        final_pose_of_object_in_robot(1) = final_detected_point.y;
+                        final_pose_of_object_in_robot(2) = final_detected_point.z;
+
+
+                        //this will be changed to add more objects, for now its a start
+                        particle_filter::object_info_struct_pf complete_obj_info;
+
+                        complete_obj_info.type = segmented_objects_from_point_cloud[i].type;
+                        complete_obj_info.pose = final_pose_of_object_in_robot;
+
+
+                        filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
+                    }
+                    //                pclViewer->removeAllPointClouds();
+                    //                //pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
+                    //                pclViewer->addPointCloud<pcl::PointXYZRGB>(segmented_point_cloud_pcl,"segmented cloud");
+                    //                pclViewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(segmented_point_cloud_pcl, segmented_point_cloud_normal, 100, 0.02f, "segmented cloud normals");
+                    //                pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "segmented cloud");
+                    publishSegmentedPointCloud(segmented_point_cloud);
                 }
-                //                pclViewer->removeAllPointClouds();
-                //                //pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
-                //                pclViewer->addPointCloud<pcl::PointXYZRGB>(segmented_point_cloud_pcl,"segmented cloud");
-                //                pclViewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(segmented_point_cloud_pcl, segmented_point_cloud_normal, 100, 0.02f, "segmented cloud normals");
-                //                pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "segmented cloud");
-                publishSegmentedPointCloud(segmented_point_cloud);
             }
         }
     }
@@ -549,26 +558,28 @@ void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingSt
 {
     float roll, pitch, yaw;
 
-    //this makes sure that the roll, pitch and yaw data is taken only after takeoff, as the yaw of the bebop changes during takeoff//
-    if(final_pose_(2) > 0.80)
+    //this makes sure that the yaw data is taken again after takeoff, as the yaw of the bebop changes during takeoff//
+    if(final_pose_(2) > 0.8)
+        bebop_imu_data_ready_ = false;
+
+
+    if(!bebop_imu_data_ready_)
     {
-        if(!bebop_imu_data_ready_)
-        {
-            yaw_first_   = msg.yaw;
-            bebop_imu_data_ready_ = true;
-        }
-
-        //bebop provides the angles in NED, hence converting them to ENU
-        roll  =  msg.roll;
-        pitch = -msg.pitch;
-        yaw   = -(msg.yaw - yaw_first_);
-
-        //    if (yaw < 0)
-        //        yaw = yaw + 2*M_PI;
-        std::cout << "yaw from bebop " << yaw << std::endl;
-
-        this->setBebopIMUData(roll, pitch, yaw);
+        yaw_first_   = msg.yaw;
+        bebop_imu_data_ready_ = true;
     }
+
+    //bebop provides the angles in NED, hence converting them to ENU
+    roll  =  msg.roll;
+    pitch = -msg.pitch;
+    yaw   = -(msg.yaw - yaw_first_);
+
+    //    if (yaw < 0)
+    //        yaw = yaw + 2*M_PI;
+    std::cout << "yaw from bebop " << yaw << std::endl;
+
+    this->setBebopIMUData(roll, pitch, yaw);
+
 }
 
 void semantic_slam_ros::setBebopIMUData(float roll, float pitch, float yaw)
