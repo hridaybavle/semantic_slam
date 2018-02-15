@@ -51,7 +51,7 @@
 #include <opencv2/calib3d.hpp>
 
 const float camera_pitch_angle_ = 0;
-const float real_sense_pitch_angle =50*(M_PI/180);
+const float real_sense_pitch_angle =33*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 500;
 const int num_centroids = 2;

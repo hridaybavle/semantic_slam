@@ -98,7 +98,6 @@ void semantic_slam_ros::run()
     //std::cout << "time diff " << time_diff << std::endl;
 
     Eigen::VectorXf avg_pose;
-    std::vector<geometry_msgs::Point> detected_object_position_vec;
     geometry_msgs::Point detected_object_avg_position;
 
 
@@ -158,67 +157,79 @@ void semantic_slam_ros::run()
             {
                 if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
                 {
-                    std::cout << "segmented pc size " << segmented_objects_from_point_cloud[i].segmented_point_cloud->size() << std::endl;
-                    std::cout << "segmented point cloud height " << segmented_objects_from_point_cloud[i].segmented_point_cloud->height << std::endl;
+                    //                    std::cout << "segmented pc size " << segmented_objects_from_point_cloud[i].segmented_point_cloud->size() << std::endl;
+                    //                    std::cout << "segmented point cloud height " << segmented_objects_from_point_cloud[i].segmented_point_cloud->height << std::endl;
 
-                    //                float height, width;
-                    //                height = segmented_point_cloud_pcl->height/2;
-                    //                width  = segmented_point_cloud_pcl->width/2;
-                    //                std::cout << "center point of the point cloud " << segmented_point_cloud_pcl->at(width, height) << std::endl;
+                    //                    float height, width;
+                    //                    height = segmented_objects_from_point_cloud[i].segmented_point_cloud->height/2;
+                    //                    width  = segmented_objects_from_point_cloud[i].segmented_point_cloud->width/2;
+                    //                    std::cout << "center point of the point cloud " << segmented_objects_from_point_cloud[i].segmented_point_cloud->at(width, height) << std::endl;
 
-                    //                geometry_msgs::Point point;
-                    //                for(size_t i =0; i < segmented_point_cloud_pcl->size(); ++i)
-                    //                {
-                    //                    if(!(std::isnan(segmented_point_cloud_pcl->points[i].x)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y)) && !(std::isnan(segmented_point_cloud_pcl->points[i].y))
-                    //                            && segmented_point_cloud_pcl->points[i].x < 10 && segmented_point_cloud_pcl->points[i].y < 10 && segmented_point_cloud_pcl->points[i].z < 10
-                    //                            && segmented_point_cloud_pcl->points[i].z > 0)
+                    //                    std::vector<geometry_msgs::Point> detected_object_position_vec;
+                    //                    geometry_msgs::Point point;
+                    //                    for(size_t k =0; k < segmented_objects_from_point_cloud[i].segmented_point_cloud->size(); ++k)
                     //                    {
-                    //                        //                        std::cout << "segmented points have no nans" << std::endl;
-                    //                        //                        std::cout << "points are: " << std::endl
-                    //                        //                                  << "X: " << segmented_point_cloud_pcl->points[i].x << std::endl
-                    //                        //                                  << "Y: " << segmented_point_cloud_pcl->points[i].y << std::endl
-                    //                        //                                  << "Z: " << segmented_point_cloud_pcl->points[i].z << std::endl;
+                    //                        if(!(std::isnan(segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].x)) &&
+                    //                                !(std::isnan(segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].y)) &&
+                    //                                !(std::isnan(segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].y)) &&
+                    //                                segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].x < 3 &&
+                    //                                segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].y < 3 &&
+                    //                                segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].z < 3 &&
+                    //                                segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].z > 0)
+                    //                        {
+                    //                            //                            std::cout << "segmented points have no nans" << std::endl;
+                    //                            //                            std::cout << "points are: " << std::endl
+                    //                            //                                      << "X: " << segmented_point_cloud_pcl->points[k].x << std::endl
+                    //                            //                                      << "Y: " << segmented_point_cloud_pcl->points[k].y << std::endl
+                    //                            //                                      << "Z: " << segmented_point_cloud_pcl->points[k].z << std::endl;
 
-                    //                        point.x = segmented_point_cloud_pcl->points[i].x;
-                    //                        point.y = segmented_point_cloud_pcl->points[i].y;
-                    //                        point.z = segmented_point_cloud_pcl->points[i].z;
-                    //                        detected_object_position_vec.push_back(point);
+                    //                            point.x = segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].x;
+                    //                            point.y = segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].y;
+                    //                            point.z = segmented_objects_from_point_cloud[i].segmented_point_cloud->points[k].z;
+                    //                            detected_object_position_vec.push_back(point);
+                    //                        }
+
                     //                    }
 
-                    //                }
+                    //                    detected_object_postion_mat = cv::Mat::zeros(detected_object_position_vec.size(), 3, CV_32F);
 
-                    //                detected_object_postion_mat = cv::Mat::zeros(detected_object_position_vec.size(), 3, CV_32F);
+                    //                    for(int k=0; k < detected_object_position_vec.size(); ++k)
+                    //                    {
+                    //                        detected_object_postion_mat.at<float>(i,0) = static_cast<float>(detected_object_position_vec[k].x);
+                    //                        detected_object_postion_mat.at<float>(i,1) = static_cast<float>(detected_object_position_vec[k].y);
+                    //                        detected_object_postion_mat.at<float>(i,2) = static_cast<float>(detected_object_position_vec[k].z);
+                    //                    }
+                    //                    double compactness = 0.0;
 
-                    //                for(int i=0; i < detected_object_position_vec.size(); ++i)
-                    //                {
-                    //                    detected_object_postion_mat.at<float>(i,0) = static_cast<float>(detected_object_position_vec[i].x);
-                    //                    detected_object_postion_mat.at<float>(i,1) = static_cast<float>(detected_object_position_vec[i].y);
-                    //                    detected_object_postion_mat.at<float>(i,2) = static_cast<float>(detected_object_position_vec[i].z);
-                    //                }
-                    //                double compactness = 0.0;
-                    //                cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 50, 0.01);
-                    //                compactness = cv::kmeans(detected_object_postion_mat, num_centroids, labels, criteria_kmeans, 50, cv::KMEANS_RANDOM_CENTERS, centroids);
+                    //                    if(detected_object_postion_mat.rows < 5)
+                    //                    {
+                    //                        continue;
+                    //                        std::cout << "not enough points for finding the mean" << std::endl;
+                    //                    }
 
-                    //                std::cout << "kmeans centroid  " << centroids << std::endl;
+                    //                    cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 50, 0.01);
+                    //                    compactness = cv::kmeans(detected_object_postion_mat, num_centroids, labels, criteria_kmeans, 50, cv::KMEANS_RANDOM_CENTERS, centroids);
 
-                    //                if(centroids.at<float>(0,2) < centroids.at<float>(1,2) && centroids.at<float>(0,2) > 0)
-                    //                {
-                    //                    final_detected_point.x = centroids.at<float>(0,0);
-                    //                    final_detected_point.y = centroids.at<float>(0,1);
-                    //                    final_detected_point.z = centroids.at<float>(0,2);
-                    //                }
-                    //                else
-                    //                {
-                    //                    final_detected_point.x = centroids.at<float>(1,0);
-                    //                    final_detected_point.y = centroids.at<float>(1,1);
-                    //                    final_detected_point.z = centroids.at<float>(1,2);
-                    //                }
+                    //                    std::cout << "kmeans centroid  " << centroids << std::endl;
+
+                    //                    if(centroids.at<float>(0,2) < centroids.at<float>(1,2) && centroids.at<float>(0,2) > 0)
+                    //                    {
+                    //                        final_detected_point.x = centroids.at<float>(0,0);
+                    //                        final_detected_point.y = centroids.at<float>(0,1);
+                    //                        final_detected_point.z = centroids.at<float>(0,2);
+                    //                    }
+                    //                    else
+                    //                    {
+                    //                        final_detected_point.x = centroids.at<float>(1,0);
+                    //                        final_detected_point.y = centroids.at<float>(1,1);
+                    //                        final_detected_point.z = centroids.at<float>(1,2);
+                    //                    }
 
 
-                    //                std::cout << "final object point " << std::endl
-                    //                          << "X: " << final_detected_point.x << std::endl
-                    //                          << "Y: " << final_detected_point.y << std::endl
-                    //                          << "Z: " << final_detected_point.z << std::endl;
+                    //                    std::cout << "final object point " << std::endl
+                    //                              << "X: " << final_detected_point.x << std::endl
+                    //                              << "Y: " << final_detected_point.y << std::endl
+                    //                              << "Z: " << final_detected_point.z << std::endl;
 
                     //This calculates the normals of the segmented pointcloud
                     pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
@@ -232,6 +243,16 @@ void semantic_slam_ros::run()
                     final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_objects_from_point_cloud[i].segmented_point_cloud, segmented_point_cloud_normal,
                                                                                                       transformation_mat, final_pose_);
 
+                    //                    Eigen::Vector4f final_detected_point_in_robot_frame_from_mean, final_detected_point_in_cam_frame_from_mean;
+                    //                    final_detected_point_in_robot_frame_from_mean.setZero(), final_detected_point_in_cam_frame_from_mean.setZero();
+
+                    //                    final_detected_point_in_cam_frame_from_mean(0) = final_detected_point.x;
+                    //                    final_detected_point_in_cam_frame_from_mean(1) = final_detected_point.y;
+                    //                    final_detected_point_in_cam_frame_from_mean(2) = final_detected_point.z;
+                    //                    final_detected_point_in_cam_frame_from_mean(3) = 1;
+                    //final_detected_point_in_robot_frame_from_mean = transformation_mat * final_detected_point_in_cam_frame_from_mean;
+                    //std::cout << "final detected point in robot frame obtained from mean " << final_detected_point_in_robot_frame_from_mean << std::endl;
+
                     final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
                     if(!final_pose_from_horizontal_plane.empty())
                     {
@@ -241,7 +262,7 @@ void semantic_slam_ros::run()
                         final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
 
                         final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                        std::cout << "final pose from horizontal plane in world frame " << final_detected_point_robot_frame << std::endl;
+                        std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
 
 
                         final_detected_point.x = final_detected_point_robot_frame(0);
@@ -261,10 +282,14 @@ void semantic_slam_ros::run()
                         particle_filter::object_info_struct_pf complete_obj_info;
 
                         complete_obj_info.type = segmented_objects_from_point_cloud[i].type;
+                        complete_obj_info.prob = segmented_objects_from_point_cloud[i].prob;
                         complete_obj_info.pose = final_pose_of_object_in_robot;
 
+                        if(segmented_objects_from_point_cloud[i].prob > 0.5)
+                            filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
+                        else
+                            std::cout << "\033[1;31mbold returning as the probability of the object is less\033[0m" << std::endl;
 
-                        filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
                     }
                     //                pclViewer->removeAllPointClouds();
                     //                //pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
@@ -359,18 +384,24 @@ void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped 
 
     camera_ang_local_mat.setOnes(), camera_ang_world_mat.setOnes();
 
-    camera_ang_local_mat(0) = roll;
-    camera_ang_local_mat(1) = pitch;
-    camera_ang_local_mat(2) = yaw;
+    //converting to the correct camera coordinate frame as in case of stefans its inverted
+    camera_ang_local_mat(0) = -roll;
+    camera_ang_local_mat(1) = -pitch;
+    camera_ang_local_mat(2) = -yaw;
+
+    //    std::cout << "camera angles in cam frame " << std::endl
+    //              << "roll " << camera_ang_local_mat(0) << std::endl
+    //              << "pitch " << camera_ang_local_mat(1) << std::endl
+    //              << "yaw " << camera_ang_local_mat(2) << std::endl;
 
     Eigen::Matrix4f euler_transformation_mat;
     this->transformCameraToRobot(euler_transformation_mat);
     camera_ang_world_mat = euler_transformation_mat * camera_ang_local_mat;
 
-    std::cout << "camera angles in world " << std::endl
-              << "roll " << camera_ang_world_mat(0) << std::endl
-              << "pitch " << camera_ang_world_mat(1) << std::endl
-              << "yaw " << camera_ang_world_mat(2) << std::endl;
+    //    std::cout << "camera angles in world " << std::endl
+    //              << "roll " << camera_ang_world_mat(0) << std::endl
+    //              << "pitch " << camera_ang_world_mat(1) << std::endl
+    //              << "yaw " << camera_ang_world_mat(2) << std::endl;
 
 
     Eigen::Matrix4f transformation_mat;
@@ -378,17 +409,17 @@ void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped 
     //assume roll, pitch and yaw zero for now//
     this->transformCameraToRobot(transformation_mat);
 
-    //converting to the correct camere coordinate frame as in case of stefans its inverted
+    //converting to the correct camera coordinate frame as in case of stefans its inverted
     camera_pose_local_mat(0) = -msg.pose.position.x;
     camera_pose_local_mat(1) = -msg.pose.position.y;
     camera_pose_local_mat(2) = -msg.pose.position.z;
 
     camera_pose_world_mat = transformation_mat * camera_pose_local_mat;
 
-    std::cout << "world pose mat " << std::endl
-              << "x: " << camera_pose_world_mat(0) << std::endl
-              << "y: " << camera_pose_world_mat(1) << std::endl
-              << "z: " << camera_pose_world_mat(2) << std::endl;
+    //    std::cout << "world pose mat " << std::endl
+    //              << "x: " << camera_pose_world_mat(0) << std::endl
+    //              << "y: " << camera_pose_world_mat(1) << std::endl
+    //              << "z: " << camera_pose_world_mat(2) << std::endl;
 
     Eigen::VectorXf VO_pose;
     VO_pose.resize(6), VO_pose.setZero();
@@ -576,7 +607,7 @@ void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingSt
 
     //    if (yaw < 0)
     //        yaw = yaw + 2*M_PI;
-    std::cout << "yaw from bebop " << yaw << std::endl;
+    //std::cout << "yaw from bebop " << yaw << std::endl;
 
     this->setBebopIMUData(roll, pitch, yaw);
 
@@ -625,8 +656,8 @@ void semantic_slam_ros::arucoObservationCallback(const aruco_eye_msgs::MarkerLis
 
         //filling the last element with the aruco id
         aruco_pose_robot[i](3) = msg.markers[i].id;
-        std::cout << "aruco marker pose in cam " << i << " " << "pose " << aruco_pose_cam[i] << std::endl;
-        std::cout << "aruco marker pose in robot " << i << " " << "pose " << aruco_pose_robot[i] << std::endl;
+        //std::cout << "aruco marker pose in cam " << i << " " << "pose " << aruco_pose_cam[i] << std::endl;
+        //std::cout << "aruco marker pose in robot " << i << " " << "pose " << aruco_pose_robot[i] << std::endl;
     }
 
     this->setArucoPose(aruco_pose_robot);
@@ -691,6 +722,7 @@ void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObje
         object_info[i].tl_y   = msg.objects[i].tl_y;
         object_info[i].height = msg.objects[i].height;
         object_info[i].width  = msg.objects[i].width;
+        object_info[i].prob   = msg.objects[i].prob;
     }
 
     this->setDetectedObjectInfo(object_info);
@@ -769,13 +801,14 @@ void semantic_slam_ros::transformCameraToRobot(Eigen::Matrix4f &transformation_m
     rot_z_robot(2,2) = 1;
     rot_z_robot(3,3) = 1;
 
-    //    //tranlation of 0cm in
-    //    translation_cam(0,0) = 1;
-    //    translation_cam(0,3) = 0.0;
-
-    //    translation_cam(1,1) = 1;
-    //    translation_cam(2,2) = 1;
-    //    translation_cam(3,3) = 1;
+    //tranlation of 5cm in x, 10cm in y and 1.5cm in z
+    translation_cam(0,0) = 1;
+    translation_cam(0,3) = -0.05;
+    translation_cam(1,1) = 1;
+    translation_cam(1,3) = -0.10;
+    translation_cam(2,2) = 1;
+    translation_cam(2,2) = 0.015;
+    translation_cam(3,3) = 1;
 
 
     //transformation from robot to world
@@ -798,7 +831,7 @@ void semantic_slam_ros::transformCameraToRobot(Eigen::Matrix4f &transformation_m
     //    T_robot_world(2,3) = prev_pose_z_;
     //    T_robot_world(3,3) = 1;
 
-    transformation_mat = rot_z_robot * rot_x_robot ;
+    transformation_mat = translation_cam * rot_z_robot * rot_x_robot ;
 
 
     //std::cout << "transformation matrix " << transformation_mat << std::endl;
@@ -857,12 +890,12 @@ void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eige
     pitch = final_pose(4);
     yaw = final_pose(5);
 
-    std::cout << "X: " << x << std::endl
-              << "Y: " << y << std::endl
-              << "Z: " << z << std::endl
-              << "roll: " << roll << std::endl
-              << "pitch: " << pitch << std::endl
-              << "yaw: "   << yaw << std::endl;
+    //    std::cout << "X: " << x << std::endl
+    //              << "Y: " << y << std::endl
+    //              << "Z: " << z << std::endl
+    //              << "roll: " << roll << std::endl
+    //              << "pitch: " << pitch << std::endl
+    //              << "yaw: "   << yaw << std::endl;
 
     rot_x_cam(0,0) = 1;
     rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
@@ -887,13 +920,14 @@ void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eige
     rot_z_robot(2,2) = 1;
     rot_z_robot(3,3) = 1;
 
-    //    //tranlation of 0cm in
-    //    translation_cam(0,0) = 1;
-    //    translation_cam(0,3) = 0.0;
-
-    //    translation_cam(1,1) = 1;
-    //    translation_cam(2,2) = 1;
-    //    translation_cam(3,3) = 1;
+    //translation of -10cm in x, -0.5cm in y and -5cm in z
+    translation_cam(0,0) = 1;
+    translation_cam(0,3) = -0.10;
+    translation_cam(1,1) = 1;
+    translation_cam(1,3) = -0.005;
+    translation_cam(2,2) = 1;
+    translation_cam(2,3) = -0.5;
+    translation_cam(3,3) = 1;
 
 
     //transformation from robot to world
@@ -916,7 +950,7 @@ void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eige
     //    T_robot_world(2,3) = z;
     //    T_robot_world(3,3) = 1;
 
-    transformation_mat = T_robot_world * rot_z_robot * rot_x_robot * rot_x_cam;
+    transformation_mat = T_robot_world * translation_cam * rot_z_robot * rot_x_robot * rot_x_cam;
 }
 
 void semantic_slam_ros::publishParticlePoses()

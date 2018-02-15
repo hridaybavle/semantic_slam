@@ -13,14 +13,13 @@
 		<remap from="image_mono" to="/camera/depth/image_raw_uncompressed"/> 
 		<remap from="image_rect" to="/camera/depth/image_rect"/>
 		</node>
-		
+
 		<!-- This nodelet is for converting the depth image to pointcloud data-->
 		<node pkg="nodelet" type="nodelet" name="depth_manager" args="manager" output="screen"/>
 	  <node pkg="nodelet" type="nodelet" name="point_cloud_xyz" args="load depth_image_proc/point_cloud_xyz depth_manager" output="screen">
 		<remap from="camera_info" to="/camera/depth/camera_info"/> 
 		<remap from="image_rect" to="/camera/depth/image_rect"/>
 		</node>  
-	
 
 	<node name="semantic_slam_node" pkg="semantic_SLAM" type="semantic_SLAM_node" output="screen" />
 

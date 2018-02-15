@@ -33,6 +33,7 @@ public:
 
     struct segmented_objects {
         std::string type;
+        float prob;
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud;
     };
 

@@ -19,7 +19,7 @@ inline bool comparator(const float lhs, const float rhs)
 }
 
 plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(semantic_SLAM::ObjectInfo object_info, sensor_msgs::PointCloud2 point_cloud,
-                                                                               sensor_msgs::PointCloud2& segmented_point_cloud)
+                                                                                sensor_msgs::PointCloud2& segmented_point_cloud)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud_pcl (new pcl::PointCloud<pcl::PointXYZRGB>);
 
@@ -27,19 +27,46 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     //{
     //if(object_info[i].type == "chair")
     //{
+    //transforming the color camera to depth cam frame
+    //    Eigen::Matrix3f h_mat, k_depth, k_color;
+    //    Eigen::Vector3f point_in_depth, point_in_color;
+
+    //    point_in_color(0) = object_info.tl_x;
+    //    point_in_color(1) = object_info.tl_y;
+    //    point_in_color(2) = 1;
+
+    //    h_mat(0,0) = 1; h_mat(0,1) = 0; h_mat(0,2) = 0.05;
+    //    h_mat(1,0) = 0; h_mat(1,1) = 1; h_mat(1,2) = 0;
+    //    h_mat(2,0) = 0; h_mat(2,1) = 0; h_mat(2,2) = 1;
+
+    //    k_depth(0,0) = 312.6761474609375; k_depth(0,1) = 0; k_depth(0,2) = 161.23934936523438;
+    //    k_depth(1,0) = 0; k_depth(1,1) = 312.6761474609375; k_depth(1,2) = 118.19078826904297;
+    //    k_depth(2,0) = 0; k_depth(2,1) = 0; k_depth(2,2) = 1;
+
+    //    k_color(0,0) = 314.9288024902344; k_color(0,1) = 0; k_color(0,2) = 159.6829071044922;
+    //    k_color(1,0) = 0; k_color(1,1) = 317.964111328125; k_color(1,2) = 115.64295196533203;
+    //    k_color(2,0) = 0; k_color(2,1) = 0; k_color(2,2) = 1;
+
+
+    //point_in_depth = (k_depth * h_mat * k_color.inverse().eval()) * point_in_color;
+
+    //    std::cout << "point in color  " << point_in_color << std::endl;
+    //    std::cout << "point in depth  " << point_in_depth << std::endl;
 
     float start_u = object_info.tl_x, start_v = object_info.tl_y;
     float height = object_info.height, width = object_info.width;
+
+
 
     segmented_point_cloud_pcl->resize(object_info.height * object_info.width);
     segmented_point_cloud_pcl->height = object_info.height;
     segmented_point_cloud_pcl->width = object_info.width;
     segmented_point_cloud_pcl->is_dense = false;
 
-    std::cout << "start u " << start_u << std::endl;
-    std::cout << "start v " << start_v << std::endl;
-    std::cout << "height "  << height << std::endl;
-    std::cout << "width "   << width  << std::endl;
+    //    std::cout << "start u " << start_u << std::endl;
+    //    std::cout << "start v " << start_v << std::endl;
+    //    std::cout << "height "  << height << std::endl;
+    //    std::cout << "width "   << width  << std::endl;
 
     int p_u =0;
     for(size_t u = start_u; u < (start_u+width); ++u)
@@ -92,6 +119,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
 
     plane_segmentation::segmented_objects segmented_objects_to_return;
     segmented_objects_to_return.type = object_info.type;
+    segmented_objects_to_return.prob = object_info.prob;
     segmented_objects_to_return.segmented_point_cloud = segmented_point_cloud_pcl;
 
     pcl::toROSMsg(*segmented_point_cloud_pcl, segmented_point_cloud);
@@ -181,9 +209,9 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     int filtered_centroids_counter = -1;
     for(int i = 0; i < num_centroids_normals; i++)
     {
-        if(centroids.at<float>(i,0) < normals_of_the_horizontal_plane_in_cam(0)+0.4 && centroids.at<float>(i,0) > normals_of_the_horizontal_plane_in_cam(0)-0.4
-                && centroids.at<float>(i,1) < normals_of_the_horizontal_plane_in_cam(1)+0.4 && centroids.at<float>(i,1) > normals_of_the_horizontal_plane_in_cam(1)-0.4
-                && centroids.at<float>(i,2) < normals_of_the_horizontal_plane_in_cam(2)+0.4 && centroids.at<float>(i,2) > normals_of_the_horizontal_plane_in_cam(2)-0.4)
+        if(centroids.at<float>(i,0) < normals_of_the_horizontal_plane_in_cam(0)+0.3 && centroids.at<float>(i,0) > normals_of_the_horizontal_plane_in_cam(0)-0.3
+                && centroids.at<float>(i,1) < normals_of_the_horizontal_plane_in_cam(1)+0.3 && centroids.at<float>(i,1) > normals_of_the_horizontal_plane_in_cam(1)-0.3
+                && centroids.at<float>(i,2) < normals_of_the_horizontal_plane_in_cam(2)+0.3 && centroids.at<float>(i,2) > normals_of_the_horizontal_plane_in_cam(2)-0.3)
         {
             filtered_centroids.push_back(centroids.row(i));
             filtered_centroids_counter = i;
@@ -242,7 +270,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     cv::TermCriteria height_criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
     height_compactness = cv::kmeans(height_points, num_centroids_height, height_labels, height_criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, height_centroids);
 
-    std::cout << "height centroids " << height_centroids << std::endl;
+    //std::cout << "height centroids " << height_centroids << std::endl;
     //std::cout << "height labels " << height_labels << std::endl;
 
     std::vector<float> height_centroids_vec;
@@ -253,6 +281,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     std::sort(height_centroids_vec.begin(), height_centroids_vec.end(), comparator);
 
+    std::cout << "final pose " << final_pose(2) << std::endl;
     for(int i =0; i < height_centroids_vec.size(); ++i)
     {
         std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
@@ -263,13 +292,12 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     int segmented_height_label = -1;
     for(int i = 0; i < height_centroids.rows; ++i)
     {
-        //getting the label of the second height centroid and also checking that the label is actually the height of the chair horizontal plain
-        //if no then return
-        if(height_centroids.at<float>(i,0) == height_centroids_vec[1])
+        //getting the label of the second height centroid
+        if(height_centroids.at<float>(i,0) == height_centroids_vec[1] && (height_centroids_vec[1] < 2.1))
             segmented_height_label = i;
     }
 
-    std::cout << "segmented height label " << segmented_height_label << std::endl;
+    //std::cout << "segmented height label " << segmented_height_label << std::endl;
 
     if(segmented_height_label == -1)
     {
@@ -318,8 +346,8 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
     }
 
-    std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
-    std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
+    //std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
+    //std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
 
     return final_pose_centroid;
 
