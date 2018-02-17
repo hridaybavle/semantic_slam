@@ -157,7 +157,6 @@ void semantic_slam_ros::run()
             {
                 if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
                 {
-                    //                    std::cout << "segmented pc size " << segmented_objects_from_point_cloud[i].segmented_point_cloud->size() << std::endl;
                     //                    std::cout << "segmented point cloud height " << segmented_objects_from_point_cloud[i].segmented_point_cloud->height << std::endl;
 
                     //                    float height, width;
@@ -239,9 +238,10 @@ void semantic_slam_ros::run()
                     Eigen::Matrix4f transformation_mat;
                     this->transformNormalsToWorld(final_pose_, transformation_mat);
 
+                    float horizontal_point_size =0;
                     cv::Mat final_pose_from_horizontal_plane;
                     final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_objects_from_point_cloud[i].segmented_point_cloud, segmented_point_cloud_normal,
-                                                                                                      transformation_mat, final_pose_);
+                                                                                                      transformation_mat, final_pose_, horizontal_point_size);
 
                     //                    Eigen::Vector4f final_detected_point_in_robot_frame_from_mean, final_detected_point_in_cam_frame_from_mean;
                     //                    final_detected_point_in_robot_frame_from_mean.setZero(), final_detected_point_in_cam_frame_from_mean.setZero();
@@ -263,7 +263,7 @@ void semantic_slam_ros::run()
 
                         final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
                         std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
-
+                        std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
                         final_detected_point.x = final_detected_point_robot_frame(0);
                         final_detected_point.y = final_detected_point_robot_frame(1);
@@ -281,10 +281,12 @@ void semantic_slam_ros::run()
                         //this will be changed to add more objects, for now its a start
                         particle_filter::object_info_struct_pf complete_obj_info;
 
-                        complete_obj_info.type = segmented_objects_from_point_cloud[i].type;
-                        complete_obj_info.prob = segmented_objects_from_point_cloud[i].prob;
-                        complete_obj_info.pose = final_pose_of_object_in_robot;
+                        complete_obj_info.type       = segmented_objects_from_point_cloud[i].type;
+                        complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
+                        complete_obj_info.pose       = final_pose_of_object_in_robot;
+                        complete_obj_info.num_points = horizontal_point_size;
 
+                        std::cout << "detection prob " << complete_obj_info.prob << std::endl;
                         if(segmented_objects_from_point_cloud[i].prob > 0.5)
                             filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
                         else

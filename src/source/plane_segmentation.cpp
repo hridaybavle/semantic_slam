@@ -145,7 +145,7 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
 }
 
 cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
-                                                   Eigen::MatrixXf final_pose)
+                                                   Eigen::MatrixXf final_pose, float& point_size)
 {
 
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
@@ -346,6 +346,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
     }
 
+    point_size = final_pose_labels.rows;
     //std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
     //std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
 

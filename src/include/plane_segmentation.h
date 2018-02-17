@@ -41,6 +41,6 @@ public:
                                                                sensor_msgs::PointCloud2& segmented_point_cloud);
     pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
     cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
-                                   Eigen::MatrixXf final_pose);
+                                   Eigen::MatrixXf final_pose, float& point_size);
 
 };
