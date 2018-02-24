@@ -23,6 +23,7 @@
 #include "sensor_msgs/PointCloud2.h"
 #include "visualization_msgs/MarkerArray.h"
 #include "nav_msgs/Odometry.h"
+#include "nav_msgs/Path.h"
 
 //PCL ROS
 #include <pcl_conversions/pcl_conversions.h>
@@ -54,11 +55,12 @@
 const float slamdunk_pitch_angle = 17*(M_PI/180);
 const float real_sense_pitch_angle =33*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 500;
+const int num_particles_ = 1000;
 const int num_centroids = 2;
 
-const float optitrack_x_transform =  2.95764923096;
-const float optitrack_y_transform =  0.0402016490698;
+const float optitrack_x_transform =  2.9;
+const float optitrack_y_transform = -0.1;
+const float optitrack_z_transform = -0.05;
 
 class semantic_slam_ros
 {
@@ -116,10 +118,14 @@ protected:
     ros::Subscriber optitrack_pose_sub_;
     void optitrackPoseCallback(const nav_msgs::Odometry& msg);
 
+    ros::Subscriber optitrack_pose_sub_for_plottin_path_;
+    void optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped& msg);
+
     ros::Publisher particle_poses_pub_;
     void publishParticlePoses();
 
     ros::Publisher final_pose_pub_;
+    ros::Publisher final_path_pub_;
     void publishFinalPose();
 
     ros::Publisher corres_vo_pose_pub_;
@@ -135,6 +141,7 @@ protected:
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
 
     ros::Publisher optitrack_pose_pub_;
+    ros::Publisher optitrack_path_pub_;
 protected:
     //variables regarding VO
     float pose_x_, pose_y_, pose_z_;
@@ -212,8 +219,9 @@ protected:
     bool point_cloud_available_;
     sensor_msgs::PointCloud2 point_cloud_msg_;
 
-
-
+    //for publishing the path
+     std::vector<geometry_msgs::PoseStamped> final_particle_pose_vec_;
+     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
 };
 
 

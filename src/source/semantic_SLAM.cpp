@@ -58,45 +58,49 @@ void semantic_slam_ros::init()
     //    mapped_object_pose[1](2) = 0.44;
 
     //rosbag of nave 4 chairs with optitrack
-    //    //chair 1
-    //    mapped_object_pose.resize(4);
-    //    mapped_object_pose[0](0) = 1.0;
-    //    mapped_object_pose[0](1) = 1.0;
-    //    mapped_object_pose[0](2) = 0.46;
-
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 1.0;
-    //    mapped_object_pose[1](1) =-2.0;
-    //    mapped_object_pose[1](2) = 0.49;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 4.5;
-    //    mapped_object_pose[2](1) = -1;
-    //    mapped_object_pose[2](2) = 0.49;
-
-    //    //chair 4
-    //    mapped_object_pose[3](0) = 3;
-    //    mapped_object_pose[3](1) = 1.5;
-    //    mapped_object_pose[3](2) = 0.45;
-
-
-    //rosbag of nave 4 chairs without optitrack
     //chair 1
     mapped_object_pose.resize(4);
     mapped_object_pose[0](0) = 2.0;
-    mapped_object_pose[0](1) = 1.0;
+    mapped_object_pose[0](1) = 0.0;
     mapped_object_pose[0](2) = 0.45;
 
     //chair 2
-    mapped_object_pose[1](0) = 7.0;
-    mapped_object_pose[1](1) = 3.0;
-    mapped_object_pose[1](2) = 0.46;
+    mapped_object_pose[1](0) = 4.5;
+    mapped_object_pose[1](1) =-1.0;
+    mapped_object_pose[1](2) = 0.49;
 
     //chair 3
-    mapped_object_pose[2](0) = 5.0;
-    mapped_object_pose[2](1) = 5.0;
-    mapped_object_pose[2](2) = 0.49;
+    mapped_object_pose[2](0) = 4.5;
+    mapped_object_pose[2](1) = 1.0;
+    mapped_object_pose[2](2) = 0.43;
 
+    //chair 4
+    mapped_object_pose[3](0) = 2.0;
+    mapped_object_pose[3](1) = 2.0;
+    mapped_object_pose[3](2) = 0.45;
+
+
+    //rosbag of nave 4 chairs without optitrack
+    //    //chair 1
+    //    mapped_object_pose.resize(4);
+    //    mapped_object_pose[0](0) = 4.0;
+    //    mapped_object_pose[0](1) = 1.0;
+    //    mapped_object_pose[0](2) = 0.45;
+
+    //    //chair 2
+    //    mapped_object_pose[1](0) = 7.0;
+    //    mapped_object_pose[1](1) = 1.0;
+    //    mapped_object_pose[1](2) = 0.49;
+
+    //    //chair 3
+    //    mapped_object_pose[2](0) = 7.0;
+    //    mapped_object_pose[2](1) = 4.0;
+    //    mapped_object_pose[2](2) = 0.45;
+
+    //    //chair 4
+    //    mapped_object_pose[3](0) = 2.0;
+    //    mapped_object_pose[3](1) = 4.0;
+    //    mapped_object_pose[3](2) = 0.45;
 
     //    //rosbag of passage
     //    //chair 1
@@ -424,16 +428,20 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     bebop_imu_sub_         = n.subscribe("/drone4/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
     detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
     point_cloud_sub_       = n.subscribe("/points", 1, &semantic_slam_ros::pointCloudCallback, this);
-    optitrack_pose_sub_     = n.subscribe("/vrpn_client_node/bebop/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
+    optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/bebop/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
+    //this is just for visualizing the path
+    optitrack_pose_sub_for_plottin_path_ = n.subscribe("/optitrack_pose",1, &semantic_slam_ros::optitrackPoseForPlottingPathCallback, this);
 
     //Publishers
     particle_poses_pub_             = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
     final_pose_pub_                 = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
+    final_path_pub_                 = n.advertise<nav_msgs::Path>("final_path",1);
     corres_vo_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
     segmented_point_cloud_pub_      = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
     detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
     optitrack_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
+    optitrack_path_pub_             = n.advertise<nav_msgs::Path>("optitrack_path",1);
 
 }
 
@@ -457,19 +465,19 @@ void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped 
     camera_ang_local_mat(1) = -pitch;
     camera_ang_local_mat(2) = -yaw;
 
-//    std::cout << "camera angles in cam frame " << std::endl
-//              << "roll " << camera_ang_local_mat(0) << std::endl
-//              << "pitch " << camera_ang_local_mat(1) << std::endl
-//              << "yaw " << camera_ang_local_mat(2) << std::endl;
+    //    std::cout << "camera angles in cam frame " << std::endl
+    //              << "roll " << camera_ang_local_mat(0) << std::endl
+    //              << "pitch " << camera_ang_local_mat(1) << std::endl
+    //              << "yaw " << camera_ang_local_mat(2) << std::endl;
 
     Eigen::Matrix4f euler_transformation_mat;
     this->transformEulerAnglesFromCameraToRobot(euler_transformation_mat);
     camera_ang_world_mat = euler_transformation_mat * camera_ang_local_mat;
 
-//    std::cout << "camera angles in world " << std::endl
-//              << "roll " << camera_ang_world_mat(0) << std::endl
-//              << "pitch " << camera_ang_world_mat(1) << std::endl
-//              << "yaw " << camera_ang_world_mat(2) << std::endl;
+    //    std::cout << "camera angles in world " << std::endl
+    //              << "roll " << camera_ang_world_mat(0) << std::endl
+    //              << "pitch " << camera_ang_world_mat(1) << std::endl
+    //              << "yaw " << camera_ang_world_mat(2) << std::endl;
 
 
     Eigen::Matrix4f transformation_mat;
@@ -484,10 +492,10 @@ void semantic_slam_ros::stereoOdometryCallback(const geometry_msgs::PoseStamped 
 
     camera_pose_world_mat = transformation_mat * camera_pose_local_mat;
 
-    std::cout << "world pose mat " << std::endl
-              << "x: " << camera_pose_world_mat(0) << std::endl
-              << "y: " << camera_pose_world_mat(1) << std::endl
-              << "z: " << camera_pose_world_mat(2) << std::endl;
+    //    std::cout << "world pose mat " << std::endl
+    //              << "x: " << camera_pose_world_mat(0) << std::endl
+    //              << "y: " << camera_pose_world_mat(1) << std::endl
+    //              << "z: " << camera_pose_world_mat(2) << std::endl;
 
     Eigen::VectorXf VO_pose;
     VO_pose.resize(6), VO_pose.setZero();
@@ -806,6 +814,7 @@ void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObje
 
     this->setDetectedObjectInfo(object_info);
 
+
 }
 
 void semantic_slam_ros::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
@@ -858,9 +867,31 @@ void semantic_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 
     optitrack_pose.pose.position.x = msg.pose.pose.position.x + optitrack_x_transform;
     optitrack_pose.pose.position.y = msg.pose.pose.position.y + optitrack_y_transform;
-    optitrack_pose.pose.position.z = msg.pose.pose.position.z;
+    optitrack_pose.pose.position.z = msg.pose.pose.position.z + optitrack_z_transform;
 
     optitrack_pose_pub_.publish(optitrack_pose);
+}
+
+void semantic_slam_ros::optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped &msg)
+{
+    nav_msgs::Path optitrack_path;
+    geometry_msgs::PoseStamped optitrack_pose;
+    ros::Time current_time = ros::Time::now();
+
+    optitrack_pose.header.stamp = current_time;
+    optitrack_pose.header.frame_id = "map";
+    optitrack_pose.pose.position = msg.pose.position;
+    optitrack_pose.pose.orientation = msg.pose.orientation;
+
+
+    optitrack_pose_vec_.push_back(optitrack_pose);
+
+    optitrack_path.header.stamp = current_time;
+    optitrack_path.header.frame_id = "map";
+    optitrack_path.poses = optitrack_pose_vec_;
+    optitrack_path_pub_.publish(optitrack_path);
+
+
 }
 
 void semantic_slam_ros::transformEulerAnglesFromCameraToRobot(Eigen::Matrix4f &transformation_mat)
@@ -899,12 +930,12 @@ void semantic_slam_ros::transformPoseFromCameraToRobot(Eigen::Matrix4f &transfor
     Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
     rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4);
 
-    rot_x_cam(0,0) = 1;
-    rot_x_cam(1,1) =  cos(-slamdunk_pitch_angle);
-    rot_x_cam(1,2) = -sin(-slamdunk_pitch_angle);
-    rot_x_cam(2,1) =  sin(-slamdunk_pitch_angle);
-    rot_x_cam(2,2) =  cos(-slamdunk_pitch_angle);
-    rot_x_cam(3,3) = 1;
+    //    rot_x_cam(0,0) = 1;
+    //    rot_x_cam(1,1) =  cos(-slamdunk_pitch_angle);
+    //    rot_x_cam(1,2) = -sin(-slamdunk_pitch_angle);
+    //    rot_x_cam(2,1) =  sin(-slamdunk_pitch_angle);
+    //    rot_x_cam(2,2) =  cos(-slamdunk_pitch_angle);
+    //    rot_x_cam(3,3) = 1;
 
     //rotation of -90
     rot_x_robot(0,0) = 1;
@@ -926,9 +957,9 @@ void semantic_slam_ros::transformPoseFromCameraToRobot(Eigen::Matrix4f &transfor
     translation_cam(0,0) = 1;
     translation_cam(0,3) = -0.05;
     translation_cam(1,1) = 1;
-    translation_cam(1,3) = -0.10;
+    translation_cam(1,3) = 0.0;
     translation_cam(2,2) = 1;
-    translation_cam(2,3) = 0.015;
+    translation_cam(2,3) = -0.015;
     translation_cam(3,3) = 1;
 
 
@@ -952,7 +983,7 @@ void semantic_slam_ros::transformPoseFromCameraToRobot(Eigen::Matrix4f &transfor
     //    T_robot_world(2,3) = prev_pose_z_;
     //    T_robot_world(3,3) = 1;
 
-    transformation_mat = translation_cam * rot_z_robot * rot_x_robot * rot_x_cam ;
+    transformation_mat = translation_cam * rot_z_robot * rot_x_robot /** rot_x_cam */;
 
 
     //std::cout << "transformation matrix " << transformation_mat << std::endl;
@@ -1041,13 +1072,13 @@ void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eige
     rot_z_robot(2,2) = 1;
     rot_z_robot(3,3) = 1;
 
-    //translation of -10cm in x, -0.5cm in y and -5cm in z
+    //translation of -10cm in x, 0.5cm in y and -5cm in z
     translation_cam(0,0) = 1;
-    translation_cam(0,3) = -0.10;
+    translation_cam(0,3) = -0.1;
     translation_cam(1,1) = 1;
-    translation_cam(1,3) = -0.005;
+    translation_cam(1,3) = 0.0;
     translation_cam(2,2) = 1;
-    translation_cam(2,3) = -0.5;
+    translation_cam(2,3) = 0.0;
     translation_cam(3,3) = 1;
 
 
@@ -1103,7 +1134,9 @@ void semantic_slam_ros::publishParticlePoses()
 void semantic_slam_ros::publishFinalPose()
 {
     geometry_msgs::PoseStamped final_particle_pose;
-    final_particle_pose.header.stamp = ros::Time::now();
+    ros::Time current_time = ros::Time::now();
+
+    final_particle_pose.header.stamp = current_time;
     final_particle_pose.header.frame_id = "map";
 
     final_particle_pose.pose.position.x = final_pose_(0);
@@ -1117,6 +1150,14 @@ void semantic_slam_ros::publishFinalPose()
     final_particle_pose.pose.orientation.w = quaternion.getW();
 
     final_pose_pub_.publish(final_particle_pose);
+
+    nav_msgs::Path final_path;
+    final_path.header.stamp = current_time;
+    final_path.header.frame_id = "map";
+
+    final_particle_pose_vec_.push_back(final_particle_pose);
+    final_path.poses = final_particle_pose_vec_;
+    final_path_pub_.publish(final_path);
 }
 
 void semantic_slam_ros::publishCorresVOPose()
