@@ -52,10 +52,10 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
-const float slamdunk_pitch_angle = 17*(M_PI/180);
-const float real_sense_pitch_angle =33*(M_PI/180);
+const float slamdunk_pitch_angle = 23*(M_PI/180);
+const float real_sense_pitch_angle =43*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 1000;
+const int num_particles_ = 2000;
 const int num_centroids = 2;
 
 const float optitrack_x_transform =  2.9;
@@ -129,6 +129,7 @@ protected:
     void publishFinalPose();
 
     ros::Publisher corres_vo_pose_pub_;
+    ros::Publisher corres_vo_path_;
     void publishCorresVOPose();
 
     ros::Publisher segmented_point_cloud_pub_;
@@ -222,6 +223,7 @@ protected:
     //for publishing the path
      std::vector<geometry_msgs::PoseStamped> final_particle_pose_vec_;
      std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
+     std::vector<geometry_msgs::PoseStamped> vo_pose_vec_;
 };
 
 

@@ -166,7 +166,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     //finding the orientation of all the horizontal planes in the cam frame
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
-    std::cout << "normals in the cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
+    //std::cout << "normals in the cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
 
     //---------------------removing the nans from the normals and the 3d points----------------------//
     cv::Mat normal_points, normal_filtered_points;
@@ -201,7 +201,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
     compactness = cv::kmeans(normal_filtered_points, num_centroids_normals, labels, criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, centroids);
 
-    std::cout << "centroids of normals kmeans " << centroids << std::endl;
+    //std::cout << "centroids of normals kmeans " << centroids << std::endl;
     //---------------------------------------------------------------------------------------------------//
 
     //---------------segmenting the normals and obtaining the corresponding 3D points--------------------//
@@ -219,7 +219,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     }
 
-    std::cout << "filtered centroids " << filtered_centroids << std::endl;
+    //std::cout << "filtered centroids " << filtered_centroids << std::endl;
 
     if(filtered_centroids.empty())
     {
@@ -281,11 +281,11 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     std::sort(height_centroids_vec.begin(), height_centroids_vec.end(), comparator);
 
-    std::cout << "final pose " << final_pose(2) << std::endl;
-    for(int i =0; i < height_centroids_vec.size(); ++i)
-    {
-        std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
-    }
+    //    std::cout << "final pose " << final_pose(2) << std::endl;
+    //    for(int i =0; i < height_centroids_vec.size(); ++i)
+    //    {
+    //        std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
+    //    }
     //-------------------------------------------------------------------------------------------------------------------//
 
     //------------------------obtaining the points corresponding to the segmented heights--------------------------------//

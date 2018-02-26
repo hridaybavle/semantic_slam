@@ -57,10 +57,10 @@ void semantic_slam_ros::init()
     //    mapped_object_pose[1](1) = 1.0;
     //    mapped_object_pose[1](2) = 0.44;
 
-    //rosbag of nave 4 chairs with optitrack
-    //chair 1
+    //    //rosbag of nave 4 chairs with optitrack
+    //    //chair 1
     mapped_object_pose.resize(4);
-    mapped_object_pose[0](0) = 2.0;
+    mapped_object_pose[0](0) = 1.9;
     mapped_object_pose[0](1) = 0.0;
     mapped_object_pose[0](2) = 0.45;
 
@@ -79,9 +79,26 @@ void semantic_slam_ros::init()
     mapped_object_pose[3](1) = 2.0;
     mapped_object_pose[3](2) = 0.45;
 
+    //rosbag of nave 3 chairs with optitrack
+    //    //chair 1
+    //    mapped_object_pose.resize(3);
+    //    mapped_object_pose[0](0) = 1.9;
+    //    mapped_object_pose[0](1) = 1.0;
+    //    mapped_object_pose[0](2) = 0.45;
+
+    //    //chair 2
+    //    mapped_object_pose[1](0) = 3.0;
+    //    mapped_object_pose[1](1) =-1.0;
+    //    mapped_object_pose[1](2) = 0.43;
+
+    //    //chair 3
+    //    mapped_object_pose[2](0) = 5.0;
+    //    mapped_object_pose[2](1) = 0.0;
+    //    mapped_object_pose[2](2) = 0.49;
+
 
     //rosbag of nave 4 chairs without optitrack
-    //    //chair 1
+    //    //    //chair 1
     //    mapped_object_pose.resize(4);
     //    mapped_object_pose[0](0) = 4.0;
     //    mapped_object_pose[0](1) = 1.0;
@@ -98,9 +115,32 @@ void semantic_slam_ros::init()
     //    mapped_object_pose[2](2) = 0.45;
 
     //    //chair 4
-    //    mapped_object_pose[3](0) = 2.0;
-    //    mapped_object_pose[3](1) = 4.0;
+    //    mapped_object_pose[3](0) = 2.5;
+    //    mapped_object_pose[3](1) = 2.5;
     //    mapped_object_pose[3](2) = 0.45;
+
+    //rosbag of nave 4 chairs without optitrack new
+    //    //chair 1
+    //    mapped_object_pose.resize(4);
+    //    mapped_object_pose[0](0) = 3.0;
+    //    mapped_object_pose[0](1) =-0.5;
+    //    mapped_object_pose[0](2) = 0.45;
+
+    //    //chair 2
+    //    mapped_object_pose[1](0) = 7.5;
+    //    mapped_object_pose[1](1) = 1.5;
+    //    mapped_object_pose[1](2) = 0.49;
+
+    //    //chair 3
+    //    mapped_object_pose[2](0) = 7.0;
+    //    mapped_object_pose[2](1) = 4.0;
+    //    mapped_object_pose[2](2) = 0.43;
+
+    //    //chair 4
+    //    mapped_object_pose[3](0) = 1.5;
+    //    mapped_object_pose[3](1) = 2.5;
+    //    mapped_object_pose[3](2) = 0.45;
+
 
     //    //rosbag of passage
     //    //chair 1
@@ -329,10 +369,11 @@ void semantic_slam_ros::run()
                         final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane.at<float>(0,0);
                         final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane.at<float>(0,1);
                         final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
+                        final_detected_point_cam_frame(3) = 1;
 
                         final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                        std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
-                        std::cout << "segmented pc points " << horizontal_point_size << std::endl;
+                        //std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
+                        //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
                         final_detected_point.x = final_detected_point_robot_frame(0);
                         final_detected_point.y = final_detected_point_robot_frame(1);
@@ -355,7 +396,7 @@ void semantic_slam_ros::run()
                         complete_obj_info.pose       = final_pose_of_object_in_robot;
                         complete_obj_info.num_points = horizontal_point_size;
 
-                        std::cout << "detection prob " << complete_obj_info.prob << std::endl;
+                        //std::cout << "detection prob " << complete_obj_info.prob << std::endl;
                         if(segmented_objects_from_point_cloud[i].prob > 0.5)
                             filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info, filtered_pose_, final_pose_, VO_pose_);
                         else
@@ -437,6 +478,7 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     final_pose_pub_                 = n.advertise<geometry_msgs::PoseStamped>("final_pose",1);
     final_path_pub_                 = n.advertise<nav_msgs::Path>("final_path",1);
     corres_vo_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    corres_vo_path_                 = n.advertise<nav_msgs::Path>("corres_vo_path",1);
     segmented_point_cloud_pub_      = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
     detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
@@ -983,7 +1025,7 @@ void semantic_slam_ros::transformPoseFromCameraToRobot(Eigen::Matrix4f &transfor
     //    T_robot_world(2,3) = prev_pose_z_;
     //    T_robot_world(3,3) = 1;
 
-    transformation_mat = translation_cam * rot_z_robot * rot_x_robot /** rot_x_cam */;
+    transformation_mat = /*translation_cam **/ rot_z_robot * rot_x_robot /** rot_x_cam*/ ;
 
 
     //std::cout << "transformation matrix " << transformation_mat << std::endl;
@@ -1072,11 +1114,11 @@ void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eige
     rot_z_robot(2,2) = 1;
     rot_z_robot(3,3) = 1;
 
-    //translation of -10cm in x, 0.5cm in y and -5cm in z
+    //translation of -10cm in x, 10cm in y and -5cm in z
     translation_cam(0,0) = 1;
-    translation_cam(0,3) = -0.1;
+    translation_cam(0,3) = 0;
     translation_cam(1,1) = 1;
-    translation_cam(1,3) = 0.0;
+    translation_cam(1,3) = -0.1;
     translation_cam(2,2) = 1;
     translation_cam(2,3) = 0.0;
     translation_cam(3,3) = 1;
@@ -1162,8 +1204,9 @@ void semantic_slam_ros::publishFinalPose()
 
 void semantic_slam_ros::publishCorresVOPose()
 {
+    ros::Time current_time = ros::Time::now();
     geometry_msgs::PoseStamped corres_vo_pose;
-    corres_vo_pose.header.stamp = ros::Time::now();
+    corres_vo_pose.header.stamp = current_time;
     corres_vo_pose.header.frame_id = "map";
 
     corres_vo_pose.pose.position.x = VO_pose_(0);
@@ -1177,6 +1220,15 @@ void semantic_slam_ros::publishCorresVOPose()
     corres_vo_pose.pose.orientation.w = quaternion.getW();
 
     corres_vo_pose_pub_.publish(corres_vo_pose);
+
+
+    nav_msgs::Path vo_path;
+    vo_path.header.stamp = current_time;
+    vo_path.header.frame_id = "map";
+
+    vo_pose_vec_.push_back(corres_vo_pose);
+    vo_path.poses = vo_pose_vec_;
+    corres_vo_path_.publish(vo_path);
 
 }
 
