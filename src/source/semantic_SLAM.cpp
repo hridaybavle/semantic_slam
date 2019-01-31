@@ -21,41 +21,11 @@ void semantic_slam_ros::init()
     VO_pose_.resize(6);
     aruco_poses_.resize(1);
 
-    //    //first aruco pose
-    //    aruco_poses_[0](0) = 2.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 0.56;
-    //    //second aruco pose
-    //    aruco_poses_[1](0) = 3.51, aruco_poses_[1](1) = -1.55, aruco_poses_[1](2) = 1.38;
-
-    //first aruco pose
-    //    aruco_poses_[0](0) = 3.0, aruco_poses_[0](1) = 0.0, aruco_poses_[0](2) = 1.39;
-    //    //second aruco pose
-    //    aruco_poses_[1](0) = 3.0, aruco_poses_[1](1) = -1.49, aruco_poses_[1](2) = 1.39;
-
-
     //this is temporary will be filled from an xml file
     //object pose
     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec;
 
     std::vector<Eigen::Vector3f> mapped_object_pose;
-
-
-    //rosbag of lab
-    //mapped_object_pose.resize(1);
-    //    mapped_object_pose[0](0) = 2.0;
-    //    mapped_object_pose[0](1) = 0.0;
-    //    mapped_object_pose[0](2) = 0.53;
-
-    //rosbag of nave
-    //mapped_object_pose.resize(2);
-    //    mapped_object_pose[0](0) = 3.0;
-    //    mapped_object_pose[0](1) = 0.0;
-    //    mapped_object_pose[0](2) = 0.44;
-
-    //    //second chair pose
-    //    //rosbag of nave
-    //    mapped_object_pose[1](0) = 5.0;
-    //    mapped_object_pose[1](1) = 1.0;
-    //    mapped_object_pose[1](2) = 0.44;
 
     //    //rosbag of nave 4 chairs with optitrack
     //    //chair 1
@@ -78,91 +48,6 @@ void semantic_slam_ros::init()
     mapped_object_pose[3](0) = 2.0;
     mapped_object_pose[3](1) = 2.0;
     mapped_object_pose[3](2) = 0.45;
-
-    //rosbag of nave 3 chairs with optitrack
-    //    //chair 1
-    //    mapped_object_pose.resize(3);
-    //    mapped_object_pose[0](0) = 1.9;
-    //    mapped_object_pose[0](1) = 1.0;
-    //    mapped_object_pose[0](2) = 0.45;
-
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 3.0;
-    //    mapped_object_pose[1](1) =-1.0;
-    //    mapped_object_pose[1](2) = 0.43;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 5.0;
-    //    mapped_object_pose[2](1) = 0.0;
-    //    mapped_object_pose[2](2) = 0.49;
-
-
-    //rosbag of nave 4 chairs without optitrack
-    //    //    //chair 1
-    //    mapped_object_pose.resize(4);
-    //    mapped_object_pose[0](0) = 4.0;
-    //    mapped_object_pose[0](1) = 1.0;
-    //    mapped_object_pose[0](2) = 0.45;
-
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 7.0;
-    //    mapped_object_pose[1](1) = 1.0;
-    //    mapped_object_pose[1](2) = 0.49;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 7.0;
-    //    mapped_object_pose[2](1) = 4.0;
-    //    mapped_object_pose[2](2) = 0.45;
-
-    //    //chair 4
-    //    mapped_object_pose[3](0) = 2.5;
-    //    mapped_object_pose[3](1) = 2.5;
-    //    mapped_object_pose[3](2) = 0.45;
-
-    //rosbag of nave 4 chairs without optitrack new
-    //    //chair 1
-    //    mapped_object_pose.resize(4);
-    //    mapped_object_pose[0](0) = 3.0;
-    //    mapped_object_pose[0](1) =-0.5;
-    //    mapped_object_pose[0](2) = 0.45;
-
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 7.5;
-    //    mapped_object_pose[1](1) = 1.5;
-    //    mapped_object_pose[1](2) = 0.49;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 7.0;
-    //    mapped_object_pose[2](1) = 4.0;
-    //    mapped_object_pose[2](2) = 0.43;
-
-    //    //chair 4
-    //    mapped_object_pose[3](0) = 1.5;
-    //    mapped_object_pose[3](1) = 2.5;
-    //    mapped_object_pose[3](2) = 0.45;
-
-
-    //    //rosbag of passage
-    //    //chair 1
-    //    mapped_object_pose.resize(4);
-    //    mapped_object_pose[0](0) = 1.89;
-    //    mapped_object_pose[0](1) = -0.55;
-    //    mapped_object_pose[0](2) = 0.45;
-
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 7.94;
-    //    mapped_object_pose[1](1) = 0.57;
-    //    mapped_object_pose[1](2) = 0.45;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 12.73;
-    //    mapped_object_pose[2](1) = 0.57;
-    //    mapped_object_pose[2](2) = 0.45;
-
-    //    //chair 4
-    //    mapped_object_pose[3](0) = 16.47;
-    //    mapped_object_pose[3](1) = -0.55;
-    //    mapped_object_pose[3](2) = 0.435;
 
     mapped_object_vec.resize(mapped_object_pose.size());
     for(int i = 0; i < mapped_object_vec.size(); ++i)
