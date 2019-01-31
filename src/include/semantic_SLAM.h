@@ -52,7 +52,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
-const float slamdunk_pitch_angle = 23*(M_PI/180);
 const float real_sense_pitch_angle =43*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 2000;
@@ -89,14 +88,11 @@ private:
 
     //Publishers and subscribers
 protected:
-    ros::Subscriber stereo_odometry_sub_;
-    void stereoOdometryCallback(const geometry_msgs::PoseStamped& msg);
+    ros::Subscriber rovio_odometry_sub_;
+    void rovioOdometryCallback(const nav_msgs::Odometry& msg);
 
     ros::Subscriber imu_sub_;
     void imuCallback(const sensor_msgs::Imu& msg);
-
-    ros::Subscriber magnetic_field_sub_;
-    void magneticFieldCallback(const sensor_msgs::MagneticField& msg);
 
     ros::Subscriber bebop_imu_sub_;
     void bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingStateAttitudeChanged& msg);
@@ -105,9 +101,6 @@ protected:
 
     ros::Subscriber aruco_observation_sub_;
     void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
-
-    ros::Subscriber slam_dunk_pose_sub_;
-    void slamdunkPoseCallback(const geometry_msgs::PoseStamped& msg);
 
     ros::Subscriber detected_object_sub_;
     void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
@@ -144,19 +137,23 @@ protected:
     ros::Publisher optitrack_pose_pub_;
     ros::Publisher optitrack_path_pub_;
 protected:
+    //variables regarding RVIO
+    std::mutex rvio_pose_lock_;
+    bool rvio_pose_available_;
+    Eigen::VectorXf RVIO_pose_;
+    void setRVIOPose(Eigen::VectorXf RVIO_pose);
+    void getRVIOPose(Eigen::VectorXf& RVIO_pose);
+
+
     //variables regarding VO
     float pose_x_, pose_y_, pose_z_;
     void transformEulerAnglesFromCameraToRobot(Eigen::Matrix4f &transformation_mat);
     void transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat);
     void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
     void transformNormalsToWorld(Eigen::VectorXf final_pose, Eigen::Matrix4f &transformation_mat);
-    void setVOPose(Eigen::VectorXf VO_pose);
-    void getVOPose(Eigen::VectorXf& VO_pose);
     void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);
     void getArucoPose(std::vector<Eigen::Vector4f>& aruco_pose);
 
-    void setSlamdunkPose(Eigen::Vector3f pose);
-    void getSlamdunkPose(Eigen::Vector3f& pose);
 
     std::mutex bebop_imu_lock_;
     bool bebop_imu_data_available_;
@@ -168,14 +165,6 @@ protected:
     float acc_x_, acc_y_, acc_z_;
     void setIMUdata(float acc_x,float acc_y,float acc_z);
     void getIMUdata(float& acc_x, float& acc_y, float& acc_z);
-
-    std::mutex magnetometer_data_lock_;
-    float mag_x_, mag_y_, mag_z_;
-    void setMagData(float mag_x, float mag_y, float mag_z);
-    void getMagData(float& mag_x, float& mag_y,float& mag_z);
-
-    bool magnetic_field_available_;
-    void calculateRPYAngles();
 
     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
     void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
@@ -191,14 +180,9 @@ protected:
     Eigen::Vector4f imu_local_acc_mat_, imu_world_acc_mat_;
     Eigen::Vector4f imu_local_ang_vel_, imu_world_ang_vel_;
 
-    std::mutex vo_pose_lock_;
-    Eigen::VectorXf VO_pose_;
-    bool vo_data_available_;
-
     std::vector<Eigen::VectorXf> filtered_pose_;
 
     //variables regarding aruco detection
-    std::vector<Eigen::Vector3f> aruco_poses_;
     std::mutex aruco_pose_lock_;
     bool aruco_data_available_;
     std::vector<Eigen::Vector4f> aruco_pose_;
