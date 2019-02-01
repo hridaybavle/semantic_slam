@@ -2,6 +2,7 @@
 #include <string>
 #include <math.h>
 #include <mutex>
+#include <random>
 
 #include "semantic_SLAM/ObjectInfo.h"
 
@@ -14,6 +15,7 @@
 //PCL
 #include "pcl/point_types.h"
 #include <pcl/features/integral_image_normal.h>
+#include <pcl/search/impl/search.hpp>
 
 //opencv
 #include <opencv2/core/core.hpp>
