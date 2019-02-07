@@ -52,7 +52,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
-const float real_sense_pitch_angle =43*(M_PI/180);
+const float real_sense_pitch_angle =21*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 2000;
 const int num_centroids = 2;
