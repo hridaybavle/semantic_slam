@@ -54,7 +54,7 @@
 
 const float real_sense_pitch_angle =21*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 2000;
+const int num_particles_ = 1000;
 const int num_centroids = 2;
 
 const float optitrack_x_transform =  2.9;

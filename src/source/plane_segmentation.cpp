@@ -147,7 +147,6 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
 cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
                                                    Eigen::MatrixXf final_pose, float& point_size)
 {
-    std::cout << "here"  << std::endl;
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
     normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
 
@@ -201,7 +200,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
     compactness = cv::kmeans(normal_filtered_points, num_centroids_normals, labels, criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, centroids);
 
-    std::cout << "centroids of normals kmeans " << centroids << std::endl;
+    //std::cout << "centroids of normals kmeans " << centroids << std::endl;
     //---------------------------------------------------------------------------------------------------//
 
     //---------------segmenting the normals and obtaining the corresponding 3D points--------------------//
