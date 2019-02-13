@@ -13,13 +13,10 @@ semantic_slam_ros::~semantic_slam_ros()
 
 void semantic_slam_ros::init()
 {
-    imu_data_available_, aruco_data_available_ = false, slamdunk_data_available_ = false, bebop_imu_data_available_ = false,
-            object_detection_available_ = false, point_cloud_available_ = false;
-    bebop_imu_data_ready_ = false;
+    imu_data_available_, object_detection_available_ = false, point_cloud_available_ = false;
     rvio_pose_available_ = false;
 
     prev_time_ = 0;
-    yaw_first_ = 0;
     RVIO_pose_.resize(6);
     RVIO_pose_.setZero();
 
@@ -29,45 +26,11 @@ void semantic_slam_ros::init()
 
     std::vector<Eigen::Vector3f> mapped_object_pose;
 
-    //    //rosbag of nave 4 chairs with optitrack
-    //    //chair 1
-    //    mapped_object_pose.resize(4);
-    //    mapped_object_pose[0](0) = 1.9;
-    //    mapped_object_pose[0](1) = 0.0;
-    //    mapped_object_pose[0](2) = 0.45;
+    mapped_object_vec_.clear();
+    mapped_object_pose.clear();
 
-    //    //chair 2
-    //    mapped_object_pose[1](0) = 4.5;
-    //    mapped_object_pose[1](1) =-1.0;
-    //    mapped_object_pose[1](2) = 0.49;
-
-    //    //chair 3
-    //    mapped_object_pose[2](0) = 4.5;
-    //    mapped_object_pose[2](1) = 1.0;
-    //    mapped_object_pose[2](2) = 0.43;
-
-    //    //chair 4
-    //    mapped_object_pose[3](0) = 2.0;
-    //    mapped_object_pose[3](1) = 2.0;
-    //    mapped_object_pose[3](2) = 0.45;
-
-    //    mapped_object_vec.resize(mapped_object_pose.size());
-    for(int i = 0; i < mapped_object_vec.size(); ++i)
-    {
-        mapped_object_vec[i].type = "chair";
-        mapped_object_vec[i].pose =  mapped_object_pose[i];
-    }
-
-    this->mapped_object_vec_ = mapped_object_vec;
     filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, mapped_object_vec);
     final_pose_.resize(6); final_pose_.setZero();
-
-    //    filtered_pose_.resize(num_particles_);
-    //    for(int i= 0; i < num_particles_; ++i)
-    //    {
-    //        filtered_pose_[i].resize(state_size_);
-    //        filtered_pose_[i].setZero();
-    //    }
 
     //Display Window
     //    pclViewer->setBackgroundColor (0, 0, 0);
@@ -93,9 +56,6 @@ void semantic_slam_ros::run()
     time_diff = current_time_ - prev_time_;
     //std::cout << "time diff " << time_diff << std::endl;
 
-    Eigen::VectorXf avg_pose;
-    geometry_msgs::Point detected_object_avg_position;
-
     //--------------------------Prediction stage using ROVIO--------------------------------------//
     if(rvio_pose_available_)
     {
@@ -108,127 +68,28 @@ void semantic_slam_ros::run()
         filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, RVIO_pose, filtered_pose_, final_pose_);
 
     }
-    //---------------------------------------------------------------------------------------------------------------//
 
-    //--------------------------Update stage for updating the roll, pitch and yaw from bebop imu--------------------//
-    //    if(bebop_imu_data_available_)
-    //    {
-    //        float roll, pitch, yaw;
-    //        getBebopIMUData(roll, pitch, yaw);
-
-    //        filtered_pose_ = particle_filter_obj_.bebopIMUUpdate(roll, pitch, yaw, filtered_pose_, final_pose_);
-
-    //    }
-    //    //--------------------------------------------------------------------------------------------------------------//
-
-
-    //    //-------------------------------------segmentation of the point_cloud------------------------------------------//
-    sensor_msgs::PointCloud2 segmented_point_cloud;
-    geometry_msgs::Point final_detected_point;
-    Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
-    std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
+    //-------------------------------------segmentation of the point_cloud------------------------------------------//
     std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
-
-    complete_obj_info_vec.clear();
-
     if(object_detection_available_)
     {
         if(point_cloud_available_)
         {
-            std::vector<semantic_SLAM::ObjectInfo> object_info;
-            this->getDetectedObjectInfo(object_info);
-
-            sensor_msgs::PointCloud2 point_cloud;
-            this->getPointCloudData(point_cloud);
-
-            //This segments the PC according to the received bounding box data in the 2D image
-            for (int i = 0; i < object_info.size(); ++i)
-            {
-                if(object_info[i].type == "chair")
-                    segmented_objects_from_point_cloud.push_back(plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud));
-            }
-
-            for(int i = 0; i < segmented_objects_from_point_cloud.size(); ++i)
-            {
-                if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
-                {
-
-                    //This calculates the normals of the segmented pointcloud
-                    pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
-                    segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
-
-                    //inputting the current roll, pitch and yaw from the pf updated from imu
-                    Eigen::Matrix4f transformation_mat;
-                    this->transformNormalsToWorld(final_pose_, transformation_mat);
-
-                    float horizontal_point_size =0;
-                    cv::Mat final_pose_from_horizontal_plane;
-                    final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_objects_from_point_cloud[i].segmented_point_cloud, segmented_point_cloud_normal,
-                                                                                                      transformation_mat, final_pose_, horizontal_point_size);
-
-
-                    final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
-                    if(!final_pose_from_horizontal_plane.empty())
-                    {
-
-                        final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane.at<float>(0,0);
-                        final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane.at<float>(0,1);
-                        final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
-                        final_detected_point_cam_frame(3) = 1;
-
-                        final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                        //std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
-                        //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
-
-                        final_detected_point.x = final_detected_point_robot_frame(0);
-                        final_detected_point.y = final_detected_point_robot_frame(1);
-                        final_detected_point.z = final_detected_point_robot_frame(2);
-                        publishFinalDetectedObjectPoint(final_detected_point);
-
-
-                        Eigen::Vector3f final_pose_of_object_in_robot;
-
-                        final_pose_of_object_in_robot(0) = final_detected_point.x;
-                        final_pose_of_object_in_robot(1) = final_detected_point.y;
-                        final_pose_of_object_in_robot(2) = final_detected_point.z;
-
-
-                        //this will be changed to add more objects, for now its a start
-                        particle_filter::object_info_struct_pf complete_obj_info;
-
-                        complete_obj_info.type       = segmented_objects_from_point_cloud[i].type;
-                        complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
-                        complete_obj_info.pose       = final_pose_of_object_in_robot;
-                        complete_obj_info.num_points = horizontal_point_size;
-
-                        if( complete_obj_info.num_points  > 500)
-                            complete_obj_info_vec.push_back(complete_obj_info);
-
-                    }
-
-                }
-            }
-
-            if(!complete_obj_info_vec.empty())
-            {
-                filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info_vec,
-                                                                         filtered_pose_,
-                                                                         final_pose_,
-                                                                         RVIO_pose_,
-                                                                         mapped_object_vec_);
-            }
-            else
-                std::cout << "\033[1;31mReturning as not objects segmented\033[0m" << std::endl;
-
-            //                pclViewer->removeAllPointClouds();
-            //                //pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
-            //                pclViewer->addPointCloud<pcl::PointXYZRGB>(segmented_point_cloud_pcl,"segmented cloud");
-            //                pclViewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(segmented_point_cloud_pcl, segmented_point_cloud_normal, 100, 0.02f, "segmented cloud normals");
-            //                pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "segmented cloud");
-            publishSegmentedPointCloud(segmented_point_cloud);
-
+            complete_obj_info_vec = this->segmentPointCloudData();
         }
+
+        if(!complete_obj_info_vec.empty())
+        {
+            filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info_vec,
+                                                                     filtered_pose_,
+                                                                     final_pose_,
+                                                                     RVIO_pose_,
+                                                                     mapped_object_vec_);
+        }
+        else
+            std::cout << "\033[1;31mReturning as not objects segmented\033[0m" << std::endl;
     }
+
 
     publishFinalPose();
     publishCorresVOPose();
@@ -246,8 +107,6 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     //ros subsriber
     rovio_odometry_sub_    = n.subscribe("/rovio/odometry", 1, &semantic_slam_ros::rovioOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu", 1, &semantic_slam_ros::imuCallback, this);
-    aruco_observation_sub_ = n.subscribe("/aruco_eye/aruco_observation",1, &semantic_slam_ros::arucoObservationCallback, this);
-    bebop_imu_sub_         = n.subscribe("/drone4/states/ardrone3/PilotingState/AttitudeChanged", 1, &semantic_slam_ros::bebopIMUCallback, this);
     detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
     optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/bebop/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
@@ -324,7 +183,10 @@ void semantic_slam_ros::imuCallback(const sensor_msgs::Imu &msg)
     imu_local_acc_mat_(1) = msg.linear_acceleration.y;
     imu_local_acc_mat_(2) = msg.linear_acceleration.z;
 
-    this->transformIMUtoWorld(imu_local_acc_mat_(0), imu_local_acc_mat_(1), imu_local_acc_mat_(2), transformation_mat_acc_);
+    semantic_tools_obj_.transformIMUtoWorld(imu_local_acc_mat_(0),
+                                            imu_local_acc_mat_(1),
+                                            imu_local_acc_mat_(2),
+                                            transformation_mat_acc_);
 
     //converting the imu acclerations in world frame
     imu_world_acc_mat_ = transformation_mat_acc_ * imu_local_acc_mat_;
@@ -339,7 +201,10 @@ void semantic_slam_ros::imuCallback(const sensor_msgs::Imu &msg)
     imu_local_ang_vel_(1) = msg.angular_velocity.y;
     imu_local_ang_vel_(2) = msg.angular_velocity.z;
 
-    this->transformIMUtoWorld(imu_local_ang_vel_(0), imu_local_ang_vel_(1), imu_local_ang_vel_(2), transformation_mat_ang_vel_);
+    semantic_tools_obj_.transformIMUtoWorld(imu_local_ang_vel_(0),
+                                            imu_local_ang_vel_(1),
+                                            imu_local_ang_vel_(2),
+                                            transformation_mat_ang_vel_);
 
     imu_world_ang_vel_ = transformation_mat_acc_ * imu_local_ang_vel_;
 
@@ -376,103 +241,6 @@ void semantic_slam_ros::getIMUdata(float &acc_x, float &acc_y, float &acc_z)
 
 }
 
-
-void semantic_slam_ros::bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingStateAttitudeChanged &msg)
-{
-    float roll, pitch, yaw;
-
-    //this makes sure that the yaw data is taken again after takeoff, as the yaw of the bebop changes during takeoff//
-    if(final_pose_(2) > 1.4)
-        bebop_imu_data_ready_ = false;
-
-
-    if(!bebop_imu_data_ready_)
-    {
-        yaw_first_   = msg.yaw;
-        bebop_imu_data_ready_ = true;
-    }
-
-    //bebop provides the angles in NED, hence converting them to ENU
-    roll  =  msg.roll;
-    pitch = -msg.pitch;
-    yaw   = -(msg.yaw - yaw_first_);
-
-    //    if (yaw < 0)
-    //        yaw = yaw + 2*M_PI;
-    //    std::cout << "yaw from bebop " << msg.yaw * (180/M_PI) << std::endl;
-    //    std::cout << "yaw calculated by me " << yaw * (180/M_PI) << std::endl;
-
-
-    this->setBebopIMUData(roll, pitch, yaw);
-
-}
-
-void semantic_slam_ros::setBebopIMUData(float roll, float pitch, float yaw)
-{
-    bebop_imu_lock_.lock();
-    bebop_imu_data_available_ = true;
-    bebop_imu_roll_  = roll;
-    bebop_imu_pitch_ = pitch;
-    bebop_imu_yaw_   = yaw;
-    bebop_imu_lock_.unlock();
-
-}
-
-void semantic_slam_ros::getBebopIMUData(float &roll, float &pitch, float &yaw)
-{
-
-    bebop_imu_lock_.lock();
-    bebop_imu_data_available_ = false;
-    roll  = bebop_imu_roll_;
-    pitch = bebop_imu_pitch_;
-    yaw   = bebop_imu_yaw_;
-    bebop_imu_lock_.unlock();
-}
-
-void semantic_slam_ros::arucoObservationCallback(const aruco_eye_msgs::MarkerList &msg)
-{
-    std::vector<Eigen::Vector4f> aruco_pose_cam, aruco_pose_robot;
-    aruco_pose_cam.resize(msg.markers.size()), aruco_pose_robot.resize(msg.markers.size());
-    Eigen::Matrix4f transformation_mat;
-
-    this->transformPoseFromCameraToRobot(transformation_mat);
-
-    for (int i = 0; i < msg.markers.size(); ++i)
-    {
-        aruco_pose_cam[i].setOnes();
-        aruco_pose_robot[i].setOnes();
-
-        aruco_pose_cam[i](0) = msg.markers[i].pose.pose.position.x;
-        aruco_pose_cam[i](1) = msg.markers[i].pose.pose.position.y;
-        aruco_pose_cam[i](2) = msg.markers[i].pose.pose.position.z;
-
-        aruco_pose_robot[i] = transformation_mat * aruco_pose_cam[i];
-
-        //filling the last element with the aruco id
-        aruco_pose_robot[i](3) = msg.markers[i].id;
-        //std::cout << "aruco marker pose in cam " << i << " " << "pose " << aruco_pose_cam[i] << std::endl;
-        //std::cout << "aruco marker pose in robot " << i << " " << "pose " << aruco_pose_robot[i] << std::endl;
-    }
-
-    this->setArucoPose(aruco_pose_robot);
-
-}
-
-void semantic_slam_ros::setArucoPose(std::vector<Eigen::Vector4f> aruco_pose)
-{
-    aruco_pose_lock_.lock();
-    aruco_data_available_ = true;
-    this->aruco_pose_ = aruco_pose;
-    aruco_pose_lock_.unlock();
-}
-
-void semantic_slam_ros::getArucoPose(std::vector<Eigen::Vector4f> &aruco_pose)
-{
-    aruco_pose_lock_.lock();
-    aruco_data_available_ = false;
-    aruco_pose = this->aruco_pose_;
-    aruco_pose_lock_.unlock();
-}
 
 void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
 {
@@ -572,215 +340,104 @@ void semantic_slam_ros::optitrackPoseForPlottingPathCallback(const geometry_msgs
 
 }
 
-void semantic_slam_ros::transformEulerAnglesFromCameraToRobot(Eigen::Matrix4f &transformation_mat)
+std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPointCloudData()
 {
+    sensor_msgs::PointCloud2 segmented_point_cloud;
+    geometry_msgs::Point final_detected_point;
+    Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
+    std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
+    std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
 
-    Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
-    rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4);
+    complete_obj_info_vec.clear();
 
-    //rotation of -90
-    rot_x_robot(0,0) = 1;
-    rot_x_robot(1,1) =  cos(-1.5708);
-    rot_x_robot(1,2) = -sin(-1.5708);
-    rot_x_robot(2,1) =  sin(-1.5708);
-    rot_x_robot(2,2) =  cos(-1.5708);
-    rot_x_robot(3,3) = 1;
+    std::vector<semantic_SLAM::ObjectInfo> object_info;
+    this->getDetectedObjectInfo(object_info);
 
-    //rotation of -90
-    rot_z_robot(0,0) = cos(-1.5708);
-    rot_z_robot(0,1) = -sin(-1.5708);
-    rot_z_robot(1,0) = sin(-1.5708);
-    rot_z_robot(1,1) = cos(-1.5708);
-    rot_z_robot(2,2) = 1;
-    rot_z_robot(3,3) = 1;
+    sensor_msgs::PointCloud2 point_cloud;
+    this->getPointCloudData(point_cloud);
 
+    //This segments the PC according to the received bounding box data in the 2D image
+    for (int i = 0; i < object_info.size(); ++i)
+    {
+        if(object_info[i].type == "chair")
+            segmented_objects_from_point_cloud.push_back(plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud));
+    }
 
-    transformation_mat = rot_z_robot * rot_x_robot;
+    for(int i = 0; i < segmented_objects_from_point_cloud.size(); ++i)
+    {
+        if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
+        {
 
-    //std::cout << "transformation matrix " << transformation_mat << std::endl;
+            //This calculates the normals of the segmented pointcloud
+            pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
+            segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
 
-}
+            //inputting the current roll, pitch and yaw from the pf updated from imu
+            Eigen::Matrix4f transformation_mat;
+            //this->transformNormalsToWorld(final_pose_, transformation_mat);
+            semantic_tools_obj_.transformNormalsToWorld(final_pose_,
+                                                        transformation_mat,
+                                                        real_sense_pitch_angle);
 
-
-void semantic_slam_ros::transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat)
-{
-
-    Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
-    rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4);
-
-    //    rot_x_cam(0,0) = 1;
-    //    rot_x_cam(1,1) =  cos(-slamdunk_pitch_angle);
-    //    rot_x_cam(1,2) = -sin(-slamdunk_pitch_angle);
-    //    rot_x_cam(2,1) =  sin(-slamdunk_pitch_angle);
-    //    rot_x_cam(2,2) =  cos(-slamdunk_pitch_angle);
-    //    rot_x_cam(3,3) = 1;
-
-    //rotation of -90
-    rot_x_robot(0,0) = 1;
-    rot_x_robot(1,1) =  cos(-1.5708);
-    rot_x_robot(1,2) = -sin(-1.5708);
-    rot_x_robot(2,1) =  sin(-1.5708);
-    rot_x_robot(2,2) =  cos(-1.5708);
-    rot_x_robot(3,3) = 1;
-
-    //rotation of -90
-    rot_z_robot(0,0) = cos(-1.5708);
-    rot_z_robot(0,1) = -sin(-1.5708);
-    rot_z_robot(1,0) = sin(-1.5708);
-    rot_z_robot(1,1) = cos(-1.5708);
-    rot_z_robot(2,2) = 1;
-    rot_z_robot(3,3) = 1;
-
-    //tranlation of 5cm in x, 10cm in y and 1.5cm in z
-    translation_cam(0,0) = 1;
-    translation_cam(0,3) = -0.05;
-    translation_cam(1,1) = 1;
-    translation_cam(1,3) = 0.0;
-    translation_cam(2,2) = 1;
-    translation_cam(2,3) = -0.015;
-    translation_cam(3,3) = 1;
+            float horizontal_point_size =0;
+            cv::Mat final_pose_from_horizontal_plane;
+            final_pose_from_horizontal_plane = plane_segmentation_obj_.computeHorizontalPlane(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                                              segmented_point_cloud_normal,
+                                                                                              transformation_mat, final_pose_,
+                                                                                              horizontal_point_size);
 
 
-    //transformation from robot to world
-    //    T_robot_world(0,0) = cos(yaw)*cos(pitch);
-    //    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-    //    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
+            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            if(!final_pose_from_horizontal_plane.empty())
+            {
 
-    //    T_robot_world(1,0) = sin(yaw)*cos(pitch);
-    //    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-    //    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
+                final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane.at<float>(0,0);
+                final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane.at<float>(0,1);
+                final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane.at<float>(0,2);
+                final_detected_point_cam_frame(3) = 1;
 
-    //    T_robot_world(2,0) = -sin(pitch);
-    //    T_robot_world(2,1) = cos(pitch)*sin(roll);
-    //    T_robot_world(2,2) = cos(pitch)*cos(roll);
+                final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
+                //std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
+                //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
-    //fill the x, y and z variables over here if there is a fixed transform between the camera and the world frame
-    //currently its they are all zero as the pose is obtained of the camera with respect to the world.
-    //    T_robot_world(0,3) = prev_pose_x_;
-    //    T_robot_world(1,3) = prev_pose_y_;
-    //    T_robot_world(2,3) = prev_pose_z_;
-    //    T_robot_world(3,3) = 1;
-
-    transformation_mat = /*translation_cam **/ rot_z_robot * rot_x_robot /** rot_x_cam*/ ;
+                final_detected_point.x = final_detected_point_robot_frame(0);
+                final_detected_point.y = final_detected_point_robot_frame(1);
+                final_detected_point.z = final_detected_point_robot_frame(2);
+                publishFinalDetectedObjectPoint(final_detected_point);
 
 
-    //std::cout << "transformation matrix " << transformation_mat << std::endl;
+                Eigen::Vector3f final_pose_of_object_in_robot;
 
-}
-
-void semantic_slam_ros::transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat)
-{
-    Eigen::Matrix4f rot_x_imu, T_robot_world;
-    double roll, pitch, yaw;
-
-    //for now considering roll, pitch and yaw zero
-    roll = pitch = yaw =0;
-
-    rot_x_imu.setZero(), T_robot_world.setZero();
-
-    //rotation of -180 to convert to robot frame
-    rot_x_imu(0,0) = 1;
-    rot_x_imu(1,1) =  cos(-3.14);
-    rot_x_imu(1,2) = -sin(-3.14);
-    rot_x_imu(2,1) =  sin(-3.14);
-    rot_x_imu(2,2) =  cos(-3.14);
-    rot_x_imu(3,3) = 1;
-
-    //rotation of the robot with respect to the world
-    T_robot_world(0,0) = cos(yaw)*cos(pitch);
-    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
-
-    T_robot_world(1,0) = sin(yaw)*cos(pitch);
-    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
-
-    T_robot_world(2,0) = -sin(pitch);
-    T_robot_world(2,1) = cos(pitch)*sin(roll);
-    T_robot_world(2,2) = cos(pitch)*cos(roll);
-    T_robot_world(3,3) = 1;
-
-    transformation_mat = T_robot_world * rot_x_imu;
+                final_pose_of_object_in_robot(0) = final_detected_point.x;
+                final_pose_of_object_in_robot(1) = final_detected_point.y;
+                final_pose_of_object_in_robot(2) = final_detected_point.z;
 
 
-}
+                //this will be changed to add more objects, for now its a start
+                particle_filter::object_info_struct_pf complete_obj_info;
 
-void semantic_slam_ros::transformNormalsToWorld(Eigen::VectorXf final_pose, Eigen::Matrix4f &transformation_mat)
-{
+                complete_obj_info.type       = segmented_objects_from_point_cloud[i].type;
+                complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
+                complete_obj_info.pose       = final_pose_of_object_in_robot;
+                complete_obj_info.num_points = horizontal_point_size;
 
-    Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam, T_robot_world;
-    rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4), T_robot_world.setZero(4,4);
+                if( complete_obj_info.num_points  > 500)
+                    complete_obj_info_vec.push_back(complete_obj_info);
 
-    float x, y, z, roll, pitch, yaw;
+            }
 
-    x = final_pose(0);
-    y = final_pose(1);
-    z = final_pose(2);
-    roll = final_pose(3);
-    pitch = final_pose(4);
-    yaw = final_pose(5);
+        }
+    }
 
-    //    std::cout << "X: " << x << std::endl
-    //              << "Y: " << y << std::endl
-    //              << "Z: " << z << std::endl
-    //              << "roll: " << roll << std::endl
-    //              << "pitch: " << pitch << std::endl
-    //              << "yaw: "   << yaw << std::endl;
+    //pclViewer->removeAllPointClouds();
+    ////pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZ> rgb(kmeans_segmented_points);
+    //pclViewer->addPointCloud<pcl::PointXYZRGB>(segmented_point_cloud_pcl,"segmented cloud");
+    //pclViewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(segmented_point_cloud_pcl, segmented_point_cloud_normal, 100, 0.02f, "segmented cloud normals");
+    //pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "segmented cloud");
+    publishSegmentedPointCloud(segmented_point_cloud);
 
-    rot_x_cam(0,0) = 1;
-    rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
-    rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
-    rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
-    rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
-    rot_x_cam(3,3) = 1;
+    return complete_obj_info_vec;
 
-    //rotation of -90
-    rot_x_robot(0,0) = 1;
-    rot_x_robot(1,1) =  cos(-1.5708);
-    rot_x_robot(1,2) = -sin(-1.5708);
-    rot_x_robot(2,1) =  sin(-1.5708);
-    rot_x_robot(2,2) =  cos(-1.5708);
-    rot_x_robot(3,3) = 1;
-
-    //rotation of -90
-    rot_z_robot(0,0) = cos(-1.5708);
-    rot_z_robot(0,1) = -sin(-1.5708);
-    rot_z_robot(1,0) = sin(-1.5708);
-    rot_z_robot(1,1) = cos(-1.5708);
-    rot_z_robot(2,2) = 1;
-    rot_z_robot(3,3) = 1;
-
-    //translation of -10cm in x, 10cm in y and -5cm in z
-    translation_cam(0,0) = 1;
-    translation_cam(0,3) = 0;
-    translation_cam(1,1) = 1;
-    translation_cam(1,3) = -0.1;
-    translation_cam(2,2) = 1;
-    translation_cam(2,3) = 0.0;
-    translation_cam(3,3) = 1;
-
-
-    //transformation from robot to world
-    T_robot_world(0,0) = cos(yaw)*cos(pitch);
-    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
-
-    T_robot_world(1,0) = sin(yaw)*cos(pitch);
-    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
-
-    T_robot_world(2,0) = -sin(pitch);
-    T_robot_world(2,1) = cos(pitch)*sin(roll);
-    T_robot_world(2,2) = cos(pitch)*cos(roll);
-    T_robot_world(3,3) = 1;
-
-    //fill the x, y and z variables over here if there is a fixed transform between the camera and the world frame
-    //    T_robot_world(0,3) = x;
-    //    T_robot_world(1,3) = y;
-    //    T_robot_world(2,3) = z;
-    //    T_robot_world(3,3) = 1;
-
-    transformation_mat = T_robot_world * translation_cam * rot_z_robot * rot_x_robot * rot_x_cam;
 }
 
 void semantic_slam_ros::publishParticlePoses()

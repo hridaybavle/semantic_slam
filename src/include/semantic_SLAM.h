@@ -13,6 +13,9 @@
 //point cloud segmentation
 #include "plane_segmentation.h"
 
+//tools lib
+#include "tools.h"
+
 #include "tf/transform_datatypes.h"
 
 //ROS messages
@@ -86,6 +89,9 @@ private:
     //point cloud segmentation class object
     plane_segmentation plane_segmentation_obj_;
 
+    //tools for pose conversions
+    semantic_tools semantic_tools_obj_;
+
     //Publishers and subscribers
 protected:
     ros::Subscriber rovio_odometry_sub_;
@@ -93,14 +99,6 @@ protected:
 
     ros::Subscriber imu_sub_;
     void imuCallback(const sensor_msgs::Imu& msg);
-
-    ros::Subscriber bebop_imu_sub_;
-    void bebopIMUCallback(const semantic_SLAM::Ardrone3PilotingStateAttitudeChanged& msg);
-    bool bebop_imu_data_ready_;
-    float yaw_first_;
-
-    ros::Subscriber aruco_observation_sub_;
-    void arucoObservationCallback(const aruco_eye_msgs::MarkerList& msg);
 
     ros::Subscriber detected_object_sub_;
     void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
@@ -145,22 +143,7 @@ protected:
     void getRVIOPose(Eigen::VectorXf& RVIO_pose);
 
 
-    //variables regarding VO
-    float pose_x_, pose_y_, pose_z_;
-    void transformEulerAnglesFromCameraToRobot(Eigen::Matrix4f &transformation_mat);
-    void transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat);
-    void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat);
-    void transformNormalsToWorld(Eigen::VectorXf final_pose, Eigen::Matrix4f &transformation_mat);
-    void setArucoPose(std::vector<Eigen::Vector4f> aruco_pose);
-    void getArucoPose(std::vector<Eigen::Vector4f>& aruco_pose);
-
-
-    std::mutex bebop_imu_lock_;
-    bool bebop_imu_data_available_;
-    float bebop_imu_roll_, bebop_imu_pitch_, bebop_imu_yaw_;
-    void setBebopIMUData(float roll,float pitch, float yaw);
-    void getBebopIMUData(float& roll, float& pitch, float& yaw);
-
+    //variables regarding IMU
     std::mutex imu_lock_;
     float acc_x_, acc_y_, acc_z_;
     void setIMUdata(float acc_x,float acc_y,float acc_z);
@@ -172,7 +155,7 @@ protected:
     void setPointCloudData(sensor_msgs::PointCloud2 point_cloud);
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
 
-    //void segmentPointCloudData(std::vector<semantic_SLAM::ObjectInfo> object_info, sensor_msgs::PointCloud2 point_cloud);
+    std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
 
     //variables regarding imu
     bool imu_data_available_;
@@ -181,17 +164,7 @@ protected:
     Eigen::Vector4f imu_local_ang_vel_, imu_world_ang_vel_;
 
     std::vector<Eigen::VectorXf> filtered_pose_;
-
-    //variables regarding aruco detection
-    std::mutex aruco_pose_lock_;
-    bool aruco_data_available_;
-    std::vector<Eigen::Vector4f> aruco_pose_;
     Eigen::VectorXf final_pose_;
-
-    //variables for slamdunk pose
-    std::mutex slamdunk_pose_lock_;
-    bool slamdunk_data_available_;
-    Eigen::Vector3f slamdunk_pose_;
 
     //variables regarding detected object
     std::mutex detected_object_lock_;
@@ -205,12 +178,7 @@ protected:
     sensor_msgs::PointCloud2 point_cloud_msg_;
 
     //for publishing the path
-     std::vector<geometry_msgs::PoseStamped> final_particle_pose_vec_;
-     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
-     std::vector<geometry_msgs::PoseStamped> vo_pose_vec_;
+    std::vector<geometry_msgs::PoseStamped> final_particle_pose_vec_;
+    std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
+    std::vector<geometry_msgs::PoseStamped> vo_pose_vec_;
 };
-
-
-
-
-

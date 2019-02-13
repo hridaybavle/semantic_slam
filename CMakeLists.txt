@@ -35,10 +35,11 @@ set(SEMANTIC_SLAM_SOURCE_FILES
     )
 
 
-set(SEMANTIC_SLAM_SLAM_HEADER_FILES
+set(SEMANTIC_SLAM_HEADER_FILES
     #General
     src/include/semantic_SLAM.h
     src/include/plane_segmentation.h
+    src/inlcude/tools.h
     )
 
 find_package(catkin REQUIRED
@@ -96,13 +97,13 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 
-add_library(SEMANTIC_SLAM ${SEMANTIC_SLAM_SOURCE_FILES} ${SEMANTIC_SLAM_HEADER_FILES})
+add_library(SEMANTIC_SLAM ${SEMANTIC_SLAM_SOURCE_FILES})
 add_dependencies(SEMANTIC_SLAM ${catkin_EXPORTED_TARGETS})
 target_link_libraries(SEMANTIC_SLAM ${catkin_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${EIGEN3_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
 
-add_executable(${PROJECT_NAME}_node ${SEMANTIC_SLAM_SOURCE_FILES} ${SEMANTIC_SLAM_HEADER_FILES})
+add_executable(${PROJECT_NAME}_node ${SEMANTIC_SLAM_SOURCE_FILES})
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node SEMANTIC_SLAM)
 target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
@@ -113,6 +114,3 @@ add_executable(depth_synchronization_node src/source/depth_image_synchronizer.cp
 add_dependencies(depth_synchronization_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(depth_synchronization_node ${OpenCV_LIBS})
 target_link_libraries(depth_synchronization_node ${catkin_LIBRARIES})
-
-
-
