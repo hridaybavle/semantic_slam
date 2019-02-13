@@ -81,6 +81,9 @@ public:
 
 private:
     void init();
+    void readGroundTruthPoint();
+
+
     double prev_time_, current_time_;
 
     //particle filter class object
@@ -132,9 +135,19 @@ protected:
     ros::Publisher mapped_objects_visualizer_pub_;
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
 
+    ros::Publisher ground_truth_points_pub_;
+    void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);
+
     ros::Publisher optitrack_pose_pub_;
     ros::Publisher optitrack_path_pub_;
+
+    //ros node params
+    std::string text_file_;
+
 protected:
+
+    std::vector<geometry_msgs::Point> points_vec_;
+
     //variables regarding RVIO
     std::mutex rvio_pose_lock_;
     bool rvio_pose_available_;

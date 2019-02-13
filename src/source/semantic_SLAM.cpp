@@ -11,6 +11,26 @@ semantic_slam_ros::~semantic_slam_ros()
     std::cout << "semantic SLAM destructor " << std::endl;
 }
 
+void semantic_slam_ros::readGroundTruthPoint()
+{
+
+    std::ifstream infile(text_file_);
+    if(!infile.is_open())
+    {
+        std::cerr << "cannot open the ground truth file " << std::endl;
+    }
+
+    points_vec_.clear();
+    geometry_msgs::Point points;
+    while(infile >> points.x >>  points.y >>  points.z)
+    {
+        std::cout << "X: " << points.x  << "Y: " << points.y  << "Z: " << points.z  << std::endl;
+
+        points_vec_.push_back(points);
+    }
+
+}
+
 void semantic_slam_ros::init()
 {
     imu_data_available_, object_detection_available_ = false, point_cloud_available_ = false;
@@ -40,6 +60,12 @@ void semantic_slam_ros::init()
     //    renderWindowNormals->SetSize(800,450);
     //    renderWindowNormals->Render();
 
+
+    //Read ros params
+    ros::param::get("~text_file", text_file_);
+    if(text_file_.length() == 0)
+        text_file_ = "/home/hriday/workspace/ros/rovio_semantic_workspace/src/semantic_SLAM/text_files/ground_truth_points.txt";
+    std::cout << "text file " << text_file_ << std::endl;
 
     return;
 
@@ -95,6 +121,7 @@ void semantic_slam_ros::run()
     publishCorresVOPose();
     publishParticlePoses();
     publishMappedObjects(mapped_object_vec_);
+    publishGroundTruthPoints(points_vec_);
 
     prev_time_ = current_time_;
 
@@ -102,7 +129,6 @@ void semantic_slam_ros::run()
 
 void semantic_slam_ros::open(ros::NodeHandle n)
 {
-    init();
 
     //ros subsriber
     rovio_odometry_sub_    = n.subscribe("/rovio/odometry", 1, &semantic_slam_ros::rovioOdometryCallback, this);
@@ -124,7 +150,10 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
     optitrack_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_             = n.advertise<nav_msgs::Path>("optitrack_path",1);
+    ground_truth_points_pub_        = n.advertise<visualization_msgs::MarkerArray>("ground_truth_points",1);
 
+    init();
+    readGroundTruthPoint();
 }
 
 void semantic_slam_ros::rovioOdometryCallback(const nav_msgs::Odometry &msg)
@@ -582,3 +611,40 @@ void semantic_slam_ros::publishMappedObjects(std::vector<particle_filter::object
 
     mapped_objects_visualizer_pub_.publish(marker_arrays);
 }
+
+void semantic_slam_ros::publishGroundTruthPoints(std::vector<geometry_msgs::Point> points)
+{
+    visualization_msgs::MarkerArray marker_arrays;
+
+    for(int i =0; i < points.size(); ++i)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time();
+        marker.header.frame_id = "map";
+        marker.ns = "my_ground_namespace";
+        marker.pose.position.x = points[i].x;
+        marker.pose.position.y = points[i].y;
+        marker.pose.position.z = 0.0;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        marker.id = i;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.type = visualization_msgs::Marker::SPHERE;
+        marker.scale.x = 0.3;
+        marker.scale.y = 0.3;
+        marker.scale.z = 0.3;
+        marker.color.a = 1.0; // Don't forget to set the alpha!
+        marker.color.r = 1.0;
+        marker.color.g = 0.0;
+        marker.color.b = 0.0;
+
+        marker_arrays.markers.push_back(marker);
+    }
+
+    ground_truth_points_pub_.publish(marker_arrays);
+
+}
+
