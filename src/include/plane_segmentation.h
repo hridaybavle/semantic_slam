@@ -16,6 +16,10 @@
 #include "pcl/point_types.h"
 #include <pcl/features/integral_image_normal.h>
 #include <pcl/search/impl/search.hpp>
+#include <pcl/filters/project_inliers.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl/ModelCoefficients.h>
 
 //opencv
 #include <opencv2/core/core.hpp>
@@ -26,6 +30,7 @@
 
 const int num_centroids_normals = 2;
 const int num_centroids_height = 2;
+const int num_centroids_pose = 2;
 
 class plane_segmentation
 {
@@ -39,10 +44,24 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud;
     };
 
-    plane_segmentation::segmented_objects segmentPointCloudData(semantic_SLAM::ObjectInfo object_info, sensor_msgs::PointCloud2 point_cloud,
+    plane_segmentation::segmented_objects segmentPointCloudData(semantic_SLAM::ObjectInfo object_info,
+                                                                sensor_msgs::PointCloud2 point_cloud,
                                                                sensor_msgs::PointCloud2& segmented_point_cloud);
+
     pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
-    cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointCloud<pcl::Normal>::Ptr point_normal, Eigen::Matrix4f transformation_mat,
-                                   Eigen::MatrixXf final_pose, float& point_size);
+
+    cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                   pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                   Eigen::Matrix4f transformation_mat,
+                                   Eigen::MatrixXf final_pose,
+                                   float& point_size);
+
+    double computeKmeans(cv::Mat points,
+                         const int num_centroids,
+                         cv::Mat& labels,
+                         cv::Mat& centroids);
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud);
+
 
 };

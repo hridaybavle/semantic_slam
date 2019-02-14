@@ -450,7 +450,7 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
                 complete_obj_info.pose       = final_pose_of_object_in_robot;
                 complete_obj_info.num_points = horizontal_point_size;
 
-                if( complete_obj_info.num_points  > 500)
+                //if( complete_obj_info.num_points  > 500)
                     complete_obj_info_vec.push_back(complete_obj_info);
 
             }

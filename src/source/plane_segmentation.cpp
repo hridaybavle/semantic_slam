@@ -56,8 +56,6 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     float start_u = object_info.tl_x, start_v = object_info.tl_y;
     float height = object_info.height, width = object_info.width;
 
-
-
     segmented_point_cloud_pcl->resize(object_info.height * object_info.width);
     segmented_point_cloud_pcl->height = object_info.height;
     segmented_point_cloud_pcl->width = object_info.width;
@@ -195,10 +193,11 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         return empty_final_pose_mat;
     }
     cv::Mat centroids, labels;
-
     double compactness = 0.0;
-    cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
-    compactness = cv::kmeans(normal_filtered_points, num_centroids_normals, labels, criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, centroids);
+    compactness = this->computeKmeans(normal_filtered_points,
+                                      num_centroids_normals,
+                                      labels,
+                                      centroids);
 
     //std::cout << "centroids of normals kmeans " << centroids << std::endl;
     //---------------------------------------------------------------------------------------------------//
@@ -266,8 +265,11 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     cv::Mat height_centroids, height_labels;
     double height_compactness = 0.0;
-    cv::TermCriteria height_criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
-    height_compactness = cv::kmeans(height_points, num_centroids_height, height_labels, height_criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, height_centroids);
+    height_compactness = this->computeKmeans(height_points,
+                                             num_centroids_height,
+                                             height_labels,
+                                             height_centroids);
+
 
     //std::cout << "height centroids " << height_centroids << std::endl;
     //std::cout << "height labels " << height_labels << std::endl;
@@ -280,11 +282,11 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     std::sort(height_centroids_vec.begin(), height_centroids_vec.end(), comparator);
 
-    //    std::cout << "final pose " << final_pose(2) << std::endl;
-    //    for(int i =0; i < height_centroids_vec.size(); ++i)
-    //    {
-    //        std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
-    //    }
+    std::cout << "final pose " << final_pose(2) << std::endl;
+    for(int i =0; i < height_centroids_vec.size(); ++i)
+    {
+        std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
+    }
     //-------------------------------------------------------------------------------------------------------------------//
 
     //------------------------obtaining the points corresponding to the segmented heights--------------------------------//
@@ -311,13 +313,37 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
             final_segmented_points->points.push_back(segmeted_points_using_first_kmeans->points[i]);
     }
 
-    cv::Mat final_segmented_points_mat;
-    final_segmented_points_mat = cv::Mat(final_segmented_points->size(),3, CV_32F);
-    for(size_t i =0; i < final_segmented_points->size(); ++i)
+    //computer the convex hull
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
+    final_points_convex_hull = this->compute2DConvexHull(final_segmented_points);
+
+    //    float x,y,z;
+    //    for(int i = 0; i < final_points_convex_hull->size(); ++i){
+    //        x += final_points_convex_hull->points[i].x;
+    //        y += final_points_convex_hull->points[i].y;
+    //        z += final_points_convex_hull->points[i].z;
+    //    }
+
+    //    x = x / final_points_convex_hull->size();
+    //    y = y / final_points_convex_hull->size();
+    //    z = z / final_points_convex_hull->size();
+
+    //    std::cout << "Final pose from from convex hull " << std::endl
+    //              <<  "X: " << x << std::endl << "Y: " << y << std::endl << "Z: " << z << std::endl;
+
+    if(final_points_convex_hull->size() < 10)
     {
-        final_segmented_points_mat.at<float>(i,0) = final_segmented_points->points[i].x;
-        final_segmented_points_mat.at<float>(i,1) = final_segmented_points->points[i].y;
-        final_segmented_points_mat.at<float>(i,2) = final_segmented_points->points[i].z;
+        std::cout << "returning as convex hull has too less points "<< std::endl;
+        return empty_final_pose_mat;
+    }
+
+    cv::Mat final_segmented_points_mat;
+    final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
+    for(size_t i =0; i < final_points_convex_hull->size(); ++i)
+    {
+        final_segmented_points_mat.at<float>(i,0) = final_points_convex_hull->points[i].x;
+        final_segmented_points_mat.at<float>(i,1) = final_points_convex_hull->points[i].y;
+        final_segmented_points_mat.at<float>(i,2) = final_points_convex_hull->points[i].z;
 
         //        std::cout << "final_segmented points pose "
         //                  << "X: " << final_segmented_points->points[i].x
@@ -328,10 +354,14 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     //last kmeans for obtaining the final pose of the segmented horizontal plane
     cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
     double final_pose_compactness = 0.0;
-    cv::TermCriteria final_pose_criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
-    final_pose_compactness = cv::kmeans(final_segmented_points_mat, 2, final_pose_labels, final_pose_criteria_kmeans, 30, cv::KMEANS_RANDOM_CENTERS, kmeans_final_pose_centroids);
 
-    final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+    final_pose_compactness = this->computeKmeans(final_segmented_points_mat,
+                                                 num_centroids_pose,
+                                                 final_pose_labels,
+                                                 kmeans_final_pose_centroids);
+
+
+     final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
     if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
     {
         final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
@@ -345,7 +375,8 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
     }
 
-    point_size = final_pose_labels.rows;
+    //point_size = final_pose_labels.rows;
+    point_size = final_segmented_points->size();
     //std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
     std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
 
@@ -353,17 +384,54 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
 }
 
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr projected_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    // Optional
+    seg.setOptimizeCoefficients (true);
+    // Mandatory
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold (0.01);
+    seg.setInputCloud (filtered_point_cloud);
+    seg.segment (*inliers, *coefficients);
 
 
+    // Project the model inliers
+    pcl::ProjectInliers<pcl::PointXYZRGB> proj;
+    proj.setModelType (pcl::SACMODEL_PLANE);
+    proj.setInputCloud (filtered_point_cloud);
+    proj.setIndices (inliers);
+    proj.setModelCoefficients (coefficients);
+    proj.filter (*projected_cloud);
 
+    // Create a Convex Hull representation of the projected inliers
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::ConvexHull<pcl::PointXYZRGB> chull;
+    chull.setInputCloud (projected_cloud);
+    chull.reconstruct (*cloud_hull);
 
+    std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
+    std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
 
+    return cloud_hull;
+}
 
+double plane_segmentation::computeKmeans(cv::Mat points,
+                                         const int num_centroids,
+                                         cv::Mat &labels,
+                                         cv::Mat &centroids)
+{
+    double compactness = 0.0;
+    cv::TermCriteria criteria_kmeans(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 0.01);
+    compactness = cv::kmeans(points, num_centroids, labels, criteria_kmeans, 10, cv::KMEANS_RANDOM_CENTERS, centroids);
 
+    return compactness;
 
-
-
-
-
-
+}
 
