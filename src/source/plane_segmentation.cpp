@@ -313,74 +313,105 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
             final_segmented_points->points.push_back(segmeted_points_using_first_kmeans->points[i]);
     }
 
+    point_size = final_segmented_points->size();
+
     //computer the convex hull
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
     final_points_convex_hull = this->compute2DConvexHull(final_segmented_points);
 
-    //    float x,y,z;
-    //    for(int i = 0; i < final_points_convex_hull->size(); ++i){
-    //        x += final_points_convex_hull->points[i].x;
-    //        y += final_points_convex_hull->points[i].y;
-    //        z += final_points_convex_hull->points[i].z;
-    //    }
+    double x,y,z;
+    std::vector<double> x_vec,y_vec,z_vec;
+    x_vec.clear(); y_vec.clear(); z_vec.clear();
 
-    //    x = x / final_points_convex_hull->size();
-    //    y = y / final_points_convex_hull->size();
-    //    z = z / final_points_convex_hull->size();
-
-    //    std::cout << "Final pose from from convex hull " << std::endl
-    //              <<  "X: " << x << std::endl << "Y: " << y << std::endl << "Z: " << z << std::endl;
-
-    if(final_points_convex_hull->size() < 10)
+    for(int i = 0; i < final_points_convex_hull->size(); ++i)
     {
-        std::cout << "returning as convex hull has too less points "<< std::endl;
-        return empty_final_pose_mat;
+        x += final_points_convex_hull->points[i].x;
+        y += final_points_convex_hull->points[i].y;
+        z += final_points_convex_hull->points[i].z;
+
+
     }
 
-    cv::Mat final_segmented_points_mat;
-    final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
-    for(size_t i =0; i < final_points_convex_hull->size(); ++i)
+    std::cout << "x" << x << std::endl;
+    double x_final, y_final, z_final;
+
+    x_final = x / final_points_convex_hull->size();
+    y_final = y / final_points_convex_hull->size();
+    z_final = z / final_points_convex_hull->size();
+
+    //std::cout << "final_points_convex_hull->size() " << final_points_convex_hull->size() << std::endl;
+    //std::cout << "Final pose from from convex hull " << std::endl
+    //          <<  "X final : " << x_final << std::endl << "Y final : " << y_final << std::endl << "Z final: " << z_final << std::endl;
+
+    cv::Mat final_pose_centroid;
+    final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+    if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
     {
-        final_segmented_points_mat.at<float>(i,0) = final_points_convex_hull->points[i].x;
-        final_segmented_points_mat.at<float>(i,1) = final_points_convex_hull->points[i].y;
-        final_segmented_points_mat.at<float>(i,2) = final_points_convex_hull->points[i].z;
+        final_pose_centroid.at<float>(0,0) = x_final;
+        final_pose_centroid.at<float>(0,1) = y_final;
+        final_pose_centroid.at<float>(0,2) = z_final;
 
-        //        std::cout << "final_segmented points pose "
-        //                  << "X: " << final_segmented_points->points[i].x
-        //                  << "Y: " << final_segmented_points->points[i].y
-        //                  << "Z: " << final_segmented_points->points[i].z << std::endl;
-    }
+        std::cout << "final pose centroid " << final_pose_centroid << std::endl;
 
-    //last kmeans for obtaining the final pose of the segmented horizontal plane
-    cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
-    double final_pose_compactness = 0.0;
-
-    final_pose_compactness = this->computeKmeans(final_segmented_points_mat,
-                                                 num_centroids_pose,
-                                                 final_pose_labels,
-                                                 kmeans_final_pose_centroids);
-
-
-     final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
-    if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
-    {
-        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
-        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(0,1);
-        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(0,2);
+        return final_pose_centroid;
     }
     else
     {
-        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(1,0);
-        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(1,1);
-        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
+        std::cout << "returning as the final pose has nans "<< std::endl;
+        return empty_final_pose_mat;
     }
 
-    //point_size = final_pose_labels.rows;
-    point_size = final_segmented_points->size();
-    //std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
-    std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
 
-    return final_pose_centroid;
+    //    if(final_points_convex_hull->size() < 10)
+    //    {
+    //        std::cout << "returning as convex hull has too less points "<< std::endl;
+    //        return empty_final_pose_mat;
+    //    }
+
+    //    cv::Mat final_segmented_points_mat;
+    //    final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
+    //    for(size_t i =0; i < final_points_convex_hull->size(); ++i)
+    //    {
+    //        final_segmented_points_mat.at<float>(i,0) = final_points_convex_hull->points[i].x;
+    //        final_segmented_points_mat.at<float>(i,1) = final_points_convex_hull->points[i].y;
+    //        final_segmented_points_mat.at<float>(i,2) = final_points_convex_hull->points[i].z;
+
+    //        //        std::cout << "final_segmented points pose "
+    //        //                  << "X: " << final_segmented_points->points[i].x
+    //        //                  << "Y: " << final_segmented_points->points[i].y
+    //        //                  << "Z: " << final_segmented_points->points[i].z << std::endl;
+    //    }
+
+    //    //last kmeans for obtaining the final pose of the segmented horizontal plane
+    //    cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
+    //    double final_pose_compactness = 0.0;
+
+    //    final_pose_compactness = this->computeKmeans(final_segmented_points_mat,
+    //                                                 num_centroids_pose,
+    //                                                 final_pose_labels,
+    //                                                 kmeans_final_pose_centroids);
+
+
+    //    final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+    //    if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
+    //    {
+    //        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
+    //        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(0,1);
+    //        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(0,2);
+    //    }
+    //    else
+    //    {
+    //        final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(1,0);
+    //        final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(1,1);
+    //        final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
+    //    }
+
+    //    //point_size = final_pose_labels.rows;
+    //    point_size = final_segmented_points->size();
+    //    //std::cout << "kmeans centroids from segmented horizontal plane" << kmeans_final_pose_centroids  << std::endl;
+    //    std::cout << "final_pose from segmented horizontal plane" << final_pose_centroid  << std::endl;
+
+    //    return final_pose_centroid;
 
 }
 
@@ -416,8 +447,9 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(p
     chull.setInputCloud (projected_cloud);
     chull.reconstruct (*cloud_hull);
 
-    std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
-    std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
+    //std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
+    //std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
+
 
     return cloud_hull;
 }
