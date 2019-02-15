@@ -389,18 +389,26 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
     for (int i = 0; i < object_info.size(); ++i)
     {
         if(object_info[i].type == "chair")
-            segmented_objects_from_point_cloud.push_back(plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud));
+        {
+            plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;
+            single_segmented_object_from_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
+
+            if(single_segmented_object_from_point_cloud.type != "spurious")
+                segmented_objects_from_point_cloud.push_back(single_segmented_object_from_point_cloud);
+        }
     }
 
     for(int i = 0; i < segmented_objects_from_point_cloud.size(); ++i)
     {
         if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
         {
+            std::cout << "here1 " << std::endl;
 
             //This calculates the normals of the segmented pointcloud
             pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
             segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
 
+            std::cout << "here2 " << std::endl;
             //inputting the current roll, pitch and yaw from the pf updated from imu
             Eigen::Matrix4f transformation_mat;
             //this->transformNormalsToWorld(final_pose_, transformation_mat);
@@ -451,7 +459,7 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
                 complete_obj_info.num_points = horizontal_point_size;
 
                 //if( complete_obj_info.num_points  > 500)
-                    complete_obj_info_vec.push_back(complete_obj_info);
+                complete_obj_info_vec.push_back(complete_obj_info);
 
             }
 

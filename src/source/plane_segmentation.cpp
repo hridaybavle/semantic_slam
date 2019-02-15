@@ -22,7 +22,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
                                                                                 sensor_msgs::PointCloud2& segmented_point_cloud)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud_pcl (new pcl::PointCloud<pcl::PointXYZRGB>);
-
+    plane_segmentation::segmented_objects segmented_objects_to_return;
     //for (int i =0; i < object_info.size(); ++i)
     //{
     //if(object_info[i].type == "chair")
@@ -56,6 +56,15 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     float start_u = object_info.tl_x, start_v = object_info.tl_y;
     float height = object_info.height, width = object_info.width;
 
+    std::cout << "height " << object_info.height << std::endl;
+    std::cout << "weight " << object_info.width  << std::endl;
+
+    if(object_info.height < 20 || object_info.width < 0)
+    {
+        std::cout << "returning as spurious bb " << std::endl;
+        segmented_objects_to_return.type = "spurious";
+        return segmented_objects_to_return;
+    }
     segmented_point_cloud_pcl->resize(object_info.height * object_info.width);
     segmented_point_cloud_pcl->height = object_info.height;
     segmented_point_cloud_pcl->width = object_info.width;
@@ -115,7 +124,6 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     //}
     //}
 
-    plane_segmentation::segmented_objects segmented_objects_to_return;
     segmented_objects_to_return.type = object_info.type;
     segmented_objects_to_return.prob = object_info.prob;
     segmented_objects_to_return.segmented_point_cloud = segmented_point_cloud_pcl;
