@@ -46,6 +46,8 @@
 //darknet object detector
 #include "semantic_SLAM/DetectedObjects.h"
 #include "semantic_SLAM/ObjectInfo.h"
+#include "darknet_ros_msgs/BoundingBox.h"
+#include "darknet_ros_msgs/BoundingBoxes.h"
 
 #include "sensor_msgs/image_encodings.h"
 //opencv
@@ -55,7 +57,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
-const float real_sense_pitch_angle =21*(M_PI/180);
+const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 1000;
 const int num_centroids = 2;
@@ -105,6 +107,7 @@ protected:
 
     ros::Subscriber detected_object_sub_;
     void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
+    void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
 
     ros::Subscriber point_cloud_sub_;
     void pointCloudCallback(const sensor_msgs::PointCloud2& msg);

@@ -59,7 +59,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     std::cout << "height " << object_info.height << std::endl;
     std::cout << "weight " << object_info.width  << std::endl;
 
-    if(object_info.height < 20 || object_info.width < 0)
+    if(object_info.height < 0 || object_info.width < 0)
     {
         std::cout << "returning as spurious bb " << std::endl;
         segmented_objects_to_return.type = "spurious";
@@ -91,7 +91,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
             arrayPosX   = arrayPosition + point_cloud.fields[0].offset;
             arrayPosY   = arrayPosition + point_cloud.fields[1].offset;
             arrayPosZ   = arrayPosition + point_cloud.fields[2].offset;
-            //arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
+            arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
 
             //std::cout << "arrayPosrgb " << point_cloud.fields[3].offset << std::endl;
 
@@ -99,7 +99,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
             memcpy(&X,   &point_cloud.data[arrayPosX], sizeof(float));
             memcpy(&Y,   &point_cloud.data[arrayPosY], sizeof(float));
             memcpy(&Z,   &point_cloud.data[arrayPosZ], sizeof(float));
-            //memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
+            memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
 
             //                    for(int f =0; f < point_cloud.fields.size(); ++f)
             //                        std::cout << "point cloud fields " << point_cloud.fields[f].name  << std::endl;
@@ -113,7 +113,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
             point.x   = X;
             point.y   = Y;
             point.z   = Z;
-            //point.rgb = RGB;
+            point.rgb = RGB;
 
             //segmented_point_cloud_pcl->push_back(point);
             segmented_point_cloud_pcl->at(p_u,p_v) = point;
@@ -135,16 +135,25 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
 
 pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
 {
-    pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
-    ne.setNormalEstimationMethod (ne.SIMPLE_3D_GRADIENT);
-    ne.setMaxDepthChangeFactor (0.03f);
-    ne.setNormalSmoothingSize (20.0f);
 
     pcl::PointCloud<pcl::Normal>::Ptr normal_cloud (new pcl::PointCloud<pcl::Normal>);
     normal_cloud->clear();
 
+
+    if(point_cloud->points.size() < 5000)
+    {
+        return normal_cloud;
+    }
+
+    pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+    ne.setNormalEstimationMethod (ne.COVARIANCE_MATRIX);
+    ne.setMaxDepthChangeFactor (0.03f);
+    ne.setNormalSmoothingSize (20.0f);
+
     ne.setInputCloud(point_cloud);
     ne.compute (*normal_cloud);
+
+
 
     return normal_cloud;
 
@@ -154,6 +163,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
                                                    Eigen::MatrixXf final_pose, float& point_size)
 {
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
+
     normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr points_without_nans (new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -171,7 +181,6 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     //finding the orientation of all the horizontal planes in the cam frame
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
-    //std::cout << "normals in the cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
 
     //---------------------removing the nans from the normals and the 3d points----------------------//
     cv::Mat normal_points, normal_filtered_points;
@@ -207,7 +216,22 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
                                       labels,
                                       centroids);
 
-    //std::cout << "centroids of normals kmeans " << centroids << std::endl;
+    std::cout << "centroids of normals kmeans " << centroids << std::endl;
+
+    float dot_product;
+    for(int i =0; i < num_centroids_normals; ++i)
+    {
+        Eigen::Vector4f centroids_eigen;
+        centroids_eigen.setZero();
+        centroids_eigen(0) = centroids.at<float>(i,0);
+        centroids_eigen(1) = centroids.at<float>(i,1);
+        centroids_eigen(2) = centroids.at<float>(i,2);
+
+        dot_product = this->computeDotProduct(normals_of_the_horizontal_plane_in_cam, centroids_eigen);
+
+        std::cout << "dot product " << dot_product << std::endl;
+    }
+
     //---------------------------------------------------------------------------------------------------//
 
     //---------------segmenting the normals and obtaining the corresponding 3D points--------------------//
@@ -225,7 +249,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     }
 
-    //std::cout << "filtered centroids " << filtered_centroids << std::endl;
+    std::cout << "filtered centroids " << filtered_centroids << std::endl;
 
     if(filtered_centroids.empty())
     {
@@ -475,3 +499,12 @@ double plane_segmentation::computeKmeans(cv::Mat points,
 
 }
 
+float plane_segmentation::computeDotProduct(Eigen::Vector4f vector_a, Eigen::Vector4f vector_b)
+{
+    float product =0;
+
+    for (int i = 0; i < 3; i++)
+        product = product + vector_a[i] * vector_b[i];
+
+    return product;
+}

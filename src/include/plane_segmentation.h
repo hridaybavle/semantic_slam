@@ -61,6 +61,8 @@ public:
                          cv::Mat& labels,
                          cv::Mat& centroids);
 
+    float computeDotProduct(Eigen::Vector4f vector_a, Eigen::Vector4f vector_b);
+
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud);
 
 

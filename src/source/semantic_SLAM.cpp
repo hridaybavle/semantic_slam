@@ -133,7 +133,8 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     //ros subsriber
     rovio_odometry_sub_    = n.subscribe("/rovio/odometry", 1, &semantic_slam_ros::rovioOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu", 1, &semantic_slam_ros::imuCallback, this);
-    detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
+    //detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
+    detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
     optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/bebop/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
     //this is just for visualizing the path
@@ -271,20 +272,42 @@ void semantic_slam_ros::getIMUdata(float &acc_x, float &acc_y, float &acc_z)
 }
 
 
-void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
+//void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
+//{
+//    //std::cout << "objects size " << msg.objects.size() << std::endl;
+//    std::vector<semantic_SLAM::ObjectInfo>  object_info;
+//    object_info.resize(msg.objects.size());
+
+//    for(int i =0; i < msg.objects.size(); ++i)
+//    {
+//        object_info[i].type   = msg.objects[i].type;
+//        object_info[i].tl_x   = msg.objects[i].tl_x;
+//        object_info[i].tl_y   = msg.objects[i].tl_y;
+//        object_info[i].height = msg.objects[i].height;
+//        object_info[i].width  = msg.objects[i].width;
+//        object_info[i].prob   = msg.objects[i].prob;
+//    }
+
+//    this->setDetectedObjectInfo(object_info);
+
+
+//}
+
+
+void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
 {
     //std::cout << "objects size " << msg.objects.size() << std::endl;
     std::vector<semantic_SLAM::ObjectInfo>  object_info;
-    object_info.resize(msg.objects.size());
+    object_info.resize(msg.bounding_boxes.size());
 
-    for(int i =0; i < msg.objects.size(); ++i)
+    for(int i =0; i < msg.bounding_boxes.size(); ++i)
     {
-        object_info[i].type   = msg.objects[i].type;
-        object_info[i].tl_x   = msg.objects[i].tl_x;
-        object_info[i].tl_y   = msg.objects[i].tl_y;
-        object_info[i].height = msg.objects[i].height;
-        object_info[i].width  = msg.objects[i].width;
-        object_info[i].prob   = msg.objects[i].prob;
+        object_info[i].type   = msg.bounding_boxes[i].Class;
+        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
+        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
+        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
+        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
+        object_info[i].prob   = msg.bounding_boxes[i].probability;
     }
 
     this->setDetectedObjectInfo(object_info);
@@ -408,6 +431,9 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
             pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
             segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
 
+            if(segmented_point_cloud_normal->empty())
+                continue;
+
             std::cout << "here2 " << std::endl;
             //inputting the current roll, pitch and yaw from the pf updated from imu
             Eigen::Matrix4f transformation_mat;
@@ -434,7 +460,7 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
                 final_detected_point_cam_frame(3) = 1;
 
                 final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                //std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
+                std::cout << "final pose from horizontal plane in robot frame " << final_detected_point_robot_frame << std::endl;
                 //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
                 final_detected_point.x = final_detected_point_robot_frame(0);
@@ -458,8 +484,8 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
                 complete_obj_info.pose       = final_pose_of_object_in_robot;
                 complete_obj_info.num_points = horizontal_point_size;
 
-                //if( complete_obj_info.num_points  > 500)
-                complete_obj_info_vec.push_back(complete_obj_info);
+                if( complete_obj_info.num_points  > 50)
+                    complete_obj_info_vec.push_back(complete_obj_info);
 
             }
 
@@ -597,7 +623,7 @@ void semantic_slam_ros::publishMappedObjects(std::vector<particle_filter::object
         marker.ns = "my_namespace";
         marker.pose.position.x = mapped_object_vec[i].pose(0);
         marker.pose.position.y = mapped_object_vec[i].pose(1);
-        marker.pose.position.z = 0.5;
+        marker.pose.position.z = mapped_object_vec[i].pose(2);
         marker.pose.orientation.x = 0.0;
         marker.pose.orientation.y = 0.0;
         marker.pose.orientation.z = 0.0;

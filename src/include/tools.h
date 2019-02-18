@@ -37,6 +37,8 @@ public:
         pitch = final_pose(4);
         yaw = final_pose(5);
 
+
+        //pitch angle correction:
         //    std::cout << "X: " << x << std::endl
         //              << "Y: " << y << std::endl
         //              << "Z: " << z << std::endl
