@@ -20,6 +20,8 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/ModelCoefficients.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 //opencv
 #include <opencv2/core/core.hpp>
@@ -46,7 +48,7 @@ public:
 
     plane_segmentation::segmented_objects segmentPointCloudData(semantic_SLAM::ObjectInfo object_info,
                                                                 sensor_msgs::PointCloud2 point_cloud,
-                                                               sensor_msgs::PointCloud2& segmented_point_cloud);
+                                                                sensor_msgs::PointCloud2& segmented_point_cloud);
 
     pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
 
@@ -65,5 +67,9 @@ public:
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud);
 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr preprocessPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
 
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsamplePointcloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliers(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr distance_filter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
 };

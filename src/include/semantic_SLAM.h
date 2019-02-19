@@ -137,6 +137,7 @@ protected:
 
     ros::Publisher mapped_objects_visualizer_pub_;
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
+    void publishNewMappedObjects(std::vector<particle_filter::new_object_info_struct_pf> mapped_object_vec);
 
     ros::Publisher ground_truth_points_pub_;
     void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);
@@ -161,9 +162,9 @@ protected:
 
     //variables regarding IMU
     std::mutex imu_lock_;
-    float acc_x_, acc_y_, acc_z_;
-    void setIMUdata(float acc_x,float acc_y,float acc_z);
-    void getIMUdata(float& acc_x, float& acc_y, float& acc_z);
+    float imu_roll_, imu_pitch_, imu_yaw_;
+    void setIMUdata(float roll, float pitch, float yaw);
+    void getIMUdata(float& roll, float& pitch, float& yaw);
 
     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
     void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
@@ -172,9 +173,12 @@ protected:
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
 
     std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
+    std::vector<particle_filter::new_object_info_struct_pf> segmentPointsfromDetections();
 
     //variables regarding imu
     bool imu_data_available_;
+    bool imu_first_yaw_;
+    float first_yaw_;
     Eigen::Matrix4f transformation_mat_acc_, transformation_mat_ang_vel_;
     Eigen::Vector4f imu_local_acc_mat_, imu_world_acc_mat_;
     Eigen::Vector4f imu_local_ang_vel_, imu_world_ang_vel_;
@@ -187,6 +191,7 @@ protected:
     bool object_detection_available_;
     std::vector<semantic_SLAM::ObjectInfo> object_info_;
     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec_;
+    std::vector<particle_filter::new_object_info_struct_pf> new_mapped_object_vec_;
 
     //variables regarding the point cloud
     std::mutex point_cloud_lock_;
