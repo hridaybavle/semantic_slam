@@ -447,44 +447,6 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud)
-{
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr projected_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-    // Create the segmentation object
-    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
-    // Optional
-    seg.setOptimizeCoefficients (true);
-    // Mandatory
-    seg.setModelType (pcl::SACMODEL_PLANE);
-    seg.setMethodType (pcl::SAC_RANSAC);
-    seg.setDistanceThreshold (0.01);
-    seg.setInputCloud (filtered_point_cloud);
-    seg.segment (*inliers, *coefficients);
-
-
-    // Project the model inliers
-    pcl::ProjectInliers<pcl::PointXYZRGB> proj;
-    proj.setModelType (pcl::SACMODEL_PLANE);
-    proj.setInputCloud (filtered_point_cloud);
-    proj.setIndices (inliers);
-    proj.setModelCoefficients (coefficients);
-    proj.filter (*projected_cloud);
-
-    // Create a Convex Hull representation of the projected inliers
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::ConvexHull<pcl::PointXYZRGB> chull;
-    chull.setInputCloud (projected_cloud);
-    chull.reconstruct (*cloud_hull);
-
-    //std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
-    //std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
-
-
-    return cloud_hull;
-}
 
 double plane_segmentation::computeKmeans(cv::Mat points,
                                          const int num_centroids,
@@ -515,6 +477,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
     point_cloud = this->downsamplePointcloud(point_cloud);
     point_cloud = this->removeOutliers(point_cloud);
     point_cloud = this->distance_filter(point_cloud);
+    point_cloud = this->compute2DConvexHull(point_cloud);
 
     return point_cloud;
 }
@@ -556,7 +519,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::distance_filter(
     std::copy_if(point_cloud->begin(), point_cloud->end(), std::back_inserter(cloud_filtered->points),
                  [&](pcl::PointXYZRGB& p) {
         double d = p.getVector3fMap().norm();
-        return d > 0.3 && d < 4;
+        return d > 0.3 && d < 6;
     }
     );
 
@@ -569,3 +532,41 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::distance_filter(
     return cloud_filtered;
 }
 
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr projected_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    // Optional
+    seg.setOptimizeCoefficients (true);
+    // Mandatory
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold (0.01);
+    seg.setInputCloud (filtered_point_cloud);
+    seg.segment (*inliers, *coefficients);
+
+
+    // Project the model inliers
+    pcl::ProjectInliers<pcl::PointXYZRGB> proj;
+    proj.setModelType (pcl::SACMODEL_PLANE);
+    proj.setInputCloud (filtered_point_cloud);
+    proj.setIndices (inliers);
+    proj.setModelCoefficients (coefficients);
+    proj.filter (*projected_cloud);
+
+    // Create a Convex Hull representation of the projected inliers
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::ConvexHull<pcl::PointXYZRGB> chull;
+    chull.setInputCloud (projected_cloud);
+    chull.reconstruct (*cloud_hull);
+
+    //std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
+    //std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
+
+
+    return cloud_hull;
+}
