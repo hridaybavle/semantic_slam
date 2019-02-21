@@ -114,7 +114,7 @@ void semantic_slam_ros::run()
 
     //-------------------------------------segmentation of the point_cloud------------------------------------------//
     std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
-    std::vector<particle_filter::new_object_info_struct_pf> new_complete_obj_info_vec;
+    std::vector<particle_filter::object_info_struct_all_points_pf> new_complete_obj_info_vec;
     if(object_detection_available_)
     {
         if(point_cloud_available_)
@@ -179,6 +179,7 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     segmented_point_cloud_pub_      = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
     detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
+    mapped_points_pub_              = n.advertise<sensor_msgs::PointCloud2>("mapped_points",1);
     optitrack_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_             = n.advertise<nav_msgs::Path>("optitrack_path",1);
     ground_truth_points_pub_        = n.advertise<visualization_msgs::MarkerArray>("ground_truth_points",1);
@@ -248,9 +249,9 @@ void semantic_slam_ros::imuCallback(const sensor_msgs::Imu &msg)
     }
 
     yaw = yaw - first_yaw_;
-    std::cout << "roll "   << roll << std::endl
-              << "pitch "  << pitch << std::endl
-              << "yaw "    << yaw   << std::endl;
+    //    std::cout << "roll "   << roll << std::endl
+    //              << "pitch "  << pitch << std::endl
+    //              << "yaw "    << yaw   << std::endl;
 
 
     //for converting the IMU from NED to world frame (ENU)
@@ -559,12 +560,12 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
 
 }
 
-std::vector<particle_filter::new_object_info_struct_pf> semantic_slam_ros::segmentPointsfromDetections()
+std::vector<particle_filter::object_info_struct_all_points_pf> semantic_slam_ros::segmentPointsfromDetections()
 {
     sensor_msgs::PointCloud2 segmented_point_cloud;
 
     std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
-    std::vector<particle_filter::new_object_info_struct_pf> complete_obj_info_vec;
+    std::vector<particle_filter::object_info_struct_all_points_pf> complete_obj_info_vec;
 
     complete_obj_info_vec.clear();
     //Eigen::Vector4f point_cam_frame, point_robot_frame;
@@ -609,7 +610,8 @@ std::vector<particle_filter::new_object_info_struct_pf> semantic_slam_ros::segme
                                                             real_sense_pitch_angle);
 
                 //convert points from cam to robot frame
-                particle_filter::new_object_info_struct_pf complete_obj_info;
+                particle_filter::object_info_struct_all_points_pf complete_obj_info;
+
                 for(int j = 0; j < segmented_objects_from_point_cloud[i].segmented_point_cloud->size(); ++j)
                 {
                     Eigen::Vector4f point_cam_frame, point_robot_frame;
@@ -621,19 +623,20 @@ std::vector<particle_filter::new_object_info_struct_pf> semantic_slam_ros::segme
 
                     point_robot_frame = transformation_mat * point_cam_frame;
 
-                    Eigen::Vector3f point_robot_frame_3f;
-                    point_robot_frame_3f(0)    = point_robot_frame(0);
-                    point_robot_frame_3f(1)    = point_robot_frame(1);
-                    point_robot_frame_3f(2)    = point_robot_frame(2);
+                    pcl::PointXYZRGB point;
+                    point.x = point_robot_frame(0);
+                    point.y = point_robot_frame(1);
+                    point.z = point_robot_frame(2);
+                    point.rgb = segmented_objects_from_point_cloud[i].segmented_point_cloud->points[j].rgb;
 
                     //std::cout << "point_robot_frame" << point_robot_frame << std::endl;
-                    complete_obj_info.pose.push_back(point_robot_frame_3f);
+                    complete_obj_info.detected_points.points.push_back(point);
                 }
 
                 complete_obj_info.type       = segmented_objects_from_point_cloud[i].type;
                 complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
                 complete_obj_info_vec.push_back(complete_obj_info);
-                //std::cout << "point_robot_frame size" << complete_obj_info_vec[0].pose.size() << std::endl;
+                std::cout << "point_robot_frame size" << complete_obj_info_vec[0].detected_points.points.size() << std::endl;
 
             }
         }
@@ -789,41 +792,23 @@ void semantic_slam_ros::publishMappedObjects(std::vector<particle_filter::object
     mapped_objects_visualizer_pub_.publish(marker_arrays);
 }
 
-void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::new_object_info_struct_pf> mapped_object_vec)
+void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec)
 {
-    visualization_msgs::MarkerArray marker_arrays;
+    pcl::PointCloud<pcl::PointXYZRGB> point_cloud_pcl;
 
     for(int i =0; i < mapped_object_vec.size(); ++i)
     {
-        for(int j =0; j < mapped_object_vec[i].pose.size(); ++j)
+        for(int j=0; j < mapped_object_vec[i].detected_points.points.size(); ++j)
         {
-            visualization_msgs::Marker marker;
-            marker.header.stamp = ros::Time();
-            marker.header.frame_id = "map";
-            marker.ns = "my_namespace";
-            marker.pose.position.x = mapped_object_vec[i].pose[j](0);
-            marker.pose.position.y = mapped_object_vec[i].pose[j](1);
-            marker.pose.position.z = mapped_object_vec[i].pose[j](2);
-            marker.pose.orientation.x = 0.0;
-            marker.pose.orientation.y = 0.0;
-            marker.pose.orientation.z = 0.0;
-            marker.pose.orientation.w = 1.0;
-
-            marker.id = (i+1)*j;
-            marker.action = visualization_msgs::Marker::ADD;
-            marker.type = visualization_msgs::Marker::CUBE;
-            marker.scale.x = 0.05;
-            marker.scale.y = 0.05;
-            marker.scale.z = 0.05;
-            marker.color.a = 1.0; // Don't forget to set the alpha!
-            marker.color.r = 0.0;
-            marker.color.g = 1.0;
-            marker.color.b = 0.0;
-
-            marker_arrays.markers.push_back(marker);
+            point_cloud_pcl.points.push_back(mapped_object_vec[i].detected_points.points[j]);
         }
     }
-    mapped_objects_visualizer_pub_.publish(marker_arrays);
+
+    sensor_msgs::PointCloud2 point_cloud;
+    pcl::toROSMsg(point_cloud_pcl, point_cloud);
+    point_cloud.header.stamp = ros::Time::now();
+    point_cloud.header.frame_id = "map";
+    mapped_points_pub_.publish(point_cloud);
 }
 
 void semantic_slam_ros::publishGroundTruthPoints(std::vector<geometry_msgs::Point> points)

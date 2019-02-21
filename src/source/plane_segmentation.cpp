@@ -477,7 +477,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
     point_cloud = this->downsamplePointcloud(point_cloud);
     point_cloud = this->removeOutliers(point_cloud);
     point_cloud = this->distance_filter(point_cloud);
-    point_cloud = this->compute2DConvexHull(point_cloud);
+    //point_cloud = this->compute2DConvexHull(point_cloud);
 
     return point_cloud;
 }

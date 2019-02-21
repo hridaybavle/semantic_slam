@@ -46,6 +46,7 @@
 //darknet object detector
 #include "semantic_SLAM/DetectedObjects.h"
 #include "semantic_SLAM/ObjectInfo.h"
+#include "semantic_SLAM/MappedPointCloud.h"
 #include "darknet_ros_msgs/BoundingBox.h"
 #include "darknet_ros_msgs/BoundingBoxes.h"
 
@@ -137,7 +138,9 @@ protected:
 
     ros::Publisher mapped_objects_visualizer_pub_;
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
-    void publishNewMappedObjects(std::vector<particle_filter::new_object_info_struct_pf> mapped_object_vec);
+
+    ros::Publisher mapped_points_pub_;
+    void publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec);
 
     ros::Publisher ground_truth_points_pub_;
     void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);
@@ -173,7 +176,7 @@ protected:
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
 
     std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
-    std::vector<particle_filter::new_object_info_struct_pf> segmentPointsfromDetections();
+    std::vector<particle_filter::object_info_struct_all_points_pf> segmentPointsfromDetections();
 
     //variables regarding imu
     bool imu_data_available_;
@@ -191,7 +194,7 @@ protected:
     bool object_detection_available_;
     std::vector<semantic_SLAM::ObjectInfo> object_info_;
     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec_;
-    std::vector<particle_filter::new_object_info_struct_pf> new_mapped_object_vec_;
+    std::vector<particle_filter::object_info_struct_all_points_pf> new_mapped_object_vec_;
 
     //variables regarding the point cloud
     std::mutex point_cloud_lock_;

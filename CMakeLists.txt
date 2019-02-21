@@ -70,6 +70,7 @@ add_message_files(
     bebop/Ardrone3PilotingStateAttitudeChanged.msg
     ObjectInfo.msg
     DetectedObjects.msg
+    MappedPointCloud.msg
     )
 
 generate_messages(
