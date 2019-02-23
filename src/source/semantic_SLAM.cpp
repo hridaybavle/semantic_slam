@@ -104,11 +104,11 @@ void semantic_slam_ros::run()
         float roll, pitch, yaw;
         this->getIMUdata(roll, pitch, yaw);
 
-        //        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
-        //                                                        pitch,
-        //                                                        yaw,
-        //                                                        filtered_pose_,
-        //                                                        final_pose_);
+        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
+                                                        pitch,
+                                                        yaw,
+                                                        filtered_pose_,
+                                                        final_pose_);
 
     }
 
