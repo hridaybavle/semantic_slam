@@ -476,7 +476,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
 {
     point_cloud = this->downsamplePointcloud(point_cloud);
     point_cloud = this->removeOutliers(point_cloud);
-    point_cloud = this->distance_filter(point_cloud);
+    //point_cloud = this->distance_filter(point_cloud);
     point_cloud = this->compute2DConvexHull(point_cloud);
 
     return point_cloud;
@@ -519,7 +519,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::distance_filter(
     std::copy_if(point_cloud->begin(), point_cloud->end(), std::back_inserter(cloud_filtered->points),
                  [&](pcl::PointXYZRGB& p) {
         double d = p.getVector3fMap().norm();
-        return d > 0.3 && d < 6;
+        return d > 0.3 && d < 3;
     }
     );
 

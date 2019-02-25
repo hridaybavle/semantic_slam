@@ -119,38 +119,38 @@ void semantic_slam_ros::run()
     {
         if(point_cloud_available_)
         {
-            //complete_obj_info_vec     = this->segmentPointCloudData();
-            new_complete_obj_info_vec = this->segmentPointsfromDetections();
+            complete_obj_info_vec     = this->segmentPointCloudData();
+            //new_complete_obj_info_vec = this->segmentPointsfromDetections();
         }
 
-        //        if(!complete_obj_info_vec.empty())
+        if(!complete_obj_info_vec.empty())
+        {
+            filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info_vec,
+                                                                     filtered_pose_,
+                                                                     final_pose_,
+                                                                     RVIO_pose_,
+                                                                     mapped_object_vec_);
+        }
+
+        //        if(!new_complete_obj_info_vec.empty())
         //        {
-        //            filtered_pose_ = particle_filter_obj_.ObjectMapAndUpdate(complete_obj_info_vec,
-        //                                                                     filtered_pose_,
-        //                                                                     final_pose_,
-        //                                                                     RVIO_pose_,
-        //                                                                     mapped_object_vec_);
+        //            filtered_pose_ = particle_filter_obj_.newObjectMapAndUpdate(new_complete_obj_info_vec,
+        //                                                                        filtered_pose_,
+        //                                                                        final_pose_,
+        //                                                                        RVIO_pose_,
+        //                                                                        new_mapped_object_vec_);
         //        }
 
-        if(!new_complete_obj_info_vec.empty())
-        {
-            filtered_pose_ = particle_filter_obj_.newObjectMapAndUpdate(new_complete_obj_info_vec,
-                                                                        filtered_pose_,
-                                                                        final_pose_,
-                                                                        RVIO_pose_,
-                                                                        new_mapped_object_vec_);
-        }
-
         else
-            std::cout << "\033[1;31mReturning as not objects segmented\033[0m" << std::endl;
+            std::cout << "Returning as not objects segmented" << std::endl;
     }
 
 
     publishFinalPose();
     publishCorresVOPose();
     publishParticlePoses();
-    //publishMappedObjects(mapped_object_vec_);
-    publishNewMappedObjects(new_mapped_object_vec_);
+    publishMappedObjects(mapped_object_vec_);
+    //publishNewMappedObjects(new_mapped_object_vec_);
     publishGroundTruthPoints(points_vec_);
 
     prev_time_ = current_time_;
@@ -594,10 +594,10 @@ std::vector<particle_filter::object_info_struct_all_points_pf> semantic_slam_ros
         if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
         {
             //preprocess the points to filter them
-            std::cout << "here 1" << std::endl;
+            //std::cout << "here 1" << std::endl;
             segmented_objects_from_point_cloud[i].segmented_point_cloud = plane_segmentation_obj_.preprocessPointCloud(
                         segmented_objects_from_point_cloud[i].segmented_point_cloud);
-            std::cout << "here 2" << std::endl;
+            //std::cout << "here 2" << std::endl;
 
             //checking the the point cloud after processing is not empty
             if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
