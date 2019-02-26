@@ -32,6 +32,7 @@
 
 const int num_centroids_normals = 2;
 const int num_centroids_height = 2;
+const int num_centroids_vert_dist = 1;
 const int num_centroids_pose = 2;
 
 class plane_segmentation
@@ -65,6 +66,11 @@ public:
                                                     Eigen::MatrixXf final_pose,
                                                     float& point_size);
 
+    std::vector<cv::Mat> computeAllVerticalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                   pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                   Eigen::Matrix4f transformation_mat,
+                                                   Eigen::MatrixXf final_pose,
+                                                   float& point_size);
 
     double computeKmeans(cv::Mat points,
                          const int num_centroids,

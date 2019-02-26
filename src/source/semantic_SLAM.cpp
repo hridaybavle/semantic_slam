@@ -632,26 +632,45 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
 
             float horizontal_point_size =0;
-            std::vector<cv::Mat> final_pose_from_horizontal_plane_vec;
+            std::vector<cv::Mat> final_pose_from_horizontal_plane_vec, final_pose_from_vertical_plane_vec;
             final_pose_from_horizontal_plane_vec = plane_segmentation_obj_.computeAllHorizontalPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                                                                       segmented_point_cloud_normal,
                                                                                                       transformation_mat, final_pose_,
                                                                                                       horizontal_point_size);
 
-            if(!final_pose_from_horizontal_plane_vec.empty())
+            final_pose_from_vertical_plane_vec = plane_segmentation_obj_.computeAllVerticalPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                                                  segmented_point_cloud_normal,
+                                                                                                  transformation_mat, final_pose_,
+                                                                                                  horizontal_point_size);
+            std::vector<cv::Mat> final_pose_vec;
+            final_pose_vec.clear();
+
+            //concactenating poses from horizontal and vertical planes
+            for(int h = 0; h < final_pose_from_horizontal_plane_vec.size(); ++h)
+            {
+                final_pose_vec.push_back(final_pose_from_horizontal_plane_vec[h]);
+            }
+
+            for(int v = 0; v < final_pose_from_vertical_plane_vec.size(); ++v)
+            {
+                final_pose_vec.push_back(final_pose_from_vertical_plane_vec[v]);
+            }
+
+
+            if(!final_pose_vec.empty())
             {
                 std::vector<Eigen::Vector3f> pose_vec;
                 pose_vec.clear();
 
                 geometry_msgs::Point final_detected_point;
 
-                for(int j = 0; j < final_pose_from_horizontal_plane_vec.size(); ++j)
+                for(int j = 0; j < final_pose_vec.size(); ++j)
                 {
 
                     final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
-                    final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,0);
-                    final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,1);
-                    final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,2);
+                    final_detected_point_cam_frame(0) = final_pose_vec[j].at<float>(0,0);
+                    final_detected_point_cam_frame(1) = final_pose_vec[j].at<float>(0,1);
+                    final_detected_point_cam_frame(2) = final_pose_vec[j].at<float>(0,2);
                     final_detected_point_cam_frame(3) = 1;
 
                     final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
