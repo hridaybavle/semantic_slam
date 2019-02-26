@@ -32,7 +32,7 @@
 
 const int num_centroids_normals = 2;
 const int num_centroids_height = 2;
-const int num_centroids_vert_dist = 1;
+const int num_centroids_vert_dist = 2;
 const int num_centroids_pose = 2;
 
 class plane_segmentation
