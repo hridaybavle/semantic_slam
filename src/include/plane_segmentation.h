@@ -58,6 +58,14 @@ public:
                                    Eigen::MatrixXf final_pose,
                                    float& point_size);
 
+
+    std::vector<cv::Mat> computeAllHorizontalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                    Eigen::Matrix4f transformation_mat,
+                                                    Eigen::MatrixXf final_pose,
+                                                    float& point_size);
+
+
     double computeKmeans(cv::Mat points,
                          const int num_centroids,
                          cv::Mat& labels,

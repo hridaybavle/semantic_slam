@@ -138,9 +138,12 @@ protected:
 
     ros::Publisher mapped_objects_visualizer_pub_;
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
+    void publishAllMappedObjects(std::vector<particle_filter::all_object_info_struct_pf> mapped_object_vec);
 
     ros::Publisher mapped_points_pub_;
     void publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec);
+
+
 
     ros::Publisher ground_truth_points_pub_;
     void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);
@@ -176,6 +179,7 @@ protected:
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
 
     std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
+    std::vector<particle_filter::all_object_info_struct_pf> segmentallPointCloudData();
     std::vector<particle_filter::object_info_struct_all_points_pf> segmentPointsfromDetections();
 
     //variables regarding imu
@@ -194,6 +198,7 @@ protected:
     bool object_detection_available_;
     std::vector<semantic_SLAM::ObjectInfo> object_info_;
     std::vector<particle_filter::object_info_struct_pf> mapped_object_vec_;
+    std::vector<particle_filter::all_object_info_struct_pf> all_mapped_object_vec_;
     std::vector<particle_filter::object_info_struct_all_points_pf> new_mapped_object_vec_;
 
     //variables regarding the point cloud

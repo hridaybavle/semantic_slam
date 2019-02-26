@@ -361,7 +361,6 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         y += final_points_convex_hull->points[i].y;
         z += final_points_convex_hull->points[i].z;
 
-
     }
 
     std::cout << "x" << x << std::endl;
@@ -447,6 +446,214 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
 }
 
+
+std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                                    Eigen::Matrix4f transformation_mat,
+                                                                    Eigen::MatrixXf final_pose,
+                                                                    float& point_size)
+{
+
+    Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
+
+    normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr points_without_nans (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmeted_points_using_first_kmeans (new pcl::PointCloud<pcl::PointXYZRGB>);
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> final_segmented_points_vec;
+
+    std::vector<cv::Mat> empty_final_pose_mat;
+    empty_final_pose_mat.clear();
+
+    //empty_final_pose_mat = cv::Mat::zeros(0, 3, CV_32F);
+
+    //all the horizontal plane normals have this orientations
+    normals_of_the_horizontal_plane_in_world(0) = 0;
+    normals_of_the_horizontal_plane_in_world(1) = 0;
+    normals_of_the_horizontal_plane_in_world(2) = 1;
+
+    //finding the orientation of all the horizontal planes in the cam frame
+    normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
+
+
+    //---------------------removing the nans from the normals and the 3d points----------------------//
+    cv::Mat normal_points, normal_filtered_points;
+    normal_points = cv::Mat(point_normal->size(),3, CV_32F);
+    normal_filtered_points = cv::Mat::zeros(0,3, CV_32F);
+
+    for (size_t i =0; i < point_normal->size(); ++i)
+    {
+        if(!std::isnan(point_normal->points[i].normal_x) && !std::isnan(point_normal->points[i].normal_y)
+                && !std::isnan(point_normal->points[i].normal_z))
+        {
+            normal_points.at<float>(i,0) =   static_cast<float>(point_normal->points[i].normal_x);
+            normal_points.at<float>(i,1) =   static_cast<float>(point_normal->points[i].normal_y);
+            normal_points.at<float>(i,2) =   static_cast<float>(point_normal->points[i].normal_z);
+
+            points_without_nans->points.push_back(point_cloud->points[i]);
+            normal_filtered_points.push_back(normal_points.row(i));
+        }
+
+    }
+
+    //-------------applying the kmeans for finding the centroids of all the points-----------------------//
+    if(normal_filtered_points.rows <= 10)
+    {
+        std::cout << "returning as not enough normals points for kmeans" << std::endl;
+        return empty_final_pose_mat;
+    }
+    cv::Mat centroids, labels;
+    double compactness = 0.0;
+    compactness = this->computeKmeans(normal_filtered_points,
+                                      num_centroids_normals,
+                                      labels,
+                                      centroids);
+
+    std::cout << "centroids of normals kmeans " << centroids << std::endl;
+
+    //---------------------------------------------------------------------------------------------------//
+
+    //---------------segmenting the normals and obtaining the corresponding 3D points--------------------//
+    cv::Mat filtered_centroids = cv::Mat::zeros(0, 3, CV_32F);
+    int filtered_centroids_counter = -1;
+    for(int i = 0; i < num_centroids_normals; i++)
+    {
+        if(centroids.at<float>(i,0) < normals_of_the_horizontal_plane_in_cam(0)+0.3 && centroids.at<float>(i,0) > normals_of_the_horizontal_plane_in_cam(0)-0.3
+                && centroids.at<float>(i,1) < normals_of_the_horizontal_plane_in_cam(1)+0.3 && centroids.at<float>(i,1) > normals_of_the_horizontal_plane_in_cam(1)-0.3
+                && centroids.at<float>(i,2) < normals_of_the_horizontal_plane_in_cam(2)+0.3 && centroids.at<float>(i,2) > normals_of_the_horizontal_plane_in_cam(2)-0.3)
+        {
+            filtered_centroids.push_back(centroids.row(i));
+            filtered_centroids_counter = i;
+        }
+
+    }
+
+    std::cout << "filtered centroids " << filtered_centroids << std::endl;
+
+    if(filtered_centroids.empty())
+    {
+        std::cout << "returning as no centroids of horizontal planes found " << std::endl;
+        return empty_final_pose_mat;
+    }
+
+    //segmenting the pointcloud using the labels from the 1st kmeans
+    for(size_t i = 0; i < points_without_nans->size(); ++i)
+    {
+        if(labels.at<int>(i,0) == filtered_centroids_counter)
+            segmeted_points_using_first_kmeans->points.push_back(points_without_nans->points[i]);
+    }
+
+    //Computing the height vector of the centroids
+    std::vector<float> height_vector;
+    float height;
+
+    for (size_t i = 0; i < segmeted_points_using_first_kmeans->size(); ++i)
+    {
+        height = segmeted_points_using_first_kmeans->points[i].x * normals_of_the_horizontal_plane_in_cam(0) +
+                segmeted_points_using_first_kmeans->points[i].y *  normals_of_the_horizontal_plane_in_cam(1) +
+                segmeted_points_using_first_kmeans->points[i].z *  normals_of_the_horizontal_plane_in_cam(2);
+
+        height = -1*height;
+        height_vector.push_back(height);
+    }
+
+    //returning if the heigh vector size is less that 5 for avoiding failure of kmeans
+    if(height_vector.size() <= 5)
+    {
+        std::cout << "height vector doesnt have enough data " << std::endl;
+        return empty_final_pose_mat;
+    }
+
+    //applying second kmeans for height rejection
+    cv::Mat height_points;
+    height_points = cv::Mat(height_vector.size(),1, CV_32F);
+
+    for(size_t i =0; i < height_vector.size(); ++i)
+    {
+        height_points.at<float>(i,0) = (float) height_vector.at(i);
+    }
+
+    cv::Mat height_centroids, height_labels;
+    double height_compactness = 0.0;
+    height_compactness = this->computeKmeans(height_points,
+                                             num_centroids_height,
+                                             height_labels,
+                                             height_centroids);
+
+
+    //std::cout << "height centroids " << height_centroids << std::endl;
+    //std::cout << "height labels " << height_labels << std::endl;
+
+    std::vector<float> height_centroids_vec;
+    for(int i = 0; i < height_centroids.rows; ++i)
+    {
+        height_centroids_vec.push_back(height_centroids.at<float>(i,0));
+    }
+
+    std::sort(height_centroids_vec.begin(), height_centroids_vec.end(), comparator);
+
+    for(int i =0; i < height_centroids_vec.size(); ++i)
+    {
+        std::cout << "height centroids sorted " << height_centroids_vec[i] << std::endl;
+    }
+
+    //filter the points corresponding to the horizontal planes
+    final_segmented_points_vec.clear();
+    for(int i =0; i < num_centroids_height; ++i)
+    {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_segmented_points (new pcl::PointCloud<pcl::PointXYZRGB>);
+        //final segmented point cloud
+        for(size_t j = 0; j < segmeted_points_using_first_kmeans->size(); ++j)
+        {
+            if(height_labels.at<int>(j,0) == i)
+                final_segmented_points->points.push_back(segmeted_points_using_first_kmeans->points[j]);
+        }
+        final_segmented_points_vec.push_back(final_segmented_points);
+    }
+
+    //compute the average poses using convex hull for all the points
+    std::vector<cv::Mat> final_pose_centroids_vec;
+    final_pose_centroids_vec.clear();
+
+    for(int i =0; i < final_segmented_points_vec.size(); ++i)
+    {
+        //computer the convex hull
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
+        final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
+
+        double x=0,y=0,z=0;
+
+        for(int j = 0; j < final_points_convex_hull->size(); ++j)
+        {
+            x += final_points_convex_hull->points[j].x;
+            y += final_points_convex_hull->points[j].y;
+            z += final_points_convex_hull->points[j].z;
+
+        }
+
+        std::cout << "x" << x << std::endl;
+        double x_final, y_final, z_final;
+
+        x_final = x / final_points_convex_hull->size();
+        y_final = y / final_points_convex_hull->size();
+        z_final = z / final_points_convex_hull->size();
+
+        cv::Mat final_pose_centroid;
+        final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+        if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+        {
+            final_pose_centroid.at<float>(0,0) = x_final;
+            final_pose_centroid.at<float>(0,1) = y_final;
+            final_pose_centroid.at<float>(0,2) = z_final;
+
+            std::cout << "final pose centroid " << final_pose_centroid << std::endl;
+            final_pose_centroids_vec.push_back(final_pose_centroid);
+        }
+    }
+
+    return final_pose_centroids_vec;
+
+}
 
 double plane_segmentation::computeKmeans(cv::Mat points,
                                          const int num_centroids,
