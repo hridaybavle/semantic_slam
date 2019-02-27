@@ -740,14 +740,17 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
         }
     }
 
-    if(distance_min < 0.3)
+    if(distance_min < 0.2)
     {
         filtered_centroids.push_back(centroids.row(filtered_centroids_counter));
     }
 
 
     if(filtered_centroids.empty())
+    {
+        std::cout << "returning as filtered normals empty" << std::endl;
         return empty_final_pose_mat;
+    }
 
     std::cout << "filtered centroids of vertical planes " << filtered_centroids << std::endl;
 

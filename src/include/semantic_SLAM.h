@@ -61,7 +61,6 @@
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 500;
-const int num_centroids = 2;
 
 const float optitrack_x_transform =  2.9;
 const float optitrack_y_transform = -0.1;
@@ -181,6 +180,17 @@ protected:
     std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
     std::vector<particle_filter::all_object_info_struct_pf> segmentallPointCloudData();
     std::vector<particle_filter::object_info_struct_all_points_pf> segmentPointsfromDetections();
+
+    std::vector<particle_filter::all_object_info_struct_pf> segmentChairPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                               pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                               Eigen::Matrix4f transformation_mat,
+                                                                               Eigen::VectorXf final_pose_);
+
+
+    std::vector<particle_filter::all_object_info_struct_pf> segmenMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                Eigen::Matrix4f transformation_mat,
+                                                                                Eigen::VectorXf final_pose_);
 
     //variables regarding imu
     bool imu_data_available_;
