@@ -740,7 +740,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
         }
     }
 
-    if(distance_min < 0.2)
+    if(distance_min < 0.3)
     {
         filtered_centroids.push_back(centroids.row(filtered_centroids_counter));
     }
