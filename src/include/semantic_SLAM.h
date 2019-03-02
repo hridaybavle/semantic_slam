@@ -60,7 +60,7 @@
 
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 800;
+const int num_particles_ = 500;
 
 const float optitrack_x_transform =  2.9;
 const float optitrack_y_transform = -0.1;
@@ -187,10 +187,15 @@ protected:
                                                                                Eigen::VectorXf final_pose_);
 
 
-    std::vector<particle_filter::all_object_info_struct_pf> segmenMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                                                                                pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                                                                                Eigen::Matrix4f transformation_mat,
-                                                                                Eigen::VectorXf final_pose_);
+    std::vector<particle_filter::all_object_info_struct_pf> segmentMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                 pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                 Eigen::Matrix4f transformation_mat,
+                                                                                 Eigen::VectorXf final_pose_);
+
+    std::vector<particle_filter::all_object_info_struct_pf> segmentBookorKeyboardPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                        pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                        Eigen::Matrix4f transformation_mat,
+                                                                                        Eigen::VectorXf final_pose_, std::string object_type);
 
     //variables regarding imu
     bool imu_data_available_;

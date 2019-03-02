@@ -64,7 +64,7 @@ public:
                                                     pcl::PointCloud<pcl::Normal>::Ptr point_normal,
                                                     Eigen::Matrix4f transformation_mat,
                                                     Eigen::MatrixXf final_pose,
-                                                    float& point_size);
+                                                    float& point_size, int number_of_height_centroids);
 
     std::vector<cv::Mat> computeAllVerticalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,

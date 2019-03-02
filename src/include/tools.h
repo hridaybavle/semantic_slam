@@ -39,12 +39,12 @@ public:
 
 
         //pitch angle correction:
-        std::cout << "X: " << x << std::endl
-                  << "Y: " << y << std::endl
-                  << "Z: " << z << std::endl
-                  << "roll: " << roll << std::endl
-                  << "pitch: " << pitch << std::endl
-                  << "yaw: "   << yaw << std::endl;
+        //        std::cout << "X: " << x << std::endl
+        //                  << "Y: " << y << std::endl
+        //                  << "Z: " << z << std::endl
+        //                  << "roll: " << roll << std::endl
+        //                  << "pitch: " << pitch << std::endl
+        //                  << "yaw: "   << yaw << std::endl;
 
         //        rot_x_cam(0,0) = 1;
         //        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);

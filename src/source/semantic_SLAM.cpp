@@ -530,7 +530,7 @@ std::vector<particle_filter::object_info_struct_pf> semantic_slam_ros::segmentPo
                 final_detected_point_cam_frame(3) = 1;
 
                 final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-                std::cout << "final pose from horizontal plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
+                //std::cout << "final pose from horizontal plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
                 //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
                 final_detected_point.x = final_detected_point_robot_frame(0);
@@ -601,7 +601,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     segmented_objects_from_point_cloud.clear();
     for (int i = 0; i < object_info.size(); ++i)
     {
-        if(object_info[i].type == "chair" || object_info[i].type == "tvmonitor")
+        if(object_info[i].type == "chair" || object_info[i].type == "tvmonitor" || object_info[i].type == "book"
+                || object_info[i].type == "keyboard")
         {
             plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;
             single_segmented_object_from_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
@@ -616,8 +617,9 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     {
         std::vector<particle_filter::all_object_info_struct_pf> complete_chair_info_vec;
         std::vector<particle_filter::all_object_info_struct_pf> complete_monitor_info_vec;
+        std::vector<particle_filter::all_object_info_struct_pf> complete_book_keyboard_info_vec;
 
-        complete_chair_info_vec.clear(), complete_monitor_info_vec.clear();
+        complete_chair_info_vec.clear(), complete_monitor_info_vec.clear(), complete_book_keyboard_info_vec.clear();
 
         if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
         {
@@ -644,11 +646,21 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             else if(segmented_objects_from_point_cloud[i].type == "tvmonitor")
             {
-                complete_monitor_info_vec = this->segmenMonitorPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
-                                                                      segmented_point_cloud_normal,
-                                                                      transformation_mat,
-                                                                      final_pose_);
+                complete_monitor_info_vec = this->segmentMonitorPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                       segmented_point_cloud_normal,
+                                                                       transformation_mat,
+                                                                       final_pose_);
             }
+
+            else if(segmented_objects_from_point_cloud[i].type == "book" || segmented_objects_from_point_cloud[i].type == "keyboard")
+            {
+                complete_book_keyboard_info_vec    = this->segmentBookorKeyboardPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                                       segmented_point_cloud_normal,
+                                                                                       transformation_mat,
+                                                                                       final_pose_,
+                                                                                       segmented_objects_from_point_cloud[i].type);
+            }
+
 
             //std::cout << "here2 " << std::endl;
             //inputting the current roll, pitch and yaw from the pf updated from imu
@@ -663,6 +675,11 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         for(int id = 0; id < complete_monitor_info_vec.size(); ++id)
         {
             complete_obj_info_vec.push_back(complete_monitor_info_vec[id]);
+        }
+
+        for(int id = 0; id < complete_book_keyboard_info_vec.size(); ++id)
+        {
+            complete_obj_info_vec.push_back(complete_book_keyboard_info_vec[id]);
         }
 
     }
@@ -694,7 +711,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     final_pose_from_horizontal_plane_vec = plane_segmentation_obj_.computeAllHorizontalPlanes(segmented_point_cloud,
                                                                                               segmented_point_cloud_normal,
                                                                                               transformation_mat, final_pose_,
-                                                                                              horizontal_point_size);
+                                                                                              horizontal_point_size,
+                                                                                              2);
 
     final_pose_from_vertical_plane_vec = plane_segmentation_obj_.computeAllVerticalPlanes(segmented_point_cloud,
                                                                                           segmented_point_cloud_normal,
@@ -720,7 +738,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_detected_point_cam_frame(3) = 1;
 
             final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-            std::cout << "final pose from horizontal plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
+            //std::cout << "final pose from horizontal plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
             //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
             final_detected_point.x = final_detected_point_robot_frame(0);
@@ -770,7 +788,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_detected_point_cam_frame(3) = 1;
 
             final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-            std::cout << "final pose from vertical plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
+            //std::cout << "final pose from vertical plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
             //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
             final_detected_point.x = final_detected_point_robot_frame(0);
@@ -802,10 +820,10 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 }
 
 
-std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmenMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                                                                                               pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                                                                                               Eigen::Matrix4f transformation_mat,
-                                                                                               Eigen::VectorXf final_pose_)
+std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmentMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                                pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                                Eigen::Matrix4f transformation_mat,
+                                                                                                Eigen::VectorXf final_pose_)
 {
 
     std::vector<particle_filter::all_object_info_struct_pf> complete_obj_info_vec;
@@ -841,7 +859,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_detected_point_cam_frame(3) = 1;
 
             final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-            std::cout << "final pose from vertical plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
+            //std::cout << "final pose from vertical plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
             //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
 
             final_detected_point.x = final_detected_point_robot_frame(0);
@@ -872,6 +890,84 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     return complete_obj_info_vec;
 
 }
+
+
+std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmentBookorKeyboardPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                                       pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                                       Eigen::Matrix4f transformation_mat,
+                                                                                                       Eigen::VectorXf final_pose_,
+                                                                                                       std::string object_type)
+{
+
+    std::vector<particle_filter::all_object_info_struct_pf> complete_obj_info_vec;
+    complete_obj_info_vec.clear();
+
+    Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
+
+    float horizontal_point_size =0;
+    std::vector<cv::Mat> final_pose_from_horizontal_plane_vec;
+
+    final_pose_from_horizontal_plane_vec = plane_segmentation_obj_.computeAllHorizontalPlanes(segmented_point_cloud,
+                                                                                              segmented_point_cloud_normal,
+                                                                                              transformation_mat, final_pose_,
+                                                                                              horizontal_point_size,
+                                                                                              1);
+
+    //filling in the map vector if vector plane present
+    if(!final_pose_from_horizontal_plane_vec.empty())
+    {
+
+        particle_filter::all_object_info_struct_pf complete_obj_info;
+        std::vector<Eigen::Vector3f> pose_vec;
+        pose_vec.clear();
+
+        geometry_msgs::Point final_detected_point;
+
+        for(int j = 0; j < final_pose_from_horizontal_plane_vec.size(); ++j)
+        {
+
+            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,0);
+            final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,1);
+            final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,2);
+            final_detected_point_cam_frame(3) = 1;
+
+            final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
+            //std::cout << "final pose from vertical plane with respect to world frame " << final_detected_point_robot_frame << std::endl;
+            //std::cout << "segmented pc points " << horizontal_point_size << std::endl;
+
+            final_detected_point.x = final_detected_point_robot_frame(0);
+            final_detected_point.y = final_detected_point_robot_frame(1);
+            final_detected_point.z = final_detected_point_robot_frame(2);
+            //publishFinalDetectedObjectPoint(final_detected_point);
+
+
+            Eigen::Vector3f final_pose_of_object_in_robot;
+
+            final_pose_of_object_in_robot(0) = final_detected_point.x;
+            final_pose_of_object_in_robot(1) = final_detected_point.y;
+            final_pose_of_object_in_robot(2) = final_detected_point.z;
+
+            pose_vec.push_back(final_pose_of_object_in_robot);
+
+        }
+
+        //complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
+        //complete_obj_info.num_points = horizontal_point_size;
+        if(object_type == "book")
+            complete_obj_info.type       = "book";
+        else if(object_type == "keyboard")
+            complete_obj_info.type       = "keyboard";
+
+        complete_obj_info.plane_type = "horizontal";
+        complete_obj_info.pose       = pose_vec;
+        complete_obj_info_vec.push_back(complete_obj_info);
+    }
+
+    return complete_obj_info_vec;
+
+}
+
 
 
 std::vector<particle_filter::object_info_struct_all_points_pf> semantic_slam_ros::segmentPointsfromDetections()
@@ -950,7 +1046,7 @@ std::vector<particle_filter::object_info_struct_all_points_pf> semantic_slam_ros
                 complete_obj_info.type       = segmented_objects_from_point_cloud[i].type;
                 complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
                 complete_obj_info_vec.push_back(complete_obj_info);
-                std::cout << "point_robot_frame size" << complete_obj_info_vec[0].detected_points.points.size() << std::endl;
+                //std::cout << "point_robot_frame size" << complete_obj_info_vec[0].detected_points.points.size() << std::endl;
 
             }
         }
@@ -969,7 +1065,7 @@ void semantic_slam_ros::publishParticlePoses()
     particle_poses_vec.header.stamp = ros::Time::now();
     particle_poses_vec.header.frame_id = "map";
 
-    for(int i =0; i < num_particles_; ++i)
+    for(int i =0; i < filtered_pose_.size(); ++i)
     {
         geometry_msgs::Pose pose;
         pose.position.x = filtered_pose_[i](0);
@@ -1175,6 +1271,44 @@ void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all
                     marker.color.r = 1.0;
                     marker.color.g = 0.0;
                     marker.color.b = 0.0;
+
+                }
+
+            }
+
+            else if(mapped_object_vec[i].type == "book")
+            {
+                if(mapped_object_vec[i].plane_type == "horizontal")
+                {
+                    marker.id = marker_id;
+                    marker.action = visualization_msgs::Marker::ADD;
+                    marker.type = visualization_msgs::Marker::CUBE;
+                    marker.scale.x = 0.3;
+                    marker.scale.y = 0.3;
+                    marker.scale.z = 0.01;
+                    marker.color.a = 1.0; // Don't forget to set the alpha!
+                    marker.color.r = 0.0;
+                    marker.color.g = 0.0;
+                    marker.color.b = 1.0;
+
+                }
+
+            }
+
+            else if(mapped_object_vec[i].type == "keyboard")
+            {
+                if(mapped_object_vec[i].plane_type == "horizontal")
+                {
+                    marker.id = marker_id;
+                    marker.action = visualization_msgs::Marker::ADD;
+                    marker.type = visualization_msgs::Marker::CUBE;
+                    marker.scale.x = 0.3;
+                    marker.scale.y = 0.3;
+                    marker.scale.z = 0.01;
+                    marker.color.a = 1.0; // Don't forget to set the alpha!
+                    marker.color.r = 1.0;
+                    marker.color.g = 0.0;
+                    marker.color.b = 1.0;
 
                 }
 
