@@ -99,18 +99,18 @@ void semantic_slam_ros::run()
 
     }
 
-    if(imu_data_available_)
-    {
-        float roll, pitch, yaw;
-        this->getIMUdata(roll, pitch, yaw);
+    //    if(imu_data_available_)
+    //    {
+    //        float roll, pitch, yaw;
+    //        this->getIMUdata(roll, pitch, yaw);
 
-        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
-                                                        pitch,
-                                                        yaw,
-                                                        filtered_pose_,
-                                                        final_pose_);
+    //        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
+    //                                                        pitch,
+    //                                                        yaw,
+    //                                                        filtered_pose_,
+    //                                                        final_pose_);
 
-    }
+    //    }
 
     //-------------------------------------segmentation of the point_cloud------------------------------------------//
     std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
