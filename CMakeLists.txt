@@ -115,3 +115,8 @@ add_executable(depth_synchronization_node src/source/depth_image_synchronizer.cp
 add_dependencies(depth_synchronization_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(depth_synchronization_node ${OpenCV_LIBS})
 target_link_libraries(depth_synchronization_node ${catkin_LIBRARIES})
+
+add_executable(mono_image_pub_node src/source/mono_image_pub_node.cpp)
+add_dependencies(mono_image_pub_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(mono_image_pub_node ${OpenCV_LIBS})
+target_link_libraries(mono_image_pub_node ${catkin_LIBRARIES})

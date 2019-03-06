@@ -27,6 +27,8 @@
 #include "visualization_msgs/MarkerArray.h"
 #include "nav_msgs/Odometry.h"
 #include "nav_msgs/Path.h"
+#include "sensor_msgs/Image.h"
+#include <cv_bridge/cv_bridge.h>
 
 //PCL ROS
 #include <pcl_conversions/pcl_conversions.h>
@@ -60,7 +62,7 @@
 
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 800;
+const int num_particles_ = 1000;
 
 const float optitrack_x_transform =  2.9;
 const float optitrack_y_transform = -0.1;

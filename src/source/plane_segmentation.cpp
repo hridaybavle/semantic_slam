@@ -621,7 +621,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
         //computer the convex hull
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
 
-        if(final_segmented_points_vec[i]->points.size() > 100)
+        if(final_segmented_points_vec[i]->points.size() > 500)
         {
             final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
 
@@ -845,36 +845,40 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
         if(final_segmented_points_vec[i]->points.size())
         {
             //computer the convex hull
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
-
-            final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
-
-            double x=0,y=0,z=0;
-
-            for(int j = 0; j < final_points_convex_hull->size(); ++j)
+            if(final_segmented_points_vec[i]->points.size() > 500)
             {
-                x += final_points_convex_hull->points[j].x;
-                y += final_points_convex_hull->points[j].y;
-                z += final_points_convex_hull->points[j].z;
 
-            }
+                pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
 
-            double x_final, y_final, z_final;
+                final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
 
-            x_final = x / final_points_convex_hull->size();
-            y_final = y / final_points_convex_hull->size();
-            z_final = z / final_points_convex_hull->size();
+                double x=0,y=0,z=0;
 
-            cv::Mat final_pose_centroid;
-            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
-            if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
-            {
-                final_pose_centroid.at<float>(0,0) = x_final;
-                final_pose_centroid.at<float>(0,1) = y_final;
-                final_pose_centroid.at<float>(0,2) = z_final;
+                for(int j = 0; j < final_points_convex_hull->size(); ++j)
+                {
+                    x += final_points_convex_hull->points[j].x;
+                    y += final_points_convex_hull->points[j].y;
+                    z += final_points_convex_hull->points[j].z;
 
-                //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
-                final_pose_centroids_vec.push_back(final_pose_centroid);
+                }
+
+                double x_final, y_final, z_final;
+
+                x_final = x / final_points_convex_hull->size();
+                y_final = y / final_points_convex_hull->size();
+                z_final = z / final_points_convex_hull->size();
+
+                cv::Mat final_pose_centroid;
+                final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+                if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+                {
+                    final_pose_centroid.at<float>(0,0) = x_final;
+                    final_pose_centroid.at<float>(0,1) = y_final;
+                    final_pose_centroid.at<float>(0,2) = z_final;
+
+                    //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
+                    final_pose_centroids_vec.push_back(final_pose_centroid);
+                }
             }
         }
     }

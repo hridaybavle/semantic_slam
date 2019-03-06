@@ -9,7 +9,7 @@ int main(int argc, char **argv)
     semantic_slam_ros mySemanticSLAM;
     mySemanticSLAM.open(n);
 
-    ros::Rate r(10);
+    ros::Rate r(20);
 
 
  //   while(!mySemanticSLAM.pclViewer->wasStopped())

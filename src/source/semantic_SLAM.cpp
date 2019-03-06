@@ -99,18 +99,18 @@ void semantic_slam_ros::run()
 
     }
 
-    //    if(imu_data_available_)
-    //    {
-    //        float roll, pitch, yaw;
-    //        this->getIMUdata(roll, pitch, yaw);
+//    if(imu_data_available_)
+//    {
+//        float roll, pitch, yaw;
+//        this->getIMUdata(roll, pitch, yaw);
 
-    //        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
-    //                                                        pitch,
-    //                                                        yaw,
-    //                                                        filtered_pose_,
-    //                                                        final_pose_);
+//        filtered_pose_ = particle_filter_obj_.IMUUpdate(roll,
+//                                                        pitch,
+//                                                        yaw,
+//                                                        filtered_pose_,
+//                                                        final_pose_);
 
-    //    }
+//    }
 
     //-------------------------------------segmentation of the point_cloud------------------------------------------//
     std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
@@ -179,9 +179,10 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     //detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
     detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
-    optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/bebop/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
+    optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/realsense/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
     //this is just for visualizing the path
     optitrack_pose_sub_for_plottin_path_ = n.subscribe("/optitrack_pose",1, &semantic_slam_ros::optitrackPoseForPlottingPathCallback, this);
+
 
     //Publishers
     particle_poses_pub_             = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
@@ -334,7 +335,6 @@ void semantic_slam_ros::getIMUdata(float &roll, float &pitch, float &yaw)
 
 }
 
-
 //void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
 //{
 //    //std::cout << "objects size " << msg.objects.size() << std::endl;
@@ -426,9 +426,9 @@ void semantic_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
     optitrack_pose.header.stamp = msg.header.stamp;
     optitrack_pose.header.frame_id = "map";
 
-    optitrack_pose.pose.position.x = msg.pose.pose.position.x + optitrack_x_transform;
-    optitrack_pose.pose.position.y = msg.pose.pose.position.y + optitrack_y_transform;
-    optitrack_pose.pose.position.z = msg.pose.pose.position.z + optitrack_z_transform;
+    optitrack_pose.pose.position.x = msg.pose.pose.position.x ;
+    optitrack_pose.pose.position.y = msg.pose.pose.position.y ;
+    optitrack_pose.pose.position.z = msg.pose.pose.position.z ;
 
     optitrack_pose_pub_.publish(optitrack_pose);
 }

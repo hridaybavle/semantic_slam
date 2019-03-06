@@ -1,0 +1,6 @@
+<!-- Launches: altitude_from_rgbd_node -->
+<launch>
+
+	<node name="mono_image_pub_node" pkg="semantic_SLAM" type="mono_image_pub_node" output="screen" />
+
+</launch>
