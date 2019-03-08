@@ -653,6 +653,43 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
                 //std::cout << "final pose centroid " << final_pose_centroid << std::endl;
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
+
+
+            //            cv::Mat final_segmented_points_mat;
+            //            final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
+            //            for(size_t j =0; j < final_points_convex_hull->size(); ++j)
+            //            {
+            //                final_segmented_points_mat.at<float>(j,0) = final_points_convex_hull->points[j].x;
+            //                final_segmented_points_mat.at<float>(j,1) = final_points_convex_hull->points[j].y;
+            //                final_segmented_points_mat.at<float>(j,2) = final_points_convex_hull->points[j].z;
+            //            }
+
+            //            //last kmeans for obtaining the final pose of the segmented horizontal plane
+            //            cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
+            //            double final_pose_compactness = 0.0;
+
+            //            final_pose_compactness = this->computeKmeans(final_segmented_points_mat,
+            //                                                         num_centroids_pose,
+            //                                                         final_pose_labels,
+            //                                                         kmeans_final_pose_centroids);
+
+
+            //            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+            //            if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
+            //            {
+            //                final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
+            //                final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(0,1);
+            //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(0,2);
+            //            }
+            //            else
+            //            {
+            //                final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(1,0);
+            //                final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(1,1);
+            //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
+            //            }
+
+            //            final_pose_centroids_vec.push_back(final_pose_centroid);
+
         }
     }
 
@@ -842,45 +879,79 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
 
     for(int i =0; i < final_segmented_points_vec.size(); ++i)
     {
-        if(final_segmented_points_vec[i]->points.size())
+        //computer the convex hull
+        if(final_segmented_points_vec[i]->points.size() > 500)
         {
-            //computer the convex hull
-            if(final_segmented_points_vec[i]->points.size() > 500)
+
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
+
+            final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
+
+            double x=0,y=0,z=0;
+
+            for(int j = 0; j < final_points_convex_hull->size(); ++j)
             {
+                x += final_points_convex_hull->points[j].x;
+                y += final_points_convex_hull->points[j].y;
+                z += final_points_convex_hull->points[j].z;
 
-                pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
-
-                final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
-
-                double x=0,y=0,z=0;
-
-                for(int j = 0; j < final_points_convex_hull->size(); ++j)
-                {
-                    x += final_points_convex_hull->points[j].x;
-                    y += final_points_convex_hull->points[j].y;
-                    z += final_points_convex_hull->points[j].z;
-
-                }
-
-                double x_final, y_final, z_final;
-
-                x_final = x / final_points_convex_hull->size();
-                y_final = y / final_points_convex_hull->size();
-                z_final = z / final_points_convex_hull->size();
-
-                cv::Mat final_pose_centroid;
-                final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
-                if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
-                {
-                    final_pose_centroid.at<float>(0,0) = x_final;
-                    final_pose_centroid.at<float>(0,1) = y_final;
-                    final_pose_centroid.at<float>(0,2) = z_final;
-
-                    //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
-                    final_pose_centroids_vec.push_back(final_pose_centroid);
-                }
             }
+
+            double x_final, y_final, z_final;
+
+            x_final = x / final_points_convex_hull->size();
+            y_final = y / final_points_convex_hull->size();
+            z_final = z / final_points_convex_hull->size();
+
+            cv::Mat final_pose_centroid;
+            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+            if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+            {
+                final_pose_centroid.at<float>(0,0) = x_final;
+                final_pose_centroid.at<float>(0,1) = y_final;
+                final_pose_centroid.at<float>(0,2) = z_final;
+
+                //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
+                final_pose_centroids_vec.push_back(final_pose_centroid);
+            }
+
+            //            cv::Mat final_segmented_points_mat;
+            //            final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
+            //            for(size_t j =0; j < final_points_convex_hull->size(); ++j)
+            //            {
+            //                final_segmented_points_mat.at<float>(j,0) = final_points_convex_hull->points[j].x;
+            //                final_segmented_points_mat.at<float>(j,1) = final_points_convex_hull->points[j].y;
+            //                final_segmented_points_mat.at<float>(j,2) = final_points_convex_hull->points[j].z;
+            //            }
+
+            //            //last kmeans for obtaining the final pose of the segmented horizontal plane
+            //            cv::Mat kmeans_final_pose_centroids, final_pose_labels, final_pose_centroid;
+            //            double final_pose_compactness = 0.0;
+
+            //            final_pose_compactness = this->computeKmeans(final_segmented_points_mat,
+            //                                                         num_centroids_pose,
+            //                                                         final_pose_labels,
+            //                                                         kmeans_final_pose_centroids);
+
+
+            //            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+            //            if(kmeans_final_pose_centroids.at<float>(0,2) < kmeans_final_pose_centroids.at<float>(1,2) && kmeans_final_pose_centroids.at<float>(0,2) > 0)
+            //            {
+            //                final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(0,0);
+            //                final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(0,1);
+            //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(0,2);
+            //            }
+            //            else
+            //            {
+            //                final_pose_centroid.at<float>(0,0) = kmeans_final_pose_centroids.at<float>(1,0);
+            //                final_pose_centroid.at<float>(0,1) = kmeans_final_pose_centroids.at<float>(1,1);
+            //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
+            //            }
+
+            final_pose_centroids_vec.push_back(final_pose_centroid);
+
         }
+
     }
 
     return final_pose_centroids_vec;

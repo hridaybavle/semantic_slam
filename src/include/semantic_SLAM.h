@@ -192,7 +192,7 @@ protected:
     std::vector<particle_filter::all_object_info_struct_pf> segmentMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
                                                                                  pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
                                                                                  Eigen::Matrix4f transformation_mat,
-                                                                                 Eigen::VectorXf final_pose_);
+                                                                                 Eigen::VectorXf final_pose_, std::string object_type);
 
     std::vector<particle_filter::all_object_info_struct_pf> segmentBookorKeyboardPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
                                                                                         pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
