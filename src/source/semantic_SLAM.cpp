@@ -723,7 +723,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     //filling in the map vector if horizontal plane present
     if(!final_pose_from_horizontal_plane_vec.empty())
     {
-        particle_filter::all_object_info_struct_pf complete_obj_info;
+
         std::vector<Eigen::Vector3f> pose_vec;
         pose_vec.clear();
 
@@ -756,6 +756,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
 
+
+            particle_filter::all_object_info_struct_pf complete_obj_info;
             complete_obj_info.type       = "chair";
             complete_obj_info.plane_type = "horizontal";
             complete_obj_info.pose       = final_pose_of_object_in_robot;
@@ -775,7 +777,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     if(!final_pose_from_vertical_plane_vec.empty())
     {
 
-        particle_filter::all_object_info_struct_pf complete_obj_info;
+
         std::vector<Eigen::Vector3f> pose_vec;
         pose_vec.clear();
 
@@ -808,16 +810,18 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
 
+            particle_filter::all_object_info_struct_pf complete_obj_info;
             //complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
             //complete_obj_info.num_points = horizontal_point_size;
             complete_obj_info.type       = "chair";
             complete_obj_info.plane_type = "vertical";
             complete_obj_info.pose       = final_pose_of_object_in_robot;
 
+            complete_obj_info_vec.push_back(complete_obj_info);
         }
 
 
-        complete_obj_info_vec.push_back(complete_obj_info);
+
     }
 
     return complete_obj_info_vec;
@@ -848,7 +852,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     if(!final_pose_from_vertical_plane_vec.empty())
     {
 
-        particle_filter::all_object_info_struct_pf complete_obj_info;
+
         std::vector<Eigen::Vector3f> pose_vec;
         pose_vec.clear();
 
@@ -880,6 +884,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_pose_of_object_in_robot(2) = final_detected_point.z;
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
+            particle_filter::all_object_info_struct_pf complete_obj_info;
 
             if(object_type == "tvmonitor")
                 complete_obj_info.type  = "tvmonitor";
@@ -930,7 +935,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     if(!final_pose_from_horizontal_plane_vec.empty())
     {
 
-        particle_filter::all_object_info_struct_pf complete_obj_info;
+
         std::vector<Eigen::Vector3f> pose_vec;
         pose_vec.clear();
 
@@ -961,10 +966,12 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_pose_of_object_in_robot(1) = final_detected_point.y;
             final_pose_of_object_in_robot(2) = final_detected_point.z;
 
-            pose_vec.push_back(final_pose_of_object_in_robot);
+            //pose_vec.push_back(final_pose_of_object_in_robot);
 
             //complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
             //complete_obj_info.num_points = horizontal_point_size;
+
+            particle_filter::all_object_info_struct_pf complete_obj_info;
             if(object_type == "book")
                 complete_obj_info.type       = "book";
             else if(object_type == "keyboard")
@@ -1321,6 +1328,25 @@ void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all
                     marker.scale.z = 0.01;
                     marker.color.a = 1.0; // Don't forget to set the alpha!
                     marker.color.r = 1.0;
+                    marker.color.g = 0.0;
+                    marker.color.b = 1.0;
+
+                }
+
+            }
+
+            else if(mapped_object_vec[i].type == "book")
+            {
+                if(mapped_object_vec[i].plane_type == "horizontal")
+                {
+                    marker.id = marker_id;
+                    marker.action = visualization_msgs::Marker::ADD;
+                    marker.type = visualization_msgs::Marker::CUBE;
+                    marker.scale.x = 0.3;
+                    marker.scale.y = 0.3;
+                    marker.scale.z = 0.01;
+                    marker.color.a = 1.0; // Don't forget to set the alpha!
+                    marker.color.r = 0.0;
                     marker.color.g = 0.0;
                     marker.color.b = 1.0;
 
