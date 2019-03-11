@@ -95,7 +95,7 @@ void semantic_slam_ros::run()
         this->getRVIOPose(RVIO_pose);
 
         //std::cout << "VO_pose data " << VO_pose << std::endl;
-        filtered_pose_ = particle_filter_obj_.predictionVO(time_diff, RVIO_pose, filtered_pose_, final_pose_);
+        particle_filter_obj_.predictionVO(time_diff, RVIO_pose, final_pose_);
 
     }
 
@@ -137,11 +137,10 @@ void semantic_slam_ros::run()
 
         if(!all_obj_complete_info_vec.empty())
         {
-            filtered_pose_ = particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
-                                                                        filtered_pose_,
-                                                                        final_pose_,
-                                                                        RVIO_pose_,
-                                                                        all_mapped_object_vec_);
+            particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
+                                                       final_pose_,
+                                                       RVIO_pose_,
+                                                       all_mapped_object_vec_);
         }
 
         //        if(!new_complete_obj_info_vec.empty())
@@ -157,6 +156,7 @@ void semantic_slam_ros::run()
             std::cout << "Returning as not objects segmented" << std::endl;
     }
 
+    all_particles_= particle_filter_obj_.getAllParticles();
 
     publishFinalPose();
     publishCorresVOPose();
@@ -263,50 +263,6 @@ void semantic_slam_ros::imuCallback(const sensor_msgs::Imu &msg)
     }
 
     yaw = yaw - first_yaw_;
-    //    std::cout << "roll "   << roll << std::endl
-    //              << "pitch "  << pitch << std::endl
-    //              << "yaw "    << yaw   << std::endl;
-
-
-    //for converting the IMU from NED to world frame (ENU)
-    //    transformation_mat_acc_.setZero(), transformation_mat_ang_vel_.setZero();
-    //    imu_local_acc_mat_.setOnes(), imu_world_acc_mat_.setOnes();
-    //    imu_local_ang_vel_.setOnes(), imu_world_ang_vel_.setOnes();
-
-    //    imu_local_acc_mat_(0) = msg.linear_acceleration.x;
-    //    imu_local_acc_mat_(1) = msg.linear_acceleration.y;
-    //    imu_local_acc_mat_(2) = msg.linear_acceleration.z;
-
-    //    semantic_tools_obj_.transformIMUtoWorld(imu_local_acc_mat_(0),
-    //                                            imu_local_acc_mat_(1),
-    //                                            imu_local_acc_mat_(2),
-    //                                            transformation_mat_acc_);
-
-    //    //converting the imu acclerations in world frame
-    //    imu_world_acc_mat_ = transformation_mat_acc_ * imu_local_acc_mat_;
-
-    //    //    std::cout << "Imu acc in world " << std::endl
-    //    //              << "ax: " << imu_world_acc_mat_(0) << std::endl
-    //    //              << "ay: " << imu_world_acc_mat_(1) << std::endl
-    //    //              << "az: " << imu_world_acc_mat_(2) << std::endl;
-
-
-    //    imu_local_ang_vel_(0) = msg.angular_velocity.x;
-    //    imu_local_ang_vel_(1) = msg.angular_velocity.y;
-    //    imu_local_ang_vel_(2) = msg.angular_velocity.z;
-
-    //    semantic_tools_obj_.transformIMUtoWorld(imu_local_ang_vel_(0),
-    //                                            imu_local_ang_vel_(1),
-    //                                            imu_local_ang_vel_(2),
-    //                                            transformation_mat_ang_vel_);
-
-    //    imu_world_ang_vel_ = transformation_mat_acc_ * imu_local_ang_vel_;
-
-
-    //    std::cout << "Imu angular vel in world " << std::endl
-    //              << "wx: " << imu_world_ang_vel_(0) << std::endl
-    //              << "wy: " << imu_world_ang_vel_(1) << std::endl
-    //              << "wz: " << imu_world_ang_vel_(2) << std::endl;
 
     this->setIMUdata(msg.linear_acceleration.x, msg.linear_acceleration.y,msg.linear_acceleration.z);
     //this->calculateRPYAngles();
@@ -1088,16 +1044,16 @@ void semantic_slam_ros::publishParticlePoses()
     particle_poses_vec.header.stamp = ros::Time::now();
     particle_poses_vec.header.frame_id = "map";
 
-    for(int i =0; i < filtered_pose_.size(); ++i)
+    for(int i =0; i < all_particles_.size(); ++i)
     {
         geometry_msgs::Pose pose;
-        pose.position.x = filtered_pose_[i](0);
-        pose.position.y = filtered_pose_[i](1);
-        pose.position.z = filtered_pose_[i](2);
+        pose.position.x = all_particles_[i].pose(0);
+        pose.position.y = all_particles_[i].pose(1);
+        pose.position.z = all_particles_[i].pose(2);
 
         //converting euler to quaternion
-        tf::Quaternion quaternion = tf::createQuaternionFromRPY(filtered_pose_[i](3),filtered_pose_[i](4),filtered_pose_[i](5));
-                pose.orientation.x = quaternion.getX();
+        tf::Quaternion quaternion = tf::createQuaternionFromRPY(all_particles_[i].pose(3),all_particles_[i].pose(4),all_particles_[i].pose(5));
+        pose.orientation.x = quaternion.getX();
         pose.orientation.y = quaternion.getY();
         pose.orientation.z = quaternion.getZ();
         pose.orientation.w = quaternion.getW();
@@ -1232,130 +1188,130 @@ void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all
 
     for(int i =0; i < mapped_object_vec.size(); ++i)
     {
-            visualization_msgs::Marker marker;
-            marker.header.stamp = ros::Time();
-            marker.header.frame_id = "map";
-            marker.ns = "my_namespace";
-            marker.pose.position.x = mapped_object_vec[i].pose(0);
-            marker.pose.position.y = mapped_object_vec[i].pose(1);
-            marker.pose.position.z = mapped_object_vec[i].pose(2);
-            marker.pose.orientation.x = 0.0;
-            marker.pose.orientation.y = 0.0;
-            marker.pose.orientation.z = 0.0;
-            marker.pose.orientation.w = 1.0;
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time();
+        marker.header.frame_id = "map";
+        marker.ns = "my_namespace";
+        marker.pose.position.x = mapped_object_vec[i].pose(0);
+        marker.pose.position.y = mapped_object_vec[i].pose(1);
+        marker.pose.position.z = mapped_object_vec[i].pose(2);
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
 
 
-            if(mapped_object_vec[i].type == "chair")
+        if(mapped_object_vec[i].type == "chair")
+        {
+            if(mapped_object_vec[i].plane_type == "horizontal")
             {
-                if(mapped_object_vec[i].plane_type == "horizontal")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.3;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.01;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 0.0;
-                    marker.color.g = 1.0;
-                    marker.color.b = 0.0;
-
-                }
-
-                else if(mapped_object_vec[i].plane_type == "vertical")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.01;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.3;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 0.0;
-                    marker.color.g = 1.0;
-                    marker.color.b = 0.0;
-
-                }
-            }
-
-            else if(mapped_object_vec[i].type == "tvmonitor")
-            {
-                if(mapped_object_vec[i].plane_type == "vertical")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.01;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.3;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 1.0;
-                    marker.color.g = 0.0;
-                    marker.color.b = 0.0;
-
-                }
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
 
             }
 
-            else if (mapped_object_vec[i].type == "laptop")
+            else if(mapped_object_vec[i].plane_type == "vertical")
             {
-                if(mapped_object_vec[i].plane_type == "vertical")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.01;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.3;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 1.0;
-                    marker.color.g = 1.0;
-                    marker.color.b = 0.0;
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
 
-                }
+            }
+        }
+
+        else if(mapped_object_vec[i].type == "tvmonitor")
+        {
+            if(mapped_object_vec[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 0.0;
+                marker.color.b = 0.0;
 
             }
 
-            else if(mapped_object_vec[i].type == "keyboard")
-            {
-                if(mapped_object_vec[i].plane_type == "horizontal")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.3;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.01;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 1.0;
-                    marker.color.g = 0.0;
-                    marker.color.b = 1.0;
+        }
 
-                }
+        else if (mapped_object_vec[i].type == "laptop")
+        {
+            if(mapped_object_vec[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
 
             }
 
-            else if(mapped_object_vec[i].type == "book")
-            {
-                if(mapped_object_vec[i].plane_type == "horizontal")
-                {
-                    marker.id = marker_id;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.type = visualization_msgs::Marker::CUBE;
-                    marker.scale.x = 0.3;
-                    marker.scale.y = 0.3;
-                    marker.scale.z = 0.01;
-                    marker.color.a = 1.0; // Don't forget to set the alpha!
-                    marker.color.r = 0.0;
-                    marker.color.g = 0.0;
-                    marker.color.b = 1.0;
+        }
 
-                }
+        else if(mapped_object_vec[i].type == "keyboard")
+        {
+            if(mapped_object_vec[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
 
             }
 
-            marker_arrays.markers.push_back(marker);
-            marker_id++;
+        }
+
+        else if(mapped_object_vec[i].type == "book")
+        {
+            if(mapped_object_vec[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        marker_arrays.markers.push_back(marker);
+        marker_id++;
     }
 
     mapped_objects_visualizer_pub_.publish(marker_arrays);

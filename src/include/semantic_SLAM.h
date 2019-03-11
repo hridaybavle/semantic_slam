@@ -208,6 +208,8 @@ protected:
     Eigen::Vector4f imu_local_ang_vel_, imu_world_ang_vel_;
 
     std::vector<Eigen::VectorXf> filtered_pose_;
+    std::vector<particle_filter::particle> all_particles_;
+
     Eigen::VectorXf final_pose_;
 
     //variables regarding detected object
