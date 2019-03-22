@@ -62,7 +62,7 @@
 
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 1000;
+const int num_particles_ = 1500;
 
 const float optitrack_x_transform =  2.9;
 const float optitrack_y_transform = -0.1;
@@ -144,7 +144,8 @@ protected:
     ros::Publisher mapped_points_pub_;
     void publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec);
 
-
+    ros::Publisher detected_planes_pub_;
+    void publishDetectedPlanes(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec);
 
     ros::Publisher ground_truth_points_pub_;
     void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);

@@ -948,7 +948,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
             //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
             //            }
 
-            final_pose_centroids_vec.push_back(final_pose_centroid);
+            //final_pose_centroids_vec.push_back(final_pose_centroid);
 
         }
 

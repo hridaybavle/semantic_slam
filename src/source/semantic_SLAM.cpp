@@ -152,8 +152,8 @@ void semantic_slam_ros::run()
         //                                                                        new_mapped_object_vec_);
         //        }
 
-        else
-            std::cout << "Returning as not objects segmented" << std::endl;
+        //else
+        //std::cout << "Returning as not objects segmented" << std::endl;
     }
 
     all_particles_= particle_filter_obj_.getAllParticles();
@@ -193,6 +193,7 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     segmented_point_cloud_pub_      = n.advertise<sensor_msgs::PointCloud2>("segmented_point_cloud",1);
     detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
+    detected_planes_pub_            = n.advertise<visualization_msgs::MarkerArray>("detected_objects",1);
     mapped_points_pub_              = n.advertise<sensor_msgs::PointCloud2>("mapped_points",1);
     optitrack_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_             = n.advertise<nav_msgs::Path>("optitrack_path",1);
@@ -647,6 +648,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     //pclViewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal>(segmented_point_cloud_pcl, segmented_point_cloud_normal, 100, 0.02f, "segmented cloud normals");
     //pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "segmented cloud");
     //publishSegmentedPointCloud(segmented_point_cloud);
+
+    this->publishDetectedPlanes(complete_obj_info_vec);
 
     return complete_obj_info_vec;
 
@@ -1314,7 +1317,145 @@ void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all
         marker_id++;
     }
 
+    detected_planes_pub_.publish(marker_arrays);
+}
+
+void semantic_slam_ros::publishDetectedPlanes(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec)
+{
+    visualization_msgs::MarkerArray marker_arrays;
+    int marker_id = 0;
+
+    for(int i =0; i < detected_object_vec.size(); ++i)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time();
+        marker.header.frame_id = "map";
+        marker.ns = "my_namespace";
+        marker.pose.position.x = detected_object_vec[i].pose(0) + final_pose_(0);
+        marker.pose.position.y = detected_object_vec[i].pose(1) + final_pose_(1);
+        marker.pose.position.z = detected_object_vec[i].pose(2) + final_pose_(2);
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        std::cout << "Detected Pose " << detected_object_vec[i].pose << std::endl;
+
+        if(detected_object_vec[i].type == "chair")
+        {
+            if(detected_object_vec[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+
+            else if(detected_object_vec[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+        }
+
+        else if(detected_object_vec[i].type == "tvmonitor")
+        {
+            if(detected_object_vec[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        else if (detected_object_vec[i].type == "laptop")
+        {
+            if(detected_object_vec[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        else if(detected_object_vec[i].type == "keyboard")
+        {
+            if(detected_object_vec[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        else if(detected_object_vec[i].type == "book")
+        {
+            if(detected_object_vec[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        marker_arrays.markers.push_back(marker);
+        marker_id++;
+    }
+
     mapped_objects_visualizer_pub_.publish(marker_arrays);
+
 }
 
 
