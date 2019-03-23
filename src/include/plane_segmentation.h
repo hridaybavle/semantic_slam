@@ -22,6 +22,7 @@
 #include <pcl/ModelCoefficients.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/extract_indices.h>
 
 //opencv
 #include <opencv2/core/core.hpp>
@@ -71,6 +72,8 @@ public:
                                                    Eigen::Matrix4f transformation_mat,
                                                    Eigen::MatrixXf final_pose,
                                                    float& point_size);
+
+    std::vector<cv::Mat> computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, Eigen::Matrix4f transformation_mat);
 
     double computeKmeans(cv::Mat points,
                          const int num_centroids,

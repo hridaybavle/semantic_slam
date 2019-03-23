@@ -656,12 +656,12 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
 
 
             //            cv::Mat final_segmented_points_mat;
-            //            final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
-            //            for(size_t j =0; j < final_points_convex_hull->size(); ++j)
+            //            final_segmented_points_mat = cv::Mat(final_segmented_points_vec[i]->points.size(),3, CV_32F);
+            //            for(size_t j =0; j < final_segmented_points_vec[i]->points.size(); ++j)
             //            {
-            //                final_segmented_points_mat.at<float>(j,0) = final_points_convex_hull->points[j].x;
-            //                final_segmented_points_mat.at<float>(j,1) = final_points_convex_hull->points[j].y;
-            //                final_segmented_points_mat.at<float>(j,2) = final_points_convex_hull->points[j].z;
+            //                final_segmented_points_mat.at<float>(j,0) = final_segmented_points_vec[i]->points[j].x;
+            //                final_segmented_points_mat.at<float>(j,1) = final_segmented_points_vec[i]->points[j].y;
+            //                final_segmented_points_mat.at<float>(j,2) = final_segmented_points_vec[i]->points[j].z;
             //            }
 
             //            //last kmeans for obtaining the final pose of the segmented horizontal plane
@@ -904,24 +904,28 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
             z_final = z / final_points_convex_hull->size();
 
             cv::Mat final_pose_centroid;
-            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+            final_pose_centroid = cv::Mat::zeros(1, 6, CV_32F);
             if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
             {
+                //also filling the final pose with info of the orientation of the plane
                 final_pose_centroid.at<float>(0,0) = x_final;
                 final_pose_centroid.at<float>(0,1) = y_final;
                 final_pose_centroid.at<float>(0,2) = z_final;
+                final_pose_centroid.at<float>(0,3) = filtered_centroids.at<float>(0,0);
+                final_pose_centroid.at<float>(0,4) = filtered_centroids.at<float>(0,1);
+                final_pose_centroid.at<float>(0,5) = filtered_centroids.at<float>(0,3);
 
                 //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
 
             //            cv::Mat final_segmented_points_mat;
-            //            final_segmented_points_mat = cv::Mat(final_points_convex_hull->size(),3, CV_32F);
-            //            for(size_t j =0; j < final_points_convex_hull->size(); ++j)
+            //            final_segmented_points_mat = cv::Mat(final_segmented_points_vec[i]->points.size(),3, CV_32F);
+            //            for(size_t j =0; j < final_segmented_points_vec[i]->points.size(); ++j)
             //            {
-            //                final_segmented_points_mat.at<float>(j,0) = final_points_convex_hull->points[j].x;
-            //                final_segmented_points_mat.at<float>(j,1) = final_points_convex_hull->points[j].y;
-            //                final_segmented_points_mat.at<float>(j,2) = final_points_convex_hull->points[j].z;
+            //                final_segmented_points_mat.at<float>(j,0) = final_segmented_points_vec[i]->points[j].x;
+            //                final_segmented_points_mat.at<float>(j,1) = final_segmented_points_vec[i]->points[j].y;
+            //                final_segmented_points_mat.at<float>(j,2) = final_segmented_points_vec[i]->points[j].z;
             //            }
 
             //            //last kmeans for obtaining the final pose of the segmented horizontal plane
@@ -948,7 +952,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
             //                final_pose_centroid.at<float>(0,2) = kmeans_final_pose_centroids.at<float>(1,2);
             //            }
 
-            //final_pose_centroids_vec.push_back(final_pose_centroid);
+            //            final_pose_centroids_vec.push_back(final_pose_centroid);
 
         }
 
@@ -958,6 +962,142 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
 
 
 }
+
+std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                          Eigen::Matrix4f transformation_mat)
+{
+
+    std::vector<cv::Mat> final_pose_centroids_vec;
+    final_pose_centroids_vec.clear();
+
+    //first get the normals of horizontal planes using the transformation mat
+    Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
+    normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
+
+    normals_of_the_horizontal_plane_in_world(0) = 0;
+    normals_of_the_horizontal_plane_in_world(1) = 0;
+    normals_of_the_horizontal_plane_in_world(2) = 1;
+
+    normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_p (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    std::vector<cv::Mat> empty_final_pose_mat;
+    empty_final_pose_mat.clear();
+
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+    // Create the segmentation object
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    // Optional
+    seg.setOptimizeCoefficients (true);
+
+    // Mandatory
+    seg.setModelType (pcl::SACMODEL_PLANE);
+    seg.setMethodType (pcl::SAC_RANSAC);
+    seg.setDistanceThreshold (0.01);
+    seg.setMaxIterations (100);
+
+    // Create the filtering object
+    pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+
+
+    int i = 0, nr_points = (int) point_cloud->points.size ();
+    // While 30% of the original cloud is still there
+    while (point_cloud->points.size () > 0.8 * nr_points)
+    {
+        // Segment the largest planar component from the remaining cloud
+        seg.setInputCloud (point_cloud);
+        seg.segment (*inliers, *coefficients);
+
+        if (inliers->indices.size () == 0)
+        {
+            std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
+            break;
+        }
+
+
+        // Extract the inliers
+        extract.setInputCloud (point_cloud);
+        extract.setIndices (inliers);
+        extract.setNegative (false);
+        extract.filter (*cloud_p);
+
+        std::cerr << "Model coefficients: " << coefficients->values[0] << " "
+                  << coefficients->values[1] << " "
+                  << coefficients->values[2] << " "
+                  << coefficients->values[3] << std::endl;
+
+        std::cout << "Horizontal plane coefficients in cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
+
+        //std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << " data points." << std::endl;
+
+        // Create the filtering object
+        extract.setNegative (true);
+        extract.filter (*cloud_f);
+        point_cloud.swap (cloud_f);
+
+        //std::cout << "cloud filtered points size "  << cloud_f->size() << std::endl;
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
+        final_points_convex_hull = this->compute2DConvexHull(cloud_f);
+
+        double x=0,y=0,z=0;
+
+        for(int j = 0; j < final_points_convex_hull->size(); ++j)
+        {
+            x += final_points_convex_hull->points[j].x;
+            y += final_points_convex_hull->points[j].y;
+            z += final_points_convex_hull->points[j].z;
+
+        }
+
+        double x_final, y_final, z_final;
+
+        x_final = x / final_points_convex_hull->size();
+        y_final = y / final_points_convex_hull->size();
+        z_final = z / final_points_convex_hull->size();
+
+        cv::Mat final_pose_centroid;
+        final_pose_centroid = cv::Mat::zeros(1, 4, CV_32F);
+
+        //checking if the extract plane is a horizontal plane
+        if(fabs(coefficients->values[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
+                fabs(coefficients->values[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
+                fabs(coefficients->values[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
+        {
+            //zero if its horizontal plane
+            final_pose_centroid.at<float>(0,3) = 0;
+            std::cout << "Its horizontal plane " << std::endl;
+        }
+        else
+        {
+            //one if its a vertical plane
+            final_pose_centroid.at<float>(0,3) = 1;
+            std::cout << "Its a vertical plane " << std::endl;
+        }
+
+
+        if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+        {
+            //also filling the final pose with info of the orientation of the plane
+            final_pose_centroid.at<float>(0,0) = x_final;
+            final_pose_centroid.at<float>(0,1) = y_final;
+            final_pose_centroid.at<float>(0,2) = z_final;
+
+            std::cout << "final pose of the corresponding plane " << final_pose_centroid << std::endl;
+
+            //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
+            final_pose_centroids_vec.push_back(final_pose_centroid);
+        }
+
+
+    }
+
+    return final_pose_centroids_vec;
+}
+
 
 double plane_segmentation::computeKmeans(cv::Mat points,
                                          const int num_centroids,
