@@ -1005,7 +1005,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::P
 
     int i = 0, nr_points = (int) point_cloud->points.size ();
     // While 30% of the original cloud is still there
-    while (point_cloud->points.size () > 0.8 * nr_points)
+    while (point_cloud->points.size () > 0.9 * nr_points)
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud (point_cloud);
@@ -1029,7 +1029,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::P
                   << coefficients->values[2] << " "
                   << coefficients->values[3] << std::endl;
 
-        std::cout << "Horizontal plane coefficients in cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
+        //std::cout << "Horizontal plane coefficients in cam frame " << normals_of_the_horizontal_plane_in_cam << std::endl;
 
         //std::cerr << "PointCloud representing the planar component: " << cloud_p->width * cloud_p->height << " data points." << std::endl;
 
@@ -1043,57 +1043,69 @@ std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::P
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
         final_points_convex_hull = this->compute2DConvexHull(cloud_f);
 
-        double x=0,y=0,z=0;
+        float area = pcl::calculatePolygonArea(*final_points_convex_hull);
+        std::cout << "polygon area " << area << std::endl;
 
-        for(int j = 0; j < final_points_convex_hull->size(); ++j)
+
+        if(area >= 0.6)
         {
-            x += final_points_convex_hull->points[j].x;
-            y += final_points_convex_hull->points[j].y;
-            z += final_points_convex_hull->points[j].z;
+            double x=0,y=0,z=0;
 
+            for(int j = 0; j < final_points_convex_hull->size(); ++j)
+            {
+                x += final_points_convex_hull->points[j].x;
+                y += final_points_convex_hull->points[j].y;
+                z += final_points_convex_hull->points[j].z;
+
+            }
+
+            double x_final, y_final, z_final;
+
+            x_final = x / final_points_convex_hull->size();
+            y_final = y / final_points_convex_hull->size();
+            z_final = z / final_points_convex_hull->size();
+
+            cv::Mat final_pose_centroid;
+            final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
+
+            //checking if the extract plane is a horizontal plane
+            if(fabs(coefficients->values[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
+                    fabs(coefficients->values[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
+                    fabs(coefficients->values[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
+            {
+                //zero if its horizontal plane
+                final_pose_centroid.at<float>(0,7) = 0;
+                std::cout << "Its horizontal plane " << std::endl;
+            }
+            else
+            {
+                //one if its a vertical plane
+                final_pose_centroid.at<float>(0,7) = 1;
+                std::cout << "Its a vertical plane " << std::endl;
+            }
+
+
+            if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+            {
+                //also filling the final pose with info of the orientation of the plane
+                final_pose_centroid.at<float>(0,0) = x_final;
+                final_pose_centroid.at<float>(0,1) = y_final;
+                final_pose_centroid.at<float>(0,2) = z_final;
+                final_pose_centroid.at<float>(0,3) = coefficients->values[0];
+                final_pose_centroid.at<float>(0,4) = coefficients->values[1];
+                final_pose_centroid.at<float>(0,5) = coefficients->values[2];
+                final_pose_centroid.at<float>(0,6) = coefficients->values[3];
+
+                //std::cout << "final pose of the corresponding plane " << final_pose_centroid << std::endl;
+
+                //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
+                final_pose_centroids_vec.push_back(final_pose_centroid);
+            }
         }
-
-        double x_final, y_final, z_final;
-
-        x_final = x / final_points_convex_hull->size();
-        y_final = y / final_points_convex_hull->size();
-        z_final = z / final_points_convex_hull->size();
-
-        cv::Mat final_pose_centroid;
-        final_pose_centroid = cv::Mat::zeros(1, 4, CV_32F);
-
-        //checking if the extract plane is a horizontal plane
-        if(fabs(coefficients->values[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
-                fabs(coefficients->values[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
-                fabs(coefficients->values[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
-        {
-            //zero if its horizontal plane
-            final_pose_centroid.at<float>(0,3) = 0;
-            std::cout << "Its horizontal plane " << std::endl;
-        }
-        else
-        {
-            //one if its a vertical plane
-            final_pose_centroid.at<float>(0,3) = 1;
-            std::cout << "Its a vertical plane " << std::endl;
-        }
-
-
-        if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
-        {
-            //also filling the final pose with info of the orientation of the plane
-            final_pose_centroid.at<float>(0,0) = x_final;
-            final_pose_centroid.at<float>(0,1) = y_final;
-            final_pose_centroid.at<float>(0,2) = z_final;
-
-            std::cout << "final pose of the corresponding plane " << final_pose_centroid << std::endl;
-
-            //std::cout << "final pose centroid from vertical planes " << final_pose_centroid << std::endl;
-            final_pose_centroids_vec.push_back(final_pose_centroid);
-        }
-
 
     }
+
+    std::cout << "END OF PLANE SEGMENTATION " << std::endl;
 
     return final_pose_centroids_vec;
 }
@@ -1201,7 +1213,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(p
     seg.segment (*inliers, *coefficients);
 
 
-    // Project the model inliers
+    //    // Project the model inliers
     pcl::ProjectInliers<pcl::PointXYZRGB> proj;
     proj.setModelType (pcl::SACMODEL_PLANE);
     proj.setInputCloud (filtered_point_cloud);
@@ -1217,7 +1229,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(p
 
     //std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
     //std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
-
 
     return cloud_hull;
 }

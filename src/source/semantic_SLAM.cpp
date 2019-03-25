@@ -696,7 +696,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         for(int j = 0; j < final_pose_from_horizontal_plane_vec.size(); ++j)
         {
 
-            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
             final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,0);
             final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,1);
             final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,2);
@@ -711,7 +711,6 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_detected_point.z = final_detected_point_robot_frame(2);
             //publishFinalDetectedObjectPoint(final_detected_point);
 
-
             Eigen::Vector3f final_pose_of_object_in_robot;
 
             final_pose_of_object_in_robot(0) = final_detected_point.x;
@@ -719,19 +718,33 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_pose_of_object_in_robot(2) = final_detected_point.z;
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
+            //do the same above procedure for the normal orientation
+            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_robot_frame;
+            normal_orientation_cam_frame.setOnes(), normal_orientation_robot_frame.setOnes();
 
+            normal_orientation_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,3);
+            normal_orientation_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,4);
+            normal_orientation_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,5);
+            normal_orientation_cam_frame(3) = 1;
 
+            normal_orientation_robot_frame = transformation_mat * normal_orientation_cam_frame;
+
+            //std::cout << "normal orientation came frame " << normal_orientation_cam_frame << std::endl;
+            std::cout << "normal orientation robot frame " << normal_orientation_robot_frame << std::endl;
+
+            //filling the vector for the sending it to the PF
             particle_filter::all_object_info_struct_pf complete_obj_info;
             complete_obj_info.type       = "chair";
 
             //if its zeros its horizontal else its vertical
-            if(final_pose_from_horizontal_plane_vec[j].at<float>(0,3) == 0)
+            if(final_pose_from_horizontal_plane_vec[j].at<float>(0,7) == 0)
                 complete_obj_info.plane_type = "horizontal";
-            else if(final_pose_from_horizontal_plane_vec[j].at<float>(0,3) == 1)
+            else if(final_pose_from_horizontal_plane_vec[j].at<float>(0,7) == 1)
                 complete_obj_info.plane_type = "vertical";
 
-            complete_obj_info.prob       = prob;
-            complete_obj_info.pose       = final_pose_of_object_in_robot;
+            complete_obj_info.prob                  = prob;
+            complete_obj_info.pose                  = final_pose_of_object_in_robot;
+            complete_obj_info.normal_orientation    = normal_orientation_robot_frame;
 
             complete_obj_info_vec.push_back(complete_obj_info);
 
@@ -756,7 +769,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         for(int j = 0; j < final_pose_from_vertical_plane_vec.size(); ++j)
         {
 
-            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
             final_detected_point_cam_frame(0) = final_pose_from_vertical_plane_vec[j].at<float>(0,0);
             final_detected_point_cam_frame(1) = final_pose_from_vertical_plane_vec[j].at<float>(0,1);
             final_detected_point_cam_frame(2) = final_pose_from_vertical_plane_vec[j].at<float>(0,2);
@@ -838,7 +851,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         for(int j = 0; j < final_pose_from_vertical_plane_vec.size(); ++j)
         {
 
-            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
             final_detected_point_cam_frame(0) = final_pose_from_vertical_plane_vec[j].at<float>(0,0);
             final_detected_point_cam_frame(1) = final_pose_from_vertical_plane_vec[j].at<float>(0,1);
             final_detected_point_cam_frame(2) = final_pose_from_vertical_plane_vec[j].at<float>(0,2);
@@ -860,6 +873,20 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_pose_of_object_in_robot(1) = final_detected_point.y;
             final_pose_of_object_in_robot(2) = final_detected_point.z;
 
+
+            //pose_vec.push_back(final_pose_of_object_in_robot);
+            //do the same above procedure for the normal orientation
+            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_robot_frame;
+            normal_orientation_cam_frame.setOnes(), normal_orientation_robot_frame.setOnes();
+
+            normal_orientation_cam_frame(0) = final_pose_from_vertical_plane_vec[j].at<float>(0,3);
+            normal_orientation_cam_frame(1) = final_pose_from_vertical_plane_vec[j].at<float>(0,4);
+            normal_orientation_cam_frame(2) = final_pose_from_vertical_plane_vec[j].at<float>(0,5);
+            normal_orientation_cam_frame(3) = 1;
+
+            normal_orientation_robot_frame = transformation_mat * normal_orientation_cam_frame;
+
+
             //pose_vec.push_back(final_pose_of_object_in_robot);
             particle_filter::all_object_info_struct_pf complete_obj_info;
 
@@ -869,9 +896,10 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
                 complete_obj_info.type  = "laptop";
 
 
-            complete_obj_info.plane_type = "vertical";
-            complete_obj_info.pose       = final_pose_of_object_in_robot;
-            complete_obj_info.prob       = prob;
+            complete_obj_info.plane_type           = "vertical";
+            complete_obj_info.pose                 = final_pose_of_object_in_robot;
+            complete_obj_info.prob                 = prob;
+            complete_obj_info.normal_orientation   = normal_orientation_robot_frame;
 
             complete_obj_info_vec.push_back(complete_obj_info);
 
@@ -924,7 +952,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         for(int j = 0; j < final_pose_from_horizontal_plane_vec.size(); ++j)
         {
 
-            final_detected_point_cam_frame.setZero(), final_detected_point_robot_frame.setZero();
+            final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
             final_detected_point_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,0);
             final_detected_point_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,1);
             final_detected_point_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,2);
@@ -946,6 +974,17 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_pose_of_object_in_robot(1) = final_detected_point.y;
             final_pose_of_object_in_robot(2) = final_detected_point.z;
 
+            //do the same above procedure for the normal orientation
+            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_robot_frame;
+            normal_orientation_cam_frame.setOnes(), normal_orientation_robot_frame.setOnes();
+
+            normal_orientation_cam_frame(0) = final_pose_from_horizontal_plane_vec[j].at<float>(0,3);
+            normal_orientation_cam_frame(1) = final_pose_from_horizontal_plane_vec[j].at<float>(0,4);
+            normal_orientation_cam_frame(2) = final_pose_from_horizontal_plane_vec[j].at<float>(0,5);
+            normal_orientation_cam_frame(3) = 1;
+
+            normal_orientation_robot_frame = transformation_mat * normal_orientation_cam_frame;
+
             //pose_vec.push_back(final_pose_of_object_in_robot);
 
             //complete_obj_info.prob       = segmented_objects_from_point_cloud[i].prob;
@@ -957,9 +996,10 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             else if(object_type == "keyboard")
                 complete_obj_info.type       = "keyboard";
 
-            complete_obj_info.plane_type = "horizontal";
-            complete_obj_info.pose       = final_pose_of_object_in_robot;
-            complete_obj_info.prob       = prob;
+            complete_obj_info.plane_type         = "horizontal";
+            complete_obj_info.pose               = final_pose_of_object_in_robot;
+            complete_obj_info.prob               = prob;
+            complete_obj_info.normal_orientation = normal_orientation_robot_frame;
 
             complete_obj_info_vec.push_back(complete_obj_info);
 
