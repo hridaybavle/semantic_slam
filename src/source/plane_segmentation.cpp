@@ -1004,7 +1004,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::P
 
 
     int i = 0, nr_points = (int) point_cloud->points.size ();
-    // While 30% of the original cloud is still there
+    // While 90% of the original cloud is still there
     while (point_cloud->points.size () > 0.9 * nr_points)
     {
         // Segment the largest planar component from the remaining cloud
@@ -1041,7 +1041,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::P
         //std::cout << "cloud filtered points size "  << cloud_f->size() << std::endl;
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
-        final_points_convex_hull = this->compute2DConvexHull(cloud_f);
+        final_points_convex_hull = this->computeNew2DConvexHull(cloud_f, inliers, coefficients);
 
         float area = pcl::calculatePolygonArea(*final_points_convex_hull);
         std::cout << "polygon area " << area << std::endl;
@@ -1232,3 +1232,31 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(p
 
     return cloud_hull;
 }
+
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::computeNew2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud,
+                                                                                  pcl::PointIndices::Ptr inliers,
+                                                                                  pcl::ModelCoefficients::Ptr coefficients)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr projected_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    //    // Project the model inliers
+    pcl::ProjectInliers<pcl::PointXYZRGB> proj;
+    proj.setModelType (pcl::SACMODEL_PLANE);
+    proj.setInputCloud (filtered_point_cloud);
+    proj.setIndices (inliers);
+    proj.setModelCoefficients (coefficients);
+    proj.filter (*projected_cloud);
+
+    // Create a Convex Hull representation of the projected inliers
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::ConvexHull<pcl::PointXYZRGB> chull;
+    chull.setInputCloud (projected_cloud);
+    chull.reconstruct (*cloud_hull);
+
+    //std::cout << "Final point cloud size " << filtered_point_cloud->size() << std::endl;
+    //std::cout << "cloud size after convex hull " << cloud_hull->size() << std::endl;
+
+    return cloud_hull;
+}
+
