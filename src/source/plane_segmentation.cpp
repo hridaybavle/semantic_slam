@@ -140,10 +140,10 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     normal_cloud->clear();
 
 
-    //    if(point_cloud->points.size() < 5000)
-    //    {
-    //        return normal_cloud;
-    //    }
+    if(point_cloud->points.size() < 5000)
+    {
+        return normal_cloud;
+    }
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
     ne.setNormalEstimationMethod (ne.COVARIANCE_MATRIX);
@@ -384,7 +384,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
         //          <<  "X final : " << x_final << std::endl << "Y final : " << y_final << std::endl << "Z final: " << z_final << std::endl;
 
         cv::Mat final_pose_centroid;
-        final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+        final_pose_centroid = cv::Mat::zeros(1, 6, CV_32F);
         if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
         {
             final_pose_centroid.at<float>(0,0) = x_final;

@@ -607,7 +607,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             else if(segmented_objects_from_point_cloud[i].type == "book" || segmented_objects_from_point_cloud[i].type == "keyboard")
             {
-                complete_book_keyboard_info_vec    = this->segmentBookorKeyboardPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                complete_book_keyboard_info_vec  = this->segmentBookorKeyboardPlanes(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                                                        segmented_point_cloud_normal,
                                                                                        transformation_mat,
                                                                                        final_pose_,
