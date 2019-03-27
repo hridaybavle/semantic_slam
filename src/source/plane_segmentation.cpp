@@ -1,4 +1,4 @@
-#include "plane_segmentation.h"
+﻿#include "plane_segmentation.h"
 
 
 plane_segmentation::plane_segmentation()
@@ -140,10 +140,10 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     normal_cloud->clear();
 
 
-    if(point_cloud->points.size() < 5000)
-    {
-        return normal_cloud;
-    }
+    //    if(point_cloud->points.size() < 5000)
+    //    {
+    //        return normal_cloud;
+    //    }
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
     ne.setNormalEstimationMethod (ne.COVARIANCE_MATRIX);
@@ -163,7 +163,8 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
                                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,
                                                    Eigen::Matrix4f transformation_mat,
                                                    Eigen::MatrixXf final_pose,
-                                                   float& point_size)
+                                                   float& point_size,
+                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud)
 {
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
 
@@ -221,19 +222,19 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
 
     //std::cout << "centroids of normals kmeans " << centroids << std::endl;
 
-    float dot_product;
-    for(int i =0; i < num_centroids_normals; ++i)
-    {
-        Eigen::Vector4f centroids_eigen;
-        centroids_eigen.setZero();
-        centroids_eigen(0) = centroids.at<float>(i,0);
-        centroids_eigen(1) = centroids.at<float>(i,1);
-        centroids_eigen(2) = centroids.at<float>(i,2);
+    //    float dot_product;
+    //    for(int i =0; i < num_centroids_normals; ++i)
+    //    {
+    //        Eigen::Vector4f centroids_eigen;
+    //        centroids_eigen.setZero();
+    //        centroids_eigen(0) = centroids.at<float>(i,0);
+    //        centroids_eigen(1) = centroids.at<float>(i,1);
+    //        centroids_eigen(2) = centroids.at<float>(i,2);
 
-        dot_product = this->computeDotProduct(normals_of_the_horizontal_plane_in_cam, centroids_eigen);
+    //        dot_product = this->computeDotProduct(normals_of_the_horizontal_plane_in_cam, centroids_eigen);
 
-        //std::cout << "dot product " << dot_product << std::endl;
-    }
+    //        //std::cout << "dot product " << dot_product << std::endl;
+    //    }
 
     //---------------------------------------------------------------------------------------------------//
 
@@ -349,6 +350,7 @@ cv::Mat plane_segmentation::computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZ
     }
 
     point_size = final_segmented_points->size();
+    segemented_plane_from_point_cloud = final_segmented_points;
 
     //computer the convex hull
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
@@ -463,7 +465,8 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
                                                                   pcl::PointCloud<pcl::Normal>::Ptr point_normal,
                                                                   Eigen::Matrix4f transformation_mat,
                                                                   Eigen::MatrixXf final_pose,
-                                                                  float& point_size)
+                                                                  float& point_size,
+                                                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud)
 {
 
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
@@ -544,7 +547,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
         }
     }
 
-    if(distance_min < 0.3)
+    if(distance_min <= 0.3)
     {
         filtered_centroids.push_back(centroids.row(filtered_centroids_counter));
     }
@@ -642,15 +645,15 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
     for(int i =0; i < final_segmented_points_vec.size(); ++i)
     {
         //computer the convex hull
-        if(final_segmented_points_vec[i]->points.size() > 500)
+        //if(final_segmented_points_vec[i]->points.size() > 500)
         {
 
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
+            segemented_plane_from_point_cloud = final_segmented_points_vec[i];
 
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
             final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
 
             float area = pcl::calculatePolygonArea(*final_points_convex_hull);
-
 
             if(area >= 0.3)
             {
@@ -729,8 +732,6 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
 
 
 }
-
-
 
 std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                                     pcl::PointCloud<pcl::Normal>::Ptr point_normal,
@@ -906,7 +907,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
         //computer the convex hull
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
 
-        if(final_segmented_points_vec[i]->points.size() > 500)
+        //if(final_segmented_points_vec[i]->points.size() > 500)
         {
             final_points_convex_hull = this->compute2DConvexHull(final_segmented_points_vec[i]);
 
@@ -928,12 +929,15 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
             z_final = z / final_points_convex_hull->size();
 
             cv::Mat final_pose_centroid;
-            final_pose_centroid = cv::Mat::zeros(1, 3, CV_32F);
+            final_pose_centroid = cv::Mat::zeros(1, 6, CV_32F);
             if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
             {
                 final_pose_centroid.at<float>(0,0) = x_final;
                 final_pose_centroid.at<float>(0,1) = y_final;
                 final_pose_centroid.at<float>(0,2) = z_final;
+                final_pose_centroid.at<float>(0,3) = filtered_centroids.at<float>(0,0);
+                final_pose_centroid.at<float>(0,4) = filtered_centroids.at<float>(0,1);
+                final_pose_centroid.at<float>(0,5) = filtered_centroids.at<float>(0,2);
 
                 //std::cout << "final pose centroid " << final_pose_centroid << std::endl;
                 final_pose_centroids_vec.push_back(final_pose_centroid);

@@ -58,7 +58,8 @@ public:
                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,
                                    Eigen::Matrix4f transformation_mat,
                                    Eigen::MatrixXf final_pose,
-                                   float& point_size);
+                                   float& point_size,
+                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr &segemented_plane_from_point_cloud);
 
 
     std::vector<cv::Mat> computeAllHorizontalPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
@@ -71,7 +72,8 @@ public:
                                                   pcl::PointCloud<pcl::Normal>::Ptr point_normal,
                                                   Eigen::Matrix4f transformation_mat,
                                                   Eigen::MatrixXf final_pose,
-                                                  float& point_size);
+                                                  float& point_size,
+                                                  pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud);
 
     std::vector<cv::Mat> computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, Eigen::Matrix4f transformation_mat);
 

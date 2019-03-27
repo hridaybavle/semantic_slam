@@ -147,6 +147,9 @@ protected:
     ros::Publisher detected_planes_pub_;
     void publishDetectedPlanes(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec);
 
+    ros::Publisher detected_planes_point_cloud_pub_;
+    void publishDetectedPlanesPointCloud(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec);
+
     ros::Publisher ground_truth_points_pub_;
     void publishGroundTruthPoints(std::vector<geometry_msgs::Point>  points);
 
