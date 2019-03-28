@@ -20,7 +20,6 @@ This package is a general Partcle-filter-SLAM library
   <depend>particle_filter</depend>
   <depend>tf_conversions</depend>
   <depend>tf</depend>
-  <depend>aruco_eye_msgs</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>pcl_ros</depend>
