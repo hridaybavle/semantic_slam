@@ -565,6 +565,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         }
     }
 
+
     for(int i = 0; i < segmented_objects_from_point_cloud.size(); ++i)
     {
         std::vector<particle_filter::all_object_info_struct_pf> complete_chair_info_vec;
@@ -582,7 +583,6 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             if(segmented_point_cloud_normal->empty())
                 continue;
-
 
             if(segmented_objects_from_point_cloud[i].type == "chair")
             {
