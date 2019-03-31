@@ -108,8 +108,9 @@ protected:
     void imuCallback(const sensor_msgs::Imu& msg);
 
     ros::Subscriber detected_object_sub_;
-    void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
+    //void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
+    void detectedObjectCallback(const semantic_SLAM::DetectedObjects& msg);
 
     ros::Subscriber point_cloud_sub_;
     void pointCloudCallback(const sensor_msgs::PointCloud2& msg);

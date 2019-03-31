@@ -23,6 +23,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/segmentation/organized_multi_plane_segmentation.h>
 
 //opencv
 #include <opencv2/core/core.hpp>
@@ -76,6 +77,10 @@ public:
                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud);
 
     std::vector<cv::Mat> computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, Eigen::Matrix4f transformation_mat);
+
+    std::vector<cv::Mat> multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                Eigen::Matrix4f transformation_mat);
 
     double computeKmeans(cv::Mat points,
                          const int num_centroids,

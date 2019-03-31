@@ -57,9 +57,10 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     float height = object_info.height, width = object_info.width;
 
     //    std::cout << "height " << object_info.height << std::endl;
-    //    std::cout << "weight " << object_info.width  << std::endl;
+    //    std::cout << "width " << object_info.width  << std::endl;
 
-    if(object_info.height < 0 || object_info.width < 0)
+    if(object_info.height < 0 || object_info.width < 0
+            || (start_u + width) > 640 || (start_v + height) > 480)
     {
         //std::cout << "returning as spurious bb " << std::endl;
         segmented_objects_to_return.type = "spurious";
@@ -78,20 +79,21 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     int p_u =0;
     for(size_t u = start_u; u < (start_u+width); ++u)
     {
-        //                std::cout << "pointcloud row  step " << point_cloud.row_step << std::endl;
-        //                std::cout << "pointcloud point step " << point_cloud.point_step << std::endl;
+        //std::cout << "pointcloud row  step " << point_cloud.row_step << std::endl;
+        //std::cout << "pointcloud point step " << point_cloud.point_step << std::endl;
         int p_v =0;
         for (size_t v = start_v; v < (start_v+height); ++v)
         {
-
             int arrayPosition = v*point_cloud.row_step + u*point_cloud.point_step;
 
             int arrayPosX, arrayPosY, arrayPosZ, arrayPosrgb;
 
+            //std::cout << "here v " << std::endl;
+
             arrayPosX   = arrayPosition + point_cloud.fields[0].offset;
             arrayPosY   = arrayPosition + point_cloud.fields[1].offset;
             arrayPosZ   = arrayPosition + point_cloud.fields[2].offset;
-            arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
+            //arrayPosrgb = arrayPosition + point_cloud.fields[3].offset;
 
             //std::cout << "arrayPosrgb " << point_cloud.fields[3].offset << std::endl;
 
@@ -99,7 +101,7 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
             memcpy(&X,   &point_cloud.data[arrayPosX], sizeof(float));
             memcpy(&Y,   &point_cloud.data[arrayPosY], sizeof(float));
             memcpy(&Z,   &point_cloud.data[arrayPosZ], sizeof(float));
-            memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
+            //memcpy(&RGB, &point_cloud.data[arrayPosrgb], sizeof(float));
 
             //                    for(int f =0; f < point_cloud.fields.size(); ++f)
             //                        std::cout << "point cloud fields " << point_cloud.fields[f].name  << std::endl;
@@ -114,6 +116,8 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
             point.y   = Y;
             point.z   = Z;
             point.rgb = RGB;
+
+            //std::cout << "here fill " << std::endl;
 
             //segmented_point_cloud_pcl->push_back(point);
             segmented_point_cloud_pcl->at(p_u,p_v) = point;
@@ -144,6 +148,7 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     {
         return normal_cloud;
     }
+
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
     ne.setNormalEstimationMethod (ne.COVARIANCE_MATRIX);
@@ -655,7 +660,7 @@ std::vector<cv::Mat> plane_segmentation::computeAllVerticalPlanes(pcl::PointClou
 
             float area = pcl::calculatePolygonArea(*final_points_convex_hull);
 
-            if(area >= 0.3)
+            if(area >= 0.2)
             {
                 double x=0,y=0,z=0;
 
@@ -986,6 +991,77 @@ std::vector<cv::Mat> plane_segmentation::computeAllHorizontalPlanes(pcl::PointCl
 
 }
 
+std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                                pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                                Eigen::Matrix4f transformation_mat)
+{
+    std::vector<cv::Mat> final_pose_centroids_vec;
+    final_pose_centroids_vec.clear();
+
+    //first get the normals of horizontal planes using the transformation mat
+    Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
+    normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
+
+    normals_of_the_horizontal_plane_in_world(0) = 0;
+    normals_of_the_horizontal_plane_in_world(1) = 0;
+    normals_of_the_horizontal_plane_in_world(2) = 1;
+
+    normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
+
+    pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
+    mps.setMinInliers (500);
+    mps.setAngularThreshold (0.017453 * 2.0); // 2 degrees
+    mps.setDistanceThreshold (0.02); // 2cm
+    mps.setInputNormals (point_normal);
+    mps.setInputCloud (point_cloud);
+    std::vector< pcl::PlanarRegion< pcl::PointXYZRGB >, Eigen::aligned_allocator<pcl::PlanarRegion<pcl::PointXYZRGB> > > regions;
+    mps.segmentAndRefine (regions);
+
+    for (size_t i = 0; i < regions.size (); i++)
+    {
+        Eigen::Vector3f centroid = regions[i].getCentroid ();
+        Eigen::Vector4f model = regions[i].getCoefficients ();
+        pcl::PointCloud<pcl::PointXYZRGB> boundary_cloud;
+        boundary_cloud.points = regions[i].getContour ();
+        printf ("Centroid: (%f, %f, %f)\n  Coefficients: (%f, %f, %f, %f)\n",
+                centroid[0], centroid[1], centroid[2],
+                model[0], model[1], model[2], model[3]);
+        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
+
+        cv::Mat final_pose_centroid;
+        final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
+
+        //checking if the extract plane is a horizontal plane
+        if(fabs(model[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
+                fabs(model[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
+                fabs(model[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
+        {
+            //zero if its horizontal plane
+            final_pose_centroid.at<float>(0,7) = 0;
+            std::cout << "Its horizontal plane " << std::endl;
+        }
+        else
+        {
+            //one if its a vertical plane
+            final_pose_centroid.at<float>(0,7) = 1;
+            std::cout << "Its a vertical plane " << std::endl;
+        }
+
+        final_pose_centroid.at<float>(0,0) = centroid[0];
+        final_pose_centroid.at<float>(0,1) = centroid[1];
+        final_pose_centroid.at<float>(0,2) = centroid[2];
+        final_pose_centroid.at<float>(0,3) = model[0];
+        final_pose_centroid.at<float>(0,4) = model[1];
+        final_pose_centroid.at<float>(0,5) = model[2];
+        final_pose_centroid.at<float>(0,6) = model[4];
+
+        final_pose_centroids_vec.push_back(final_pose_centroid);
+
+    }
+
+    std::cout << "end of multiplane segmentation " << std::endl;
+    return final_pose_centroids_vec;
+}
 
 std::vector<cv::Mat> plane_segmentation::computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                           Eigen::Matrix4f transformation_mat)
