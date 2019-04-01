@@ -76,7 +76,6 @@ public:
                                                   float& point_size,
                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud);
 
-    std::vector<cv::Mat> computeAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, Eigen::Matrix4f transformation_mat);
 
     std::vector<cv::Mat> multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                 pcl::PointCloud<pcl::Normal>::Ptr point_normal,
@@ -90,9 +89,7 @@ public:
     float computeDotProduct(Eigen::Vector4f vector_a, Eigen::Vector4f vector_b);
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr compute2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr computeNew2DConvexHull(pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_point_cloud,
-                                                                  pcl::PointIndices::Ptr inliers,
-                                                                  pcl::ModelCoefficients::Ptr coefficients);
+
 
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr preprocessPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);

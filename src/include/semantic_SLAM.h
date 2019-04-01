@@ -189,23 +189,11 @@ protected:
     std::vector<particle_filter::all_object_info_struct_pf> segmentallPointCloudData();
     std::vector<particle_filter::object_info_struct_all_points_pf> segmentPointsfromDetections();
 
-    std::vector<particle_filter::all_object_info_struct_pf> segmentChairPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                                                                               pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                                                                               Eigen::Matrix4f transformation_mat,
-                                                                               Eigen::VectorXf final_pose_, float prob);
-
-
-    std::vector<particle_filter::all_object_info_struct_pf> segmentMonitorPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                                                                                 pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                                                                                 Eigen::Matrix4f transformation_mat,
-                                                                                 Eigen::VectorXf final_pose_, std::string object_type,
-                                                                                 float prob);
-
-    std::vector<particle_filter::all_object_info_struct_pf> segmentBookorKeyboardPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                                                                                        pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                                                                                        Eigen::Matrix4f transformation_mat,
-                                                                                        Eigen::VectorXf final_pose_, std::string object_type,
-                                                                                        float prob);
+    std::vector<particle_filter::all_object_info_struct_pf> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                                                  pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                  Eigen::Matrix4f transformation_mat,
+                                                                                  std::string object_type,
+                                                                                  float prob);
 
     int MaxIndex(std::vector<particle_filter::particle> particles);
 
