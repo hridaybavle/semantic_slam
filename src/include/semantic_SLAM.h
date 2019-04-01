@@ -141,6 +141,7 @@ protected:
     ros::Publisher mapped_objects_visualizer_pub_;
     void publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec);
     void publishAllMappedObjects(std::vector<particle_filter::all_object_info_struct_pf> mapped_object_vec);
+    void publishBestParticleMap(std::vector<particle_filter::particle> all_particles);
 
     ros::Publisher mapped_points_pub_;
     void publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec);
@@ -205,6 +206,8 @@ protected:
                                                                                         Eigen::Matrix4f transformation_mat,
                                                                                         Eigen::VectorXf final_pose_, std::string object_type,
                                                                                         float prob);
+
+    int MaxIndex(std::vector<particle_filter::particle> particles);
 
     //variables regarding imu
     bool imu_data_available_;

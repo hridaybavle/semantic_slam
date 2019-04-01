@@ -5,7 +5,6 @@
 #include "eigen3/Eigen/Eigen"
 #include <binders.h>
 
-
 class semantic_tools
 {
 public:
@@ -204,8 +203,6 @@ public:
 
 
     }
-
-
 
 };
 

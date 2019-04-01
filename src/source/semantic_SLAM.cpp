@@ -157,8 +157,10 @@ void semantic_slam_ros::run()
     publishFinalPose();
     publishCorresVOPose();
     publishParticlePoses();
+    publishBestParticleMap(all_particles_);
     //publishMappedObjects(mapped_object_vec_);
-    publishAllMappedObjects(all_mapped_object_vec_);
+    //publishAllMappedObjects(all_mapped_object_vec_);
+
     //publishNewMappedObjects(new_mapped_object_vec_);
     publishGroundTruthPoints(points_vec_);
 
@@ -871,7 +873,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             complete_obj_info.prob                          = prob;
             complete_obj_info.pose                          = final_pose_of_object_in_robot;
             complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
-            //complete_obj_info.segmented_point_cloud_plane   = segemented_vertical_plane_from_point_cloud;
+            //complete_obj_info.segmented_point_cloud_plane = segemented_vertical_plane_from_point_cloud;
 
             complete_obj_info_vec.push_back(complete_obj_info);
         }
@@ -1451,6 +1453,144 @@ void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all
     detected_planes_pub_.publish(marker_arrays);
 }
 
+void semantic_slam_ros::publishBestParticleMap(std::vector<particle_filter::particle> all_particles)
+{
+    visualization_msgs::MarkerArray marker_arrays;
+    int marker_id = 0;
+
+    //getting the best particle landmark to plot
+    int best_particle_index = this->MaxIndex(all_particles);
+
+    for(int i = 0; i < all_particles[best_particle_index].landmarks.size(); ++i)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time();
+        marker.header.frame_id = "map";
+        marker.ns = "my_namespace";
+        marker.pose.position.x = all_particles[best_particle_index].landmarks[i].mu(0);
+        marker.pose.position.y = all_particles[best_particle_index].landmarks[i].mu(1);
+        marker.pose.position.z = all_particles[best_particle_index].landmarks[i].mu(2);
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+
+        if(all_particles[best_particle_index].landmarks[i].type == "chair")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
+
+            }
+
+            else if(all_particles[best_particle_index].landmarks[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
+
+            }
+        }
+
+        else if(all_particles[best_particle_index].landmarks[i].type == "tvmonitor")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 0.0;
+                marker.color.b = 0.0;
+
+            }
+
+        }
+
+        else if (all_particles[best_particle_index].landmarks[i].type == "laptop")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 1.0;
+                marker.color.b = 0.0;
+
+            }
+
+        }
+
+        else if(all_particles[best_particle_index].landmarks[i].type == "keyboard")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 1.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        else if(all_particles[best_particle_index].landmarks[i].type == "book")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
+        marker_arrays.markers.push_back(marker);
+        marker_id++;
+    }
+
+    detected_planes_pub_.publish(marker_arrays);
+}
+
 void semantic_slam_ros::publishDetectedPlanes(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec)
 {
     visualization_msgs::MarkerArray marker_arrays;
@@ -1665,3 +1805,20 @@ void semantic_slam_ros::publishGroundTruthPoints(std::vector<geometry_msgs::Poin
 
 }
 
+//static methods
+int semantic_slam_ros::MaxIndex(std::vector<particle_filter::particle> particles)
+{
+    int max_Index = 0;
+    double max_val = 0.0;
+
+    for (int i = 1; i < particles.size(); ++i)
+    {
+        if (max_val < particles[i].weight)
+        {
+            max_val = particles[i].weight;
+            max_Index = i;
+        }
+    }
+
+    return max_Index;
+}
