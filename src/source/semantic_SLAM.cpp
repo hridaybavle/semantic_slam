@@ -1177,9 +1177,9 @@ void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::obj
 
             //fill the point cloud pcl with the new tranformed points
             pcl::PointXYZRGB  current_point_cloud_pcl;
-            current_point_cloud_pcl.x   = final_detected_point_robot_frame(0) /*+ all_particles[j].pose(0)*/;
-            current_point_cloud_pcl.y   = final_detected_point_robot_frame(1) /*+ all_particles[j].pose(1)*/;
-            current_point_cloud_pcl.z   = final_detected_point_robot_frame(2) /*+ all_particles[j].pose(2)*/;
+            current_point_cloud_pcl.x   = final_detected_point_robot_frame(0) + all_particles[j].pose(0);
+            current_point_cloud_pcl.y   = final_detected_point_robot_frame(1) + all_particles[j].pose(1);
+            current_point_cloud_pcl.z   = final_detected_point_robot_frame(2) + all_particles[j].pose(2);
             current_point_cloud_pcl.rgb = point_cloud_pcl->points[i].rgb;
 
             mapped_point_cloud_pcl_[j].points.push_back(current_point_cloud_pcl);
