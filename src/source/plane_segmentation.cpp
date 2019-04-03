@@ -209,8 +209,9 @@ float plane_segmentation::computeDotProduct(Eigen::Vector4f vector_a, Eigen::Vec
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
 {
-    //point_cloud = this->downsamplePointcloud(point_cloud);
+    point_cloud = this->downsamplePointcloud(point_cloud);
     point_cloud = this->removeOutliers(point_cloud);
+    point_cloud = this->distance_filter(point_cloud);
 
     return point_cloud;
 }
@@ -222,7 +223,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::downsamplePointcloud(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (point_cloud);
-    sor.setLeafSize (0.01f, 0.01f, 0.01f);
+    sor.setLeafSize (0.1f, 0.1f, 0.1f);
     sor.filter (*cloud_filtered);
 
     return cloud_filtered;
@@ -241,4 +242,33 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::removeOutliers(
     return cloud_filtered;
 
 }
+
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::distance_filter(
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
+{
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_filtered->reserve(point_cloud->size());
+
+    std::copy_if(point_cloud->begin(), point_cloud->end(), std::back_inserter(cloud_filtered->points),
+                 [&](pcl::PointXYZRGB& p) {
+        double d = p.getVector3fMap().norm();
+        return d > 0.3 && d < 3;
+    }
+    );
+
+    cloud_filtered->width = cloud_filtered->size();
+    cloud_filtered->height = 1;
+    cloud_filtered->is_dense = false;
+
+    cloud_filtered->header = point_cloud->header;
+
+    return cloud_filtered;
+}
+
+
+
+
+
 

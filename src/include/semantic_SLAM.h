@@ -62,7 +62,7 @@
 
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
-const int num_particles_ = 500;
+const int num_particles_ = 100;
 
 const float optitrack_x_transform =  2.9;
 const float optitrack_y_transform = -0.1;
@@ -227,4 +227,6 @@ protected:
     std::vector<geometry_msgs::PoseStamped> final_particle_pose_vec_;
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
     std::vector<geometry_msgs::PoseStamped> vo_pose_vec_;
+
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>> mapped_point_cloud_pcl_;
 };
