@@ -143,9 +143,9 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
         Eigen::Vector4f model = regions[i].getCoefficients ();
         pcl::PointCloud<pcl::PointXYZRGB> boundary_cloud;
         boundary_cloud.points = regions[i].getContour ();
-        //        printf ("Centroid: (%f, %f, %f)\n  Coefficients: (%f, %f, %f, %f)\n",
-        //                centroid[0], centroid[1], centroid[2],
-        //                model[0], model[1], model[2], model[3]);
+        printf ("Centroid: (%f, %f, %f)\n  Coefficients: (%f, %f, %f, %f)\n",
+                centroid[0], centroid[1], centroid[2],
+                model[0], model[1], model[2], model[3]);
         //        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
 
         cv::Mat final_pose_centroid;
@@ -173,7 +173,7 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
         final_pose_centroid.at<float>(0,3) = model[0];
         final_pose_centroid.at<float>(0,4) = model[1];
         final_pose_centroid.at<float>(0,5) = model[2];
-        final_pose_centroid.at<float>(0,6) = model[4];
+        final_pose_centroid.at<float>(0,6) = model[3];
 
         final_pose_centroids_vec.push_back(final_pose_centroid);
 

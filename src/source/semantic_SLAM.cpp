@@ -115,22 +115,23 @@ void semantic_slam_ros::run()
     std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
     std::vector<particle_filter::all_object_info_struct_pf> all_obj_complete_info_vec;
     std::vector<particle_filter::object_info_struct_all_points_pf> new_complete_obj_info_vec;
+    Eigen::Matrix4f transformation_mat;
     if(object_detection_available_)
     {
         if(point_cloud_available_)
         {
             //complete_obj_info_vec     = this->segmentPointCloudData();
-            all_obj_complete_info_vec   = this->segmentallPointCloudData();
+            all_obj_complete_info_vec   = this->segmentallPointCloudData(transformation_mat);
         }
 
         if(!all_obj_complete_info_vec.empty())
         {
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
                                                        final_pose_,
-                                                       RVIO_pose_,
+                                                       transformation_mat,
                                                        all_mapped_object_vec_);
 
-            publishNewMappedObjects(new_mapped_object_vec_);
+            //publishNewMappedObjects(new_mapped_object_vec_);
         }
 
     }
@@ -416,7 +417,7 @@ void semantic_slam_ros::optitrackPoseForPlottingPathCallback(const geometry_msgs
 
 }
 
-std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmentallPointCloudData()
+std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmentallPointCloudData(Eigen::Matrix4f& transformation_mat)
 {
     sensor_msgs::PointCloud2 segmented_point_cloud;
     std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
@@ -430,7 +431,6 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     sensor_msgs::PointCloud2 point_cloud;
     this->getPointCloudData(point_cloud);
 
-    Eigen::Matrix4f transformation_mat;
     transformation_mat.setOnes();
     semantic_tools_obj_.transformNormalsToWorld(final_pose_,
                                                 transformation_mat,
@@ -543,6 +543,18 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             normal_orientation_robot_frame = transformation_mat * normal_orientation_cam_frame;
 
+            normal_orientation_cam_frame(3) = final_pose_from_plane_vec[j].at<float>(0,6);
+
+            //this is to calculate the d distance in world frame
+            float normal_distance_world_frame = normal_orientation_robot_frame(3) -
+                    (final_pose_(0) * normal_orientation_robot_frame(0) +
+                     final_pose_(1) * normal_orientation_robot_frame(1) +
+                     final_pose_(2) * normal_orientation_robot_frame(2));
+
+            std::cout << "normal coefficients in robot " << normal_orientation_robot_frame << std::endl;
+            std::cout << "normal distance in cam "       << final_pose_from_plane_vec[j].at<float>(0,6) << std::endl;
+            std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
+            std::cout << "end " << std::endl;
 
             //filling the vector for the sending it to the PF
             particle_filter::all_object_info_struct_pf complete_obj_info;
@@ -556,7 +568,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             complete_obj_info.type                          = object_type;
             complete_obj_info.prob                          = prob;
             complete_obj_info.pose                          = final_pose_of_object_in_robot;
-            complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
+            //complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
+            complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
             //complete_obj_info.segmented_point_cloud_plane = segemented_horizontal_plane_from_point_cloud;
 
             complete_obj_info_vec.push_back(complete_obj_info);

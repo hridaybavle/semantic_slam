@@ -186,7 +186,7 @@ protected:
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
 
     std::vector<particle_filter::object_info_struct_pf> segmentPointCloudData();
-    std::vector<particle_filter::all_object_info_struct_pf> segmentallPointCloudData();
+    std::vector<particle_filter::all_object_info_struct_pf> segmentallPointCloudData(Eigen::Matrix4f &transformation_mat);
     std::vector<particle_filter::object_info_struct_all_points_pf> segmentPointsfromDetections();
 
     std::vector<particle_filter::all_object_info_struct_pf> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
