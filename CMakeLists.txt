@@ -32,6 +32,7 @@ set(SEMANTIC_SLAM_SOURCE_FILES
     src/source/semantic_SLAM.cpp
     src/source/semantic_SLAM_node.cpp
     src/source/plane_segmentation.cpp
+    src/source/particle_filter.cpp
     )
 
 
@@ -40,10 +41,12 @@ set(SEMANTIC_SLAM_HEADER_FILES
     src/include/semantic_SLAM.h
     src/include/plane_segmentation.h
     src/inlcude/tools.h
+    src/inlcude/particle_filter.h
+    src/inlcude/particle_tools.h
     )
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter message_generation cv_bridge image_transport darknet_ros_msgs
+    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_generation cv_bridge image_transport darknet_ros_msgs
     pcl_ros pcl_msgs pcl_conversions)
 
 find_package(PCL 1.7 REQUIRED
@@ -82,7 +85,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS ${SEMANTIC_SLAM_INCLUDE_DIR}
     LIBRARIES semantic_SLAM OpenCV PCL
-    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf particle_filter message_runtime cv_bridge image_transport darknet_ros_msgs
+    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_runtime cv_bridge image_transport darknet_ros_msgs
     pcl_ros pcl_msgs pcl_conversions
     )
 

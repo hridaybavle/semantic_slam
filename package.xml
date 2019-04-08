@@ -17,7 +17,6 @@ This package is a general Partcle-filter-SLAM library
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
-  <depend>particle_filter</depend>
   <depend>tf_conversions</depend>
   <depend>tf</depend>
   <depend>message_generation</depend>
