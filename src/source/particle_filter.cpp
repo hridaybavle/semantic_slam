@@ -384,9 +384,9 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                 landmark new_landmark;
                 new_landmark.mu = landmark_pose_in_world_frame;
 
-                new_landmark.normal_orientation(0) = landmark_normals_in_world_frame(0);
-                new_landmark.normal_orientation(1) = landmark_normals_in_world_frame(1);
-                new_landmark.normal_orientation(2) = landmark_normals_in_world_frame(2);
+                new_landmark.normal_orientation(0) = landmark_normals_in_robot_frame(0);
+                new_landmark.normal_orientation(1) = landmark_normals_in_robot_frame(1);
+                new_landmark.normal_orientation(2) = landmark_normals_in_robot_frame(2);
 
                 //this is to convert the d distance in world frame
                 new_landmark.normal_orientation(3) =   complete_object_info[j].normal_orientation(3) -
@@ -816,9 +816,9 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
         landmark new_landmark;
         new_landmark.mu = landmark_pose_in_world_frame;
 
-        new_landmark.normal_orientation(0) = landmark_normals_in_world_frame(0);
-        new_landmark.normal_orientation(1) = landmark_normals_in_world_frame(1);
-        new_landmark.normal_orientation(2) = landmark_normals_in_world_frame(2);
+        new_landmark.normal_orientation(0) = landmark_normals_in_robot_frame(0);
+        new_landmark.normal_orientation(1) = landmark_normals_in_robot_frame(1);
+        new_landmark.normal_orientation(2) = landmark_normals_in_robot_frame(2);
 
         //this is to convert the d distance in world frame
         new_landmark.normal_orientation(3) =   complete_object_info[object_id].normal_orientation(3) -
