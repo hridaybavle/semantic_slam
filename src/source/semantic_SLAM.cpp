@@ -568,8 +568,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             complete_obj_info.type                          = object_type;
             complete_obj_info.prob                          = prob;
             complete_obj_info.pose                          = final_pose_of_object_in_robot;
-            //complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
-            complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
+            complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
+            //complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
             //complete_obj_info.segmented_point_cloud_plane = segemented_horizontal_plane_from_point_cloud;
 
             complete_obj_info_vec.push_back(complete_obj_info);
