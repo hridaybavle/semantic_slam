@@ -505,11 +505,18 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     std::vector<particle_filter::all_object_info_struct_pf> complete_obj_info_vec;
     complete_obj_info_vec.clear();
 
-    std::vector<cv::Mat> final_pose_from_plane_vec;
+    std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.clusterAndSegmentAllPlanes(segmented_point_cloud,
+                                                                                                        segmented_point_cloud_normal,
+                                                                                                        transformation_mat);
 
-    final_pose_from_plane_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
-                                                                               segmented_point_cloud_normal,
-                                                                               transformation_mat);
+    //    std::vector<cv::Mat> final_pose_from_plane_vec;
+
+    //    final_pose_from_plane_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
+    //                                                                               segmented_point_cloud_normal,
+    //                                                                               transformation_mat);
+
+    //    std::vector<cv::Mat> final_pose_from_ransac = plane_segmentation_obj_.computeAllPlanes(segmented_point_cloud,
+    //                                                                                           transformation_mat);
 
     if(!final_pose_from_plane_vec.empty())
     {

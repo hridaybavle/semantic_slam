@@ -115,7 +115,7 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
         all_particles_[i].pose(3) = dist_roll(gen); //roll
         all_particles_[i].pose(4) = dist_pitch(gen); //pitch
         all_particles_[i].pose(5) = dist_yaw(gen); //yaw
-        all_particles_[i].weight  = 0;
+        all_particles_[i].weight  = 1;
 
         all_particles_[i].landmarks.clear();
 
@@ -470,9 +470,9 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                     if(complete_object_info[j].plane_type == all_particles_[i].landmarks[k].plane_type)
                     {
 
-                        distance_normal = particle_filter_tools_obj_.dist(fabs(complete_object_info[j].normal_orientation(0)), fabs(all_particles_[i].landmarks[k].normal_orientation(0)),
-                                                                          fabs(complete_object_info[j].normal_orientation(1)), fabs(all_particles_[i].landmarks[k].normal_orientation(1)),
-                                                                          fabs(complete_object_info[j].normal_orientation(2)), fabs(all_particles_[i].landmarks[k].normal_orientation(2)));
+                        distance_normal = particle_filter_tools_obj_.dist(complete_object_info[j].normal_orientation(0), all_particles_[i].landmarks[k].normal_orientation(0),
+                                                                          complete_object_info[j].normal_orientation(1), all_particles_[i].landmarks[k].normal_orientation(1),
+                                                                          complete_object_info[j].normal_orientation(2), all_particles_[i].landmarks[k].normal_orientation(2));
 
 
                         if(distance_normal < 0.2)
@@ -588,13 +588,13 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                     float current_weight = exp(-0.5*min_z_diff.transpose()*min_Q.inverse()*min_z_diff)/sqrt(2 * M_PI * min_Q.determinant());
                     //std::cout << "current weight " << current_weight << std::endl;
 
-                    current_object_weight += current_weight;
+                    all_particles_[i].weight *= current_weight;
                 }
             }
 
         }
 
-        all_particles_[i].weight = current_object_weight;
+        //all_particles_[i].weight = current_object_weight;
 
     }
 
