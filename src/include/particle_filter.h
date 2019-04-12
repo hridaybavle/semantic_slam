@@ -30,7 +30,7 @@
 //tools lib
 #include "particle_tools.h"
 
-const float MAHA_DIST_THRESHOLD = 0.58;
+const float MAHA_DIST_THRESHOLD = 1.239;
 const float MATCHING_THRESHOLD  = 0.3;
 
 class particle_filter
@@ -110,7 +110,7 @@ public:
     struct landmark {
         int id;
         Eigen::Vector3f mu;
-        Eigen::Matrix3f sigma;
+        Eigen::MatrixXf sigma;
         std::string type;
         std::string plane_type;
         Eigen::Vector4f normal_orientation;
@@ -129,7 +129,7 @@ public:
     };
 
 private:
-    Eigen::Matrix3f Q_;
+    Eigen::MatrixXf Q_;
 
 
     bool first_object_;
@@ -204,7 +204,7 @@ public:
 
     void LandmarkMeasurementModel(particle p,
                                   landmark new_landmark,
-                                  Eigen::Vector3f& h,
+                                  Eigen::VectorXf &h,
                                   Eigen::MatrixXf &H);
 
     void LandmarkNormalsMeasurementModel(particle p,

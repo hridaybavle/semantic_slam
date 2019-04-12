@@ -142,8 +142,15 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
     mps.setDistanceThreshold (0.02); // 2cm
     mps.setInputNormals (point_normal);
     mps.setInputCloud (point_cloud);
+
+
     std::vector< pcl::PlanarRegion< pcl::PointXYZRGB >, Eigen::aligned_allocator<pcl::PlanarRegion<pcl::PointXYZRGB> > > regions;
-    mps.segmentAndRefine (regions);
+    std::vector<pcl::ModelCoefficients> model_coefficients;
+    std::vector<pcl::PointIndices> inlier_indices;
+    pcl::PointCloud<pcl::Label>::Ptr labels (new pcl::PointCloud<pcl::Label>);
+    std::vector<pcl::PointIndices> label_indices;
+    std::vector<pcl::PointIndices> boundary_indices;
+    mps.segmentAndRefine (regions, model_coefficients, inlier_indices, labels, label_indices, boundary_indices);
 
     for (size_t i = 0; i < regions.size (); i++)
     {
@@ -160,31 +167,48 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
         cv::Mat final_pose_centroid;
         final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
 
-        //checking if the extract plane is a horizontal plane
-        if(fabs(model[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
-                fabs(model[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
-                fabs(model[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
+        Eigen::Vector4f normals_extracted;
+        normals_extracted.setZero();
+        normals_extracted(0) = model[0];
+        normals_extracted(1) = model[1];
+        normals_extracted(2) = model[2];
+
+        float dot_product =  this->computeDotProduct(normals_of_the_horizontal_plane_in_cam,
+                                                     normals_extracted);
+
+
+        //checking if the extract plane is a horizontal plane or vertical
+        if(fabs(model[0] - normals_of_the_horizontal_plane_in_cam(0)) < 0.2 &&
+                fabs(model[1] - normals_of_the_horizontal_plane_in_cam(1)) < 0.2 &&
+                fabs(model[2] - normals_of_the_horizontal_plane_in_cam(2)) < 0.2)
         {
             //zero if its horizontal plane
             final_pose_centroid.at<float>(0,7) = 0;
+            final_pose_centroid.at<float>(0,0) = centroid[0];
+            final_pose_centroid.at<float>(0,1) = centroid[1];
+            final_pose_centroid.at<float>(0,2) = centroid[2];
+            final_pose_centroid.at<float>(0,3) = model[0];
+            final_pose_centroid.at<float>(0,4) = model[1];
+            final_pose_centroid.at<float>(0,5) = model[2];
+            final_pose_centroid.at<float>(0,6) = model[3];
+            final_pose_centroids_vec.push_back(final_pose_centroid);
+
             //std::cout << "Its horizontal plane " << std::endl;
         }
-        else
+        else if (dot_product < 0.2)
         {
+            //std::cout << "Its a vertical plane " << std::endl;
             //one if its a vertical plane
             final_pose_centroid.at<float>(0,7) = 1;
-            //std::cout << "Its a vertical plane " << std::endl;
+            final_pose_centroid.at<float>(0,0) = centroid[0];
+            final_pose_centroid.at<float>(0,1) = centroid[1];
+            final_pose_centroid.at<float>(0,2) = centroid[2];
+            final_pose_centroid.at<float>(0,3) = model[0];
+            final_pose_centroid.at<float>(0,4) = model[1];
+            final_pose_centroid.at<float>(0,5) = model[2];
+            final_pose_centroid.at<float>(0,6) = model[3];
+            final_pose_centroids_vec.push_back(final_pose_centroid);
         }
-
-        final_pose_centroid.at<float>(0,0) = centroid[0];
-        final_pose_centroid.at<float>(0,1) = centroid[1];
-        final_pose_centroid.at<float>(0,2) = centroid[2];
-        final_pose_centroid.at<float>(0,3) = model[0];
-        final_pose_centroid.at<float>(0,4) = model[1];
-        final_pose_centroid.at<float>(0,5) = model[2];
-        final_pose_centroid.at<float>(0,6) = model[3];
-
-        final_pose_centroids_vec.push_back(final_pose_centroid);
 
     }
 
@@ -225,10 +249,10 @@ std::vector<cv::Mat> plane_segmentation::clusterAndSegmentAllPlanes(pcl::PointCl
     std::vector<cv::Mat> final_pose_vec = this->getFinalPoseWithNormals(segmented_points_using_second_kmeans,
                                                                         final_normals_with_distances);
 
-    for(int i = 0; i < final_pose_vec.size(); ++i)
-    {
-        std::cout << "final poses from clustering " << final_pose_vec[i] << std::endl;
-    }
+    //    for(int i = 0; i < final_pose_vec.size(); ++i)
+    //    {
+    //        std::cout << "final poses from clustering " << final_pose_vec[i] << std::endl;
+    //    }
 
     return final_pose_vec;
 
@@ -268,7 +292,7 @@ cv::Mat plane_segmentation::NormalBasedClusteringAndSegmentation(pcl::PointCloud
                                       labels,
                                       normal_centroids);
 
-    std::cout << "normal centroids from clustering " << normal_centroids << std::endl;
+    //std::cout << "normal centroids from clustering " << normal_centroids << std::endl;
     //----------------------------------------------------------------------------------------------------//
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
     normals_of_the_horizontal_plane_in_world.setZero(), normals_of_the_horizontal_plane_in_cam.setZero();
@@ -376,35 +400,19 @@ std::vector<cv::Mat> plane_segmentation::getFinalPoseWithNormals(std::vector<pcl
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr final_points_convex_hull;
         final_points_convex_hull = this->compute2DConvexHull(segmented_points_vec_using_second_kmeans[i]);
 
-        float area = pcl::calculatePolygonArea(*final_points_convex_hull);
 
-        //if(area >= 0.3)
+        double x=0,y=0,z=0;
+
+        std::cout << "final convex hull size " << final_points_convex_hull->size() << std::endl;
+        for(int j = 0; j < final_points_convex_hull->size(); ++j)
         {
-            double x=0,y=0,z=0;
-
-            for(int j = 0; j < final_points_convex_hull->size(); ++j)
-            {
-                x += final_points_convex_hull->points[j].x;
-                y += final_points_convex_hull->points[j].y;
-                z += final_points_convex_hull->points[j].z;
-
-            }
-
-            //std::cout << "x" << x << std::endl;
-            double x_final, y_final, z_final;
-
-            x_final = x / final_points_convex_hull->size();
-            y_final = y / final_points_convex_hull->size();
-            z_final = z / final_points_convex_hull->size();
-
-
             cv::Mat final_pose_centroid;
             final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
-            if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
+            //if(!std::isnan(x_final) && !std::isnan(y_final) && !std::isnan(z_final))
             {
-                final_pose_centroid.at<float>(0,0) = x_final;
-                final_pose_centroid.at<float>(0,1) = y_final;
-                final_pose_centroid.at<float>(0,2) = z_final;
+                final_pose_centroid.at<float>(0,0) = final_points_convex_hull->points[j].x;
+                final_pose_centroid.at<float>(0,1) = final_points_convex_hull->points[j].y;
+                final_pose_centroid.at<float>(0,2) = final_points_convex_hull->points[j].z;
                 final_pose_centroid.at<float>(0,3) = final_normals_with_distances[i].at<float>(0,0);
                 final_pose_centroid.at<float>(0,4) = final_normals_with_distances[i].at<float>(0,1);
                 final_pose_centroid.at<float>(0,5) = final_normals_with_distances[i].at<float>(0,2);

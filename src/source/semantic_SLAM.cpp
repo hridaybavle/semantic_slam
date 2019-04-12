@@ -505,15 +505,14 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     std::vector<particle_filter::all_object_info_struct_pf> complete_obj_info_vec;
     complete_obj_info_vec.clear();
 
-    std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.clusterAndSegmentAllPlanes(segmented_point_cloud,
-                                                                                                        segmented_point_cloud_normal,
-                                                                                                        transformation_mat);
+    //std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.clusterAndSegmentAllPlanes(segmented_point_cloud,
+    //                                                                                                        segmented_point_cloud_normal,
+    //                                                                                                        transformation_mat);
 
-    //    std::vector<cv::Mat> final_pose_from_plane_vec;
 
-    //    final_pose_from_plane_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
-    //                                                                               segmented_point_cloud_normal,
-    //                                                                               transformation_mat);
+    std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
+                                                                                                    segmented_point_cloud_normal,
+                                                                                                    transformation_mat);
 
     //    std::vector<cv::Mat> final_pose_from_ransac = plane_segmentation_obj_.computeAllPlanes(segmented_point_cloud,
     //                                                                                           transformation_mat);
@@ -540,25 +539,25 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
             //do the same above procedure for the normal orientation
-            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_robot_frame;
-            normal_orientation_cam_frame.setOnes(), normal_orientation_robot_frame.setOnes();
+            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_world_frame;
+            normal_orientation_cam_frame.setOnes(), normal_orientation_world_frame.setOnes();
 
             normal_orientation_cam_frame(0) = final_pose_from_plane_vec[j].at<float>(0,3);
             normal_orientation_cam_frame(1) = final_pose_from_plane_vec[j].at<float>(0,4);
             normal_orientation_cam_frame(2) = final_pose_from_plane_vec[j].at<float>(0,5);
             normal_orientation_cam_frame(3) = 1;
 
-            normal_orientation_robot_frame = transformation_mat * normal_orientation_cam_frame;
+            normal_orientation_world_frame = transformation_mat * normal_orientation_cam_frame;
 
             normal_orientation_cam_frame(3) = final_pose_from_plane_vec[j].at<float>(0,6);
 
             //this is to calculate the d distance in world frame
-            float normal_distance_world_frame = normal_orientation_robot_frame(3) -
-                    (final_pose_(0) * normal_orientation_robot_frame(0) +
-                     final_pose_(1) * normal_orientation_robot_frame(1) +
-                     final_pose_(2) * normal_orientation_robot_frame(2));
+            float normal_distance_world_frame = normal_orientation_world_frame(3) -
+                    (final_pose_(0) * normal_orientation_world_frame(0) +
+                     final_pose_(1) * normal_orientation_world_frame(1) +
+                     final_pose_(2) * normal_orientation_world_frame(2));
 
-            std::cout << "normal coefficients in robot " << normal_orientation_robot_frame << std::endl;
+            std::cout << "normal coefficients in world " << normal_orientation_world_frame << std::endl;
             std::cout << "normal distance in cam "       << final_pose_from_plane_vec[j].at<float>(0,6) << std::endl;
             std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
             std::cout << "end " << std::endl;
@@ -574,8 +573,10 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             complete_obj_info.type                          = object_type;
             complete_obj_info.prob                          = prob;
-            complete_obj_info.pose                          = final_pose_of_object_in_robot;
-            complete_obj_info.normal_orientation            = normal_orientation_robot_frame;
+            complete_obj_info.pose(0)                       = final_detected_point_cam_frame(0);
+            complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
+            complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);
+            complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
             //complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
             //complete_obj_info.segmented_point_cloud_plane = segemented_horizontal_plane_from_point_cloud;
 
