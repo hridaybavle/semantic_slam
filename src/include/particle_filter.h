@@ -217,7 +217,6 @@ public:
     void MapNewLandmarksForEachParticle(std::vector<all_object_info_struct_pf> complete_object_info,
                                         std::vector<new_landmarks>& new_landmarks_for_mapping);
 
-
     int MaxIndex();
 
     std::vector<particle> getAllParticles()

@@ -44,6 +44,36 @@ public:
 
     }
 
+    Eigen::Matrix3f transformRobotToWorld(Eigen::VectorXf particle_pose)
+    {
+        Eigen::Matrix3f T_robot_world;
+        T_robot_world.setZero(3,3);
+
+        float x, y, z, roll, pitch, yaw;
+
+        x = particle_pose(0);
+        y = particle_pose(1);
+        z = particle_pose(2);
+        roll = particle_pose(3);
+        pitch = particle_pose(4);
+        yaw = particle_pose(5);
+
+        //transformation from robot to world
+        T_robot_world(0,0) = cos(yaw)*cos(pitch);
+        T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
+        T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
+
+        T_robot_world(1,0) = sin(yaw)*cos(pitch);
+        T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
+        T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
+
+        T_robot_world(2,0) = -sin(pitch);
+        T_robot_world(2,1) = cos(pitch)*sin(roll);
+        T_robot_world(2,2) = cos(pitch)*cos(roll);
+
+        return T_robot_world;
+    }
+
     Eigen::Matrix3f transformNormalsToWorld(Eigen::VectorXf particle_pose)
     {
         Eigen::Matrix3f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam, T_robot_world, transformation_mat;
@@ -72,7 +102,6 @@ public:
         rot_z_robot(1,0) = sin(-1.5708);
         rot_z_robot(1,1) = cos(-1.5708);
         rot_z_robot(2,2) = 1;
-
 
         //transformation from robot to world
         T_robot_world(0,0) = cos(yaw)*cos(pitch);
