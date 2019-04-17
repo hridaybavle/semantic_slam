@@ -30,7 +30,7 @@
 //tools lib
 #include "particle_tools.h"
 
-const float MAHA_DIST_THRESHOLD = 1.239;
+const float MAHA_DIST_THRESHOLD = 1.23;
 const float MATCHING_THRESHOLD  = 0.3;
 
 class particle_filter
