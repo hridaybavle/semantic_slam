@@ -94,13 +94,6 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
     std::normal_distribution<float> dist_pitch(0, 0);
     std::normal_distribution<float> dist_yaw(0, 0);
 
-    //    std::cout << "printing out the normal dist " << dist_x << std::endl
-    //              << dist_y << std::endl
-    //              << dist_z << std::endl
-    //              << dist_roll << std::endl
-    //              << dist_pitch << std::endl
-    //              << dist_yaw << std::endl;
-
     for(int i =0; i < num_particles; ++i)
     {
         init_pose_vec[i].resize(state_size);
@@ -161,7 +154,7 @@ void particle_filter::predictionVO(float deltaT,
 
         //----------------------this method is using the VO pose----------------------//
 
-        //        //compute the inv of the prev pose
+        //compute the inv of the prev pose
         prev_pose_inv = particle_filter_tools_obj_.computeVectorInv(vo_prev_pose_);
         //std::cout << "prev_pose_inv " << prev_pose_inv << std::endl;
 
@@ -170,17 +163,11 @@ void particle_filter::predictionVO(float deltaT,
         pose_increament_(0,3) =  pose_increment(0);
         pose_increament_(1,3) =  pose_increment(1);
         pose_increament_(2,3) =  pose_increment(2);
-
         //std::cout << "pose increment " << pose_increment << std::endl;
 
         //compute the pose using the prediction
         new_state_vec_xkk = particle_filter_tools_obj_.computeDiffUsingHomoMethod(all_particles_[i].pose, pose_increment);
         //std::cout << "new_state_vec_xkk " << " " << i << " " << new_state_vec_xkk << std::endl;
-
-
-        //        std::normal_distribution<float> noise_x(0, 0.1);
-        //        std::normal_distribution<float> noise_y(0, 0.1);
-        //        std::normal_distribution<float> noise_z(0, 0.1);
 
         //adding gaussian noise to each normal distribution for each VO measurement
         std::normal_distribution<float> dist_x(new_state_vec_xkk(0), 0.0009);
@@ -300,7 +287,19 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     }
     data_ass_group.join_all();
 
-    this->AllDataResample(complete_object_info, final_pose);
+    //map all the new landmarks for all particles with multithreading
+    boost::thread_group mapping_group;
+    for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+    {
+        mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
+                                                i,
+                                                std::ref(complete_object_info),
+                                                std::ref(new_landmark_for_mapping_)));
+    }
+    mapping_group.join_all();
+
+    //resampling
+    this->AllDataResample(final_pose);
 
     return;
 
@@ -453,12 +452,10 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
 
     }
 
-    //std::cout << "current_object_weight " << current_object_weight << std::endl;
     all_particles_[i].weight *= current_object_weight;
 }
 
-void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
-                                      Eigen::VectorXf &final_pose)
+void particle_filter::AllDataResample(Eigen::VectorXf &final_pose)
 {
 
     std::vector<float> weights;
@@ -482,21 +479,9 @@ void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> com
             all_particles_[i].weight = all_particles_[i].weight/sum;
             weights[i]               = weights[i]/sum;
             n_effective                += pow(weights[i],-2);
-            //std::cout << "particle " << i << " " << "weight: " << all_particles_[i].weight << std::endl;
         }
     }
 
-
-    //map all the new landmarks for all particles first with threads
-    boost::thread_group mapping_group;
-    for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
-    {
-        mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
-                                                i,
-                                                std::ref(complete_objec_info),
-                                                std::ref(new_landmark_for_mapping_)));
-    }
-    mapping_group.join_all();
 
     //resample only is the sum is not zero and there are not alot of zeros in the weights
     //otherwise it will return

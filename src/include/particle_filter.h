@@ -197,8 +197,7 @@ public:
                             std::vector<all_object_info_struct_pf> complete_object_info);
 
 
-    void AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
-                         Eigen::VectorXf &final_pose);
+    void AllDataResample(Eigen::VectorXf &final_pose);
 
     void LandmarkMeasurementModel(particle p,
                                   landmark new_landmark,
