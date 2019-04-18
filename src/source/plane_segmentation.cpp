@@ -119,12 +119,15 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
 
 }
 
-std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
-                                                                pcl::PointCloud<pcl::Normal>::Ptr point_normal,
-                                                                Eigen::Matrix4f transformation_mat)
+std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                                                             pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                                                             Eigen::Matrix4f transformation_mat)
 {
     std::vector<cv::Mat> final_pose_centroids_vec;
     final_pose_centroids_vec.clear();
+
+    std::vector<plane_segmentation::segmented_planes> planes_vec;
+    planes_vec.clear();
 
     //first get the normals of horizontal planes using the transformation mat
     Eigen::Vector4f normals_of_the_horizontal_plane_in_world, normals_of_the_horizontal_plane_in_cam;
@@ -154,12 +157,13 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
 
     for (size_t i = 0; i < regions.size (); i++)
     {
+        plane_segmentation::segmented_planes planar_surf;
         Eigen::Vector3f centroid = regions[i].getCentroid ();
         Eigen::Vector4f model = regions[i].getCoefficients ();
 
-        pcl::PointCloud<pcl::PointXYZRGB> boundary_cloud;
-        boundary_cloud.points = regions[i].getContour ();
-
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr boundary_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+        boundary_cloud->points = regions[i].getContour ();
+        this->downsamplePointcloud(boundary_cloud);
         //        float avg_color=0;
         //        float counter = 0;
         //        for(size_t c=0; c < boundary_cloud.points.size(); ++c)
@@ -223,6 +227,9 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
                 final_pose_centroid.at<float>(0,6) = model[3];
             }
 
+            planar_surf.final_pose_mat        = final_pose_centroid;
+            planar_surf.planar_points.points  = boundary_cloud->points;
+            planes_vec.push_back(planar_surf);
             final_pose_centroids_vec.push_back(final_pose_centroid);
         }
         else if (dot_product < 0.2)
@@ -252,13 +259,15 @@ std::vector<cv::Mat> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<
                 //std::cout << "\033[1;34m GOOD NORMAL\033[0m\n" << std::endl;
             }
 
-
+            planar_surf.final_pose_mat        = final_pose_centroid;
+            planar_surf.planar_points.points  = boundary_cloud->points;
+            planes_vec.push_back(planar_surf);
             final_pose_centroids_vec.push_back(final_pose_centroid);
         }
 
     }
 
-    return final_pose_centroids_vec;
+    return planes_vec;
 }
 
 std::vector<cv::Mat> plane_segmentation::clusterAndSegmentAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,

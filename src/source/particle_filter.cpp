@@ -75,9 +75,9 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
     Q_.resize(6,6);
     Q_.setZero();
 
-    Q_(0,0) =  0.9;
-    Q_(1,1) =  0.9;
-    Q_(2,2) =  0.9;
+    Q_(0,0) =  1.2;
+    Q_(1,1) =  1.2;
+    Q_(2,2) =  1.2;
     Q_(3,3) =  0.9;
     Q_(4,4) =  0.9;
     Q_(5,5) =  0.9;
@@ -227,9 +227,7 @@ void particle_filter::predictionVO(float deltaT,
 }
 
 void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_pf> complete_object_info,
-                                            Eigen::VectorXf &final_pose,
-                                            Eigen::Matrix4f transformation_mat,
-                                            std::vector<particle_filter::all_object_info_struct_pf>& mapped_objects)
+                                            Eigen::VectorXf &final_pose)
 {
 
     //check if its the first object and map it for all particles
@@ -244,40 +242,20 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                 Eigen::Matrix3f rotation_mat;
                 rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
 
-                //converting the landmark pose in world frame
-                Eigen::Vector3f landmark_pose_in_world_frame, landmark_pose_in_cam_frame, landmark_pose_in_robot_frame ;
-
-                landmark_pose_in_cam_frame(0) = complete_object_info[j].pose(0);
-                landmark_pose_in_cam_frame(1) = complete_object_info[j].pose(1);
-                landmark_pose_in_cam_frame(2) = complete_object_info[j].pose(2);
-
-                landmark_pose_in_robot_frame  = rotation_mat * landmark_pose_in_cam_frame;
-
-                landmark_pose_in_world_frame(0) = landmark_pose_in_robot_frame(0) + all_particles_[i].pose(0);
-                landmark_pose_in_world_frame(1) = landmark_pose_in_robot_frame(1) + all_particles_[i].pose(1);
-                landmark_pose_in_world_frame(2) = landmark_pose_in_robot_frame(2) + all_particles_[i].pose(2);
-
-                //this is for filling the landmarks for each particle
                 landmark new_landmark;
-                new_landmark.mu = landmark_pose_in_world_frame;
-                //converting the landmark normals in world frame
-                Eigen::Vector3f landmark_normals_in_world_frame, landmark_normals_in_cam_frame;
+                this->landmarkPoseInWorld(new_landmark,
+                                          complete_object_info[j].pose,
+                                          all_particles_[i].pose,
+                                          rotation_mat);
 
-                landmark_normals_in_cam_frame(0) = complete_object_info[j].normal_orientation(0);
-                landmark_normals_in_cam_frame(1) = complete_object_info[j].normal_orientation(1);
-                landmark_normals_in_cam_frame(2) = complete_object_info[j].normal_orientation(2);
+                this->landmarkNormalsInWorld(new_landmark,
+                                             complete_object_info[j].normal_orientation,
+                                             all_particles_[i].pose,
+                                             rotation_mat);
 
-                landmark_normals_in_world_frame = rotation_mat * landmark_normals_in_cam_frame;
 
-                new_landmark.normal_orientation(0) = landmark_normals_in_world_frame(0);
-                new_landmark.normal_orientation(1) = landmark_normals_in_world_frame(1);
-                new_landmark.normal_orientation(2) = landmark_normals_in_world_frame(2);
-
-                //this is to convert the d distance in world frame
-                new_landmark.normal_orientation(3) =   complete_object_info[j].normal_orientation(3) -
-                        (all_particles_[i].pose(0) * new_landmark.normal_orientation(0) +
-                         all_particles_[i].pose(1) * new_landmark.normal_orientation(1) +
-                         all_particles_[i].pose(2) * new_landmark.normal_orientation(2));
+                this->projectPointsOnPlane(new_landmark,
+                                           complete_object_info[j]);
 
                 //create and call the measurement model here
                 Eigen::VectorXf expected_z;
@@ -288,41 +266,25 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                                                expected_z,
                                                H);
 
-                //                this->LandmarkNormalsMeasurementModel(all_particles_[i],
-                //                                                      new_landmark,
-                //                                                      expected_z,
-                //                                                      H);
-
                 Eigen::MatrixXf Hi = H.inverse().eval();
-
-                //std::cout << "H matrix "  << H << std::endl;
-                //std::cout << "H inverse " << Hi << std::endl;
-                //std::cout << "O matrix "  << Q_ << std::endl;
                 new_landmark.sigma.resize(6,6);
                 new_landmark.sigma =  Hi * Q_ * Hi.transpose();
-
-                //std::cout << "new landmark sigma " << new_landmark.sigma << std::endl;
-
                 new_landmark.type               = complete_object_info[j].type;
                 new_landmark.plane_type         = complete_object_info[j].plane_type;
-                //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
-
                 all_particles_[i].landmarks.push_back(new_landmark);
             }
         }
 
         first_object_ = false;
         return;
-
     }
 
     //****************** matching and mapping part**********************************************/
-
     std::vector<new_landmarks> new_landmark_for_mapping;
     new_landmark_for_mapping.clear();
 
     this->AllDataAssociation(complete_object_info, new_landmark_for_mapping);
-    this->AllDataResample(complete_object_info, final_pose, mapped_objects, new_landmark_for_mapping);
+    this->AllDataResample(complete_object_info, final_pose, new_landmark_for_mapping);
 
     return;
 
@@ -373,26 +335,18 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                         //converting the landmark pose in world frame
                         Eigen::Matrix3f rotation_mat;
                         rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
-                        Eigen::Vector3f landmark_pose_in_world_frame, landmark_pose_in_cam_frame, landmark_pose_in_robot_frame ;
 
-                        landmark_pose_in_cam_frame(0) = complete_object_info[j].pose(0);
-                        landmark_pose_in_cam_frame(1) = complete_object_info[j].pose(1);
-                        landmark_pose_in_cam_frame(2) = complete_object_info[j].pose(2);
+                        landmark detected_object;
+                        this->landmarkPoseInWorld(detected_object,
+                                                  complete_object_info[j].pose,
+                                                  all_particles_[i].pose,
+                                                  rotation_mat);
 
-                        landmark_pose_in_robot_frame  = rotation_mat * landmark_pose_in_cam_frame;
+                        this->landmarkNormalsInWorld(detected_object,
+                                                     complete_object_info[j].normal_orientation,
+                                                     all_particles_[i].pose,
+                                                     rotation_mat);
 
-                        landmark_pose_in_world_frame(0) = landmark_pose_in_robot_frame(0) + all_particles_[i].pose(0);
-                        landmark_pose_in_world_frame(1) = landmark_pose_in_robot_frame(1) + all_particles_[i].pose(1);
-                        landmark_pose_in_world_frame(2) = landmark_pose_in_robot_frame(2) + all_particles_[i].pose(2);
-
-                        //converting the landmark normals in world frame
-                        Eigen::Vector3f landmark_normals_in_world_frame, landmark_normals_in_cam_frame;
-
-                        landmark_normals_in_cam_frame(0) = complete_object_info[j].normal_orientation(0);
-                        landmark_normals_in_cam_frame(1) = complete_object_info[j].normal_orientation(1);
-                        landmark_normals_in_cam_frame(2) = complete_object_info[j].normal_orientation(2);
-
-                        landmark_normals_in_world_frame = rotation_mat * landmark_normals_in_cam_frame;
 
                         Eigen::MatrixXf sig = all_particles_[i].landmarks[k].sigma;
                         Eigen::MatrixXf Q   = H * sig * H.transpose() + Q_;
@@ -400,12 +354,12 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                         //get the actual measurements
                         Eigen::VectorXf actual_measurements;
                         actual_measurements.resize(6,6);
-                        actual_measurements(0) = landmark_pose_in_world_frame(0);
-                        actual_measurements(1) = landmark_pose_in_world_frame(1);
-                        actual_measurements(2) = landmark_pose_in_world_frame(2);
-                        actual_measurements(3) = landmark_normals_in_world_frame(0);
-                        actual_measurements(4) = landmark_normals_in_world_frame(1);
-                        actual_measurements(5) = landmark_normals_in_world_frame(2);
+                        actual_measurements(0) = detected_object.mu(0);
+                        actual_measurements(1) = detected_object.mu(1);
+                        actual_measurements(2) = detected_object.mu(2);
+                        actual_measurements(3) = detected_object.normal_orientation(0);
+                        actual_measurements(4) = detected_object.normal_orientation(1);
+                        actual_measurements(5) = detected_object.normal_orientation(2);
                         //actual_measurements(6) = complete_object_info[j].normal_orientation(3);
 
                         //calculate the diff (innovations)
@@ -414,11 +368,6 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                         z_diff = actual_measurements - expected_measurements;
 
                         maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
-
-                        //                        std::cout << "actual measurements "   << actual_measurements << std::endl;
-                        //                        std::cout << "expected measurements " << expected_measurements << std::endl;
-                        //                        std::cout << "maha distance "         << maha_distance << std::endl;
-                        //                        std::cout << "end " << std::endl;
 
                         //insert the minimum Q, z_diff from above equations so you dont have to do the maths twice
                         if(maha_distance < maha_distance_min)
@@ -473,16 +422,13 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
                     all_particles_[i].landmarks[neareast_landmarks_id].mu    = all_particles_[i].landmarks[neareast_landmarks_id].mu + K * min_z_diff;
                     all_particles_[i].landmarks[neareast_landmarks_id].sigma = all_particles_[i].landmarks[neareast_landmarks_id].sigma - K * min_H * min_sig;
 
-
-                    //std::cout << "Q  " << Q   << std::endl;
-                    //std::cout << "Q_ " << Q_  << std::endl;
-
-                    //std::cout << "landmark sigma " << all_particles_[i].landmarks[neareast_landmarks_id].sigma << std::endl;
-
                     float current_weight = exp(-0.5*min_z_diff.transpose()*min_Q.inverse()*min_z_diff)/sqrt(2 * M_PI * min_Q.determinant());
                     //std::cout << "current weight " << current_weight << std::endl;
 
                     current_object_weight += current_weight;
+
+                    //                    this->projectPointsOnPlane(all_particles_[i].landmarks[neareast_landmarks_id],
+                    //                                               complete_object_info[j]);
                 }
             }
 
@@ -495,7 +441,6 @@ void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> 
 
 void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
                                       Eigen::VectorXf &final_pose,
-                                      std::vector<particle_filter::all_object_info_struct_pf>& mapped_objects,
                                       std::vector<new_landmarks> new_landmarks_for_mapping)
 {
 
@@ -532,16 +477,9 @@ void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> com
     //map all the new landmarks for all particles first
     this->MapNewLandmarksForEachParticle(complete_objec_info, new_landmarks_for_mapping);
 
-    //calculate the percentage of zeros in the data
-    float percentage_of_zeros = 0;
-    percentage_of_zeros =  weight_counter / num_particles_;
-
-    //std::cout << "weight_counter" << weight_counter << std::endl;
-    //std::cout << "percentage of zeros " << percentage_of_zeros << std::endl;
-
     //resample only is the sum is not zero and there are not alot of zeros in the weights
     //otherwise it will return
-    if(sum == 0 || percentage_of_zeros  > 0.5)
+    if(sum == 0)
     {
         std::cout << "not performing resampling " << std::endl;
         return;
@@ -609,11 +547,6 @@ void particle_filter::LandmarkMeasurementModel(particle p,
                                                Eigen::MatrixXf &H)
 {
 
-    float distance_normal_in_cam = p.pose(0) * new_landmark.normal_orientation(0) +
-            p.pose(1) * new_landmark.normal_orientation(1) +
-            p.pose(2) * new_landmark.normal_orientation(2) +
-            new_landmark.normal_orientation(3);
-
     //filling up the h measurement matrix
     h(0) = new_landmark.mu(0);
     h(1) = new_landmark.mu(1);
@@ -621,7 +554,6 @@ void particle_filter::LandmarkMeasurementModel(particle p,
     h(3) = new_landmark.normal_orientation(0);
     h(4) = new_landmark.normal_orientation(1);
     h(5) = new_landmark.normal_orientation(2);
-    //h(6) = distance_normal_in_cam;
 
     //filling up the H measurement matrix
     H.setZero(6,6);
@@ -631,8 +563,6 @@ void particle_filter::LandmarkMeasurementModel(particle p,
     H(3,3) = 1;  H(3,4) = 0;  H(3,5) = 0;
     H(4,3) = 0;  H(4,4) = 1;  H(4,5) = 0;
     H(5,3) = 0;  H(5,4) = 0;  H(5,5) = 1;
-    //H(6,3) = p.pose(0);         H(6,4) = p.pose(1);         H(6,5) = p.pose(2);
-    //H(6,6) = 1;
 
 }
 
@@ -649,42 +579,20 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
         Eigen::Matrix3f transformation_mat;
         transformation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[particle_id].pose);
 
-        //converting the landmark pose in world frame
-        Eigen::Vector3f landmark_pose_in_world_frame, landmark_pose_in_cam_frame, landmark_pose_in_robot_frame;
-
-        landmark_pose_in_cam_frame(0) = complete_object_info[object_id].pose(0);
-        landmark_pose_in_cam_frame(1) = complete_object_info[object_id].pose(1);
-        landmark_pose_in_cam_frame(2) = complete_object_info[object_id].pose(2);
-
-        landmark_pose_in_robot_frame  = transformation_mat * landmark_pose_in_cam_frame;
-
-        landmark_pose_in_world_frame(0) = landmark_pose_in_robot_frame(0) + all_particles_[particle_id].pose(0);
-        landmark_pose_in_world_frame(1) = landmark_pose_in_robot_frame(1) + all_particles_[particle_id].pose(1);
-        landmark_pose_in_world_frame(2) = landmark_pose_in_robot_frame(2) + all_particles_[particle_id].pose(2);
-
-        //this is for filling the landmarks for each particle
         landmark new_landmark;
-        new_landmark.mu = landmark_pose_in_world_frame;
+        this->landmarkPoseInWorld(new_landmark,
+                                  complete_object_info[object_id].pose,
+                                  all_particles_[particle_id].pose,
+                                  transformation_mat);
 
-        //this is for filling the landmarks for each particle
-        //converting the landmark normals in world frame
-        Eigen::Vector3f landmark_normals_in_world_frame, landmark_normals_in_cam_frame;
 
-        landmark_normals_in_cam_frame(0) = complete_object_info[object_id].normal_orientation(0);
-        landmark_normals_in_cam_frame(1) = complete_object_info[object_id].normal_orientation(1);
-        landmark_normals_in_cam_frame(2) = complete_object_info[object_id].normal_orientation(2);
+        this->landmarkNormalsInWorld(new_landmark,
+                                     complete_object_info[object_id].normal_orientation,
+                                     all_particles_[particle_id].pose,
+                                     transformation_mat);
 
-        landmark_normals_in_world_frame = transformation_mat * landmark_normals_in_cam_frame;
-
-        new_landmark.normal_orientation(0) = landmark_normals_in_world_frame(0);
-        new_landmark.normal_orientation(1) = landmark_normals_in_world_frame(1);
-        new_landmark.normal_orientation(2) = landmark_normals_in_world_frame(2);
-
-        //this is to convert the d distance in world frame
-        new_landmark.normal_orientation(3) =   complete_object_info[object_id].normal_orientation(3) -
-                (all_particles_[particle_id].pose(0) * new_landmark.normal_orientation(0) +
-                 all_particles_[particle_id].pose(1) * new_landmark.normal_orientation(1) +
-                 all_particles_[particle_id].pose(2) * new_landmark.normal_orientation(2));
+        this->projectPointsOnPlane(new_landmark,
+                                   complete_object_info[object_id]);
 
 
         //create and call the measurement model here
@@ -696,21 +604,9 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
                                        expected_z,
                                        H);
 
-        //        this->LandmarkNormalsMeasurementModel(all_particles_[particle_id],
-        //                                              new_landmark,
-        //                                              expected_z,
-        //                                              H);
-
-
         Eigen::MatrixXf Hi = H.inverse().eval();
 
-        //std::cout << "H matrix "  << H << std::endl;
-        //std::cout << "H inverse " << Hi << std::endl;
-        //std::cout << "O matrix "  << Q_ << std::endl;
         new_landmark.sigma =  Hi * Q_ * Hi.transpose();
-
-        //std::cout << "new landmark sigma " << new_landmark.sigma << std::endl;
-
         new_landmark.type               = complete_object_info[object_id].type;
         new_landmark.plane_type         = complete_object_info[object_id].plane_type;
         //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
@@ -719,3 +615,75 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
     }
 
 }
+
+inline void particle_filter::landmarkPoseInWorld(landmark &l,
+                                                 Eigen::Vector3f object_pose,
+                                                 Eigen::VectorXf particle_pose,
+                                                 Eigen::Matrix3f rotation_mat)
+{
+
+    //converting the landmark pose in world frame
+    Eigen::Vector3f landmark_pose_in_world_frame, landmark_pose_in_cam_frame, landmark_pose_in_robot_frame ;
+
+    landmark_pose_in_cam_frame(0) = object_pose(0);
+    landmark_pose_in_cam_frame(1) = object_pose(1);
+    landmark_pose_in_cam_frame(2) = object_pose(2);
+
+    landmark_pose_in_robot_frame  = rotation_mat * landmark_pose_in_cam_frame;
+
+    landmark_pose_in_world_frame(0) = landmark_pose_in_robot_frame(0) + particle_pose(0);
+    landmark_pose_in_world_frame(1) = landmark_pose_in_robot_frame(1) + particle_pose(1);
+    landmark_pose_in_world_frame(2) = landmark_pose_in_robot_frame(2) + particle_pose(2);
+
+    //this is for filling the landmarks for each particle
+    l.mu = landmark_pose_in_world_frame;
+}
+
+inline void particle_filter::landmarkNormalsInWorld(landmark &l,
+                                                    Eigen::Vector4f object_normals,
+                                                    Eigen::VectorXf particle_pose,
+                                                    Eigen::Matrix3f rotation_mat)
+{
+    //converting the landmark normals in world frame
+    Eigen::Vector3f landmark_normals_in_world_frame, landmark_normals_in_cam_frame;
+
+    landmark_normals_in_cam_frame(0) = object_normals(0);
+    landmark_normals_in_cam_frame(1) = object_normals(1);
+    landmark_normals_in_cam_frame(2) = object_normals(2);
+
+    landmark_normals_in_world_frame = rotation_mat * landmark_normals_in_cam_frame;
+
+    l.normal_orientation(0) = landmark_normals_in_world_frame(0);
+    l.normal_orientation(1) = landmark_normals_in_world_frame(1);
+    l.normal_orientation(2) = landmark_normals_in_world_frame(2);
+
+    //this is to convert the d distance in world frame
+    l.normal_orientation(3) =  object_normals(3) -
+            (particle_pose(0) * l.normal_orientation(0) +
+             particle_pose(1) * l.normal_orientation(1) +
+             particle_pose(2) * l.normal_orientation(2));
+
+}
+
+
+inline void particle_filter::projectPointsOnPlane(landmark &l,
+                                                  all_object_info_struct_pf object)
+{
+
+    float proj_x, proj_y, proj_z;
+    proj_x = l.normal_orientation(3) * l.normal_orientation(0);
+    proj_y = l.normal_orientation(3) * l.normal_orientation(1);
+    proj_z = l.normal_orientation(3) * l.normal_orientation(2);
+
+    for(size_t p =0; p < object.planar_points.size(); ++p)
+    {
+
+        pcl::PointXYZRGB points;
+        points.x = object.planar_points.points[p].x - proj_x;
+        points.y = object.planar_points.points[p].y - proj_y;
+        points.z = object.planar_points.points[p].z - proj_z;
+
+        l.mapped_planar_points.points.push_back(points);
+    }
+}
+

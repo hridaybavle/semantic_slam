@@ -50,6 +50,11 @@ public:
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud;
     };
 
+    struct segmented_planes {
+        cv::Mat final_pose_mat;
+        pcl::PointCloud<pcl::PointXYZRGB> planar_points;
+    };
+
 
     plane_segmentation::segmented_objects segmentPointCloudData(semantic_SLAM::ObjectInfo object_info,
                                                                 sensor_msgs::PointCloud2 point_cloud,
@@ -73,9 +78,9 @@ public:
                                                   pcl::PointCloud<pcl::PointXYZRGB>::Ptr& segemented_plane_from_point_cloud);
 
 
-    std::vector<cv::Mat> multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
-                                                pcl::PointCloud<pcl::Normal>::Ptr point_normal,
-                                                Eigen::Matrix4f transformation_mat);
+    std::vector<segmented_planes> multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                         pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                         Eigen::Matrix4f transformation_mat);
 
     std::vector<cv::Mat> clusterAndSegmentAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                     pcl::PointCloud<pcl::Normal>::Ptr point_normal,

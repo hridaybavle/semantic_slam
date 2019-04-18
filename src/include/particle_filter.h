@@ -30,7 +30,7 @@
 //tools lib
 #include "particle_tools.h"
 
-const float MAHA_DIST_THRESHOLD = 1.23;
+const float MAHA_DIST_THRESHOLD = 1.635;
 const float MATCHING_THRESHOLD  = 0.3;
 
 class particle_filter
@@ -104,7 +104,7 @@ public:
         std::string plane_type;
         Eigen::Vector3f pose;
         Eigen::Vector4f normal_orientation;
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud_plane;
+        pcl::PointCloud<pcl::PointXYZRGB> planar_points;
     };
 
     struct landmark {
@@ -114,6 +114,7 @@ public:
         std::string type;
         std::string plane_type;
         Eigen::Vector4f normal_orientation;
+        pcl::PointCloud<pcl::PointXYZRGB> mapped_planar_points;
         float prob;
     };
 
@@ -174,32 +175,19 @@ public:
                                                     Eigen::VectorXf VO_pose,
                                                     std::vector<particle_filter::object_info_struct_pf>& mapped_objects);
 
-    void AllObjectMapAndUpdate(std::vector<all_object_info_struct_pf> complete_object_info, Eigen::VectorXf &final_pose,
-                               Eigen::Matrix4f transformation_mat,
-                               std::vector<particle_filter::all_object_info_struct_pf>& mapped_objects);
+    void AllObjectMapAndUpdate(std::vector<all_object_info_struct_pf> complete_object_info, Eigen::VectorXf &final_pose);
 
     std::vector<Eigen::VectorXf> newObjectMapAndUpdate(std::vector<object_info_struct_all_points_pf> complete_object_pose,
                                                        std::vector<Eigen::VectorXf> filtered_pose,
                                                        Eigen::VectorXf &final_pose, Eigen::VectorXf VO_pose,
                                                        std::vector<object_info_struct_all_points_pf> &mapped_objects);
 
-
-    void DataAssociation(std::vector<Eigen::VectorXf>& filtered_pose,
-                         std::vector<object_info_struct_pf> complete_objec_info,
-                         std::vector<int> &new_landmark);
-
     void AllDataAssociation(std::vector<all_object_info_struct_pf> complete_object_info,
                             std::vector<new_landmarks>& new_landmark_for_mapping);
 
 
-    void DataResample(std::vector<Eigen::VectorXf>& filtered_pose, std::vector<object_info_struct_pf> complete_objec_info,
-                      Eigen::VectorXf &final_pose,
-                      std::vector<particle_filter::object_info_struct_pf>& mapped_objects,
-                      std::vector<int> new_landmark);
-
     void AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
                          Eigen::VectorXf &final_pose,
-                         std::vector<particle_filter::all_object_info_struct_pf>& mapped_objects,
                          std::vector<new_landmarks> new_landmarks_for_mapping);
 
     void LandmarkMeasurementModel(particle p,
@@ -207,12 +195,18 @@ public:
                                   Eigen::VectorXf &h,
                                   Eigen::MatrixXf &H);
 
-    void LandmarkNormalsMeasurementModel(particle p,
-                                         landmark new_landmark,
-                                         Eigen::Vector4f &h,
-                                         Eigen::MatrixXf &H);
+    inline void landmarkPoseInWorld(landmark& l,
+                                    Eigen::Vector3f object_pose,
+                                    Eigen::VectorXf particle_pose,
+                                    Eigen::Matrix3f rotation_mat);
 
+    inline void landmarkNormalsInWorld(landmark& l,
+                                       Eigen::Vector4f object_normals,
+                                       Eigen::VectorXf particle_pose,
+                                       Eigen::Matrix3f rotation_mat);
 
+    inline void projectPointsOnPlane(landmark& l,
+                                     all_object_info_struct_pf object);
 
     void MapNewLandmarksForEachParticle(std::vector<all_object_info_struct_pf> complete_object_info,
                                         std::vector<new_landmarks>& new_landmarks_for_mapping);

@@ -112,26 +112,21 @@ void semantic_slam_ros::run()
     //    }
 
     //-------------------------------------segmentation of the point_cloud------------------------------------------//
-    std::vector<particle_filter::object_info_struct_pf> complete_obj_info_vec;
     std::vector<particle_filter::all_object_info_struct_pf> all_obj_complete_info_vec;
-    std::vector<particle_filter::object_info_struct_all_points_pf> new_complete_obj_info_vec;
     Eigen::Matrix4f transformation_mat;
     if(object_detection_available_)
     {
         if(point_cloud_available_)
         {
-            //complete_obj_info_vec     = this->segmentPointCloudData();
             all_obj_complete_info_vec   = this->segmentallPointCloudData(transformation_mat);
         }
 
         if(!all_obj_complete_info_vec.empty())
         {
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
-                                                       final_pose_,
-                                                       transformation_mat,
-                                                       all_mapped_object_vec_);
+                                                       final_pose_);
 
-            //publishNewMappedObjects(new_mapped_object_vec_);
+            publishNewMappedObjects(new_mapped_object_vec_);
         }
 
     }
@@ -177,7 +172,7 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     detected_object_point_pub_      = n.advertise<geometry_msgs::PointStamped>("detected_object_pose_cam", 1);
     mapped_objects_visualizer_pub_  = n.advertise<visualization_msgs::MarkerArray>("mapped_objects",1);
     detected_planes_pub_            = n.advertise<visualization_msgs::MarkerArray>("detected_objects",1);
-    detected_planes_point_cloud_pub_= n.advertise<sensor_msgs::PointCloud2>("detected_planes_point_cloud",1);
+    //detected_planes_point_cloud_pub_= n.advertise<sensor_msgs::PointCloud2>("detected_planes_point_cloud",1);
     mapped_points_pub_              = n.advertise<sensor_msgs::PointCloud2>("mapped_points",1);
     optitrack_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_             = n.advertise<nav_msgs::Path>("optitrack_path",1);
@@ -509,24 +504,25 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     //                                                                                                        segmented_point_cloud_normal,
     //                                                                                                        transformation_mat);
 
-
-    std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
-                                                                                                    segmented_point_cloud_normal,
-                                                                                                    transformation_mat);
+    std::vector<plane_segmentation::segmented_planes> planar_surf_vec;
+    planar_surf_vec.clear();
+    planar_surf_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
+                                                                     segmented_point_cloud_normal,
+                                                                     transformation_mat);
 
     //    std::vector<cv::Mat> final_pose_from_ransac = plane_segmentation_obj_.computeAllPlanes(segmented_point_cloud,
     //                                                                                           transformation_mat);
 
-    if(!final_pose_from_plane_vec.empty())
+    if(!planar_surf_vec.empty())
     {
-        for(int j = 0; j < final_pose_from_plane_vec.size(); ++j)
+        for(int j = 0; j < planar_surf_vec.size(); ++j)
         {
             Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
             final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
 
-            final_detected_point_cam_frame(0) = final_pose_from_plane_vec[j].at<float>(0,0);
-            final_detected_point_cam_frame(1) = final_pose_from_plane_vec[j].at<float>(0,1);
-            final_detected_point_cam_frame(2) = final_pose_from_plane_vec[j].at<float>(0,2);
+            final_detected_point_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,0);
+            final_detected_point_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,1);
+            final_detected_point_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,2);
             final_detected_point_cam_frame(3) = 1;
 
             final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
@@ -542,14 +538,14 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_world_frame;
             normal_orientation_cam_frame.setOnes(), normal_orientation_world_frame.setOnes();
 
-            normal_orientation_cam_frame(0) = final_pose_from_plane_vec[j].at<float>(0,3);
-            normal_orientation_cam_frame(1) = final_pose_from_plane_vec[j].at<float>(0,4);
-            normal_orientation_cam_frame(2) = final_pose_from_plane_vec[j].at<float>(0,5);
+            normal_orientation_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,3);
+            normal_orientation_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,4);
+            normal_orientation_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,5);
             normal_orientation_cam_frame(3) = 1;
 
             normal_orientation_world_frame = transformation_mat * normal_orientation_cam_frame;
 
-            normal_orientation_cam_frame(3) = final_pose_from_plane_vec[j].at<float>(0,6);
+            normal_orientation_cam_frame(3) = planar_surf_vec[j].final_pose_mat.at<float>(0,6);
 
             //this is to calculate the d distance in world frame
             float normal_distance_world_frame = normal_orientation_world_frame(3) -
@@ -558,7 +554,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
                      final_pose_(2) * normal_orientation_world_frame(2));
 
             std::cout << "normal coefficients in world " << normal_orientation_world_frame << std::endl;
-            std::cout << "normal distance in cam "       << final_pose_from_plane_vec[j].at<float>(0,6) << std::endl;
+            std::cout << "normal distance in cam "       << planar_surf_vec[j].final_pose_mat.at<float>(0,6) << std::endl;
             std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
             std::cout << "end " << std::endl;
 
@@ -566,9 +562,9 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             particle_filter::all_object_info_struct_pf complete_obj_info;
 
             //if its zeros its horizontal else its vertical
-            if(final_pose_from_plane_vec[j].at<float>(0,7) == 0)
+            if(planar_surf_vec[j].final_pose_mat.at<float>(0,7) == 0)
                 complete_obj_info.plane_type = "horizontal";
-            else if(final_pose_from_plane_vec[j].at<float>(0,7) == 1)
+            else if(planar_surf_vec[j].final_pose_mat.at<float>(0,7) == 1)
                 complete_obj_info.plane_type = "vertical";
 
             complete_obj_info.type                          = object_type;
@@ -577,8 +573,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
             complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);
             complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
-            //complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
-            //complete_obj_info.segmented_point_cloud_plane = segemented_horizontal_plane_from_point_cloud;
+            complete_obj_info.planar_points                 = planar_surf_vec[j].planar_points;
 
             complete_obj_info_vec.push_back(complete_obj_info);
         }
@@ -1143,24 +1138,24 @@ void semantic_slam_ros::publishDetectedPlanes(std::vector<particle_filter::all_o
 }
 
 
-void semantic_slam_ros::publishDetectedPlanesPointCloud(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec)
-{
-    pcl::PointCloud<pcl::PointXYZRGB> point_cloud_pcl;
+//void semantic_slam_ros::publishDetectedPlanesPointCloud(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec)
+//{
+//    pcl::PointCloud<pcl::PointXYZRGB> point_cloud_pcl;
 
-    for(int i =0; i < detected_object_vec.size(); ++i)
-    {
-        for(int j=0; j < detected_object_vec[i].segmented_point_cloud_plane->points.size(); ++j)
-        {
-            point_cloud_pcl.points.push_back(detected_object_vec[i].segmented_point_cloud_plane->points[j]);
-        }
-    }
+//    for(int i =0; i < detected_object_vec.size(); ++i)
+//    {
+//        for(int j=0; j < detected_object_vec[i].segmented_point_cloud_plane->points.size(); ++j)
+//        {
+//            point_cloud_pcl.points.push_back(detected_object_vec[i].segmented_point_cloud_plane->points[j]);
+//        }
+//    }
 
-    sensor_msgs::PointCloud2 point_cloud;
-    pcl::toROSMsg(point_cloud_pcl, point_cloud);
-    point_cloud.header.stamp = ros::Time::now();
-    point_cloud.header.frame_id = "cam";
-    detected_planes_point_cloud_pub_.publish(point_cloud);
-}
+//    sensor_msgs::PointCloud2 point_cloud;
+//    pcl::toROSMsg(point_cloud_pcl, point_cloud);
+//    point_cloud.header.stamp = ros::Time::now();
+//    point_cloud.header.frame_id = "cam";
+//    detected_planes_point_cloud_pub_.publish(point_cloud);
+//}
 
 
 void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec)
@@ -1169,47 +1164,15 @@ void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::obj
     all_particles = particle_filter_obj_.getAllParticles();
     int best_particle_index = this->MaxIndex(all_particles);
 
-    sensor_msgs::PointCloud2 point_cloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_pcl (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    this->getPointCloudData(point_cloud);
-
-    pcl::fromROSMsg(point_cloud, *point_cloud_pcl);
-    point_cloud_pcl = plane_segmentation_obj_.preprocessPointCloud(point_cloud_pcl);
-
-    Eigen::Matrix4f transformation_mat;
-    semantic_tools_obj_.transformNormalsToWorld(final_pose_,
-                                                transformation_mat,
-                                                0);
-
-    //convert the points to world frame using transformation mat
-    for(int j = 0; j < num_particles_; ++j)
+    pcl::PointCloud<pcl::PointXYZRGB> points_vec;
+    for(int i = 0; i < all_particles[best_particle_index].landmarks.size(); ++i)
     {
-        for(size_t i = 0; i < point_cloud_pcl->size(); ++i)
-        {
-            Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_robot_frame;
-            final_detected_point_cam_frame.setOnes(), final_detected_point_robot_frame.setOnes();
-
-            final_detected_point_cam_frame(0) = point_cloud_pcl->points[i].x;
-            final_detected_point_cam_frame(1) = point_cloud_pcl->points[i].y;
-            final_detected_point_cam_frame(2) = point_cloud_pcl->points[i].z;
-
-            final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-
-            //fill the point cloud pcl with the new tranformed points
-            pcl::PointXYZRGB  current_point_cloud_pcl;
-            current_point_cloud_pcl.x   = final_detected_point_robot_frame(0) + all_particles[j].pose(0);
-            current_point_cloud_pcl.y   = final_detected_point_robot_frame(1) + all_particles[j].pose(1);
-            current_point_cloud_pcl.z   = final_detected_point_robot_frame(2) + all_particles[j].pose(2);
-            current_point_cloud_pcl.rgb = point_cloud_pcl->points[i].rgb;
-
-            mapped_point_cloud_pcl_[j].points.push_back(current_point_cloud_pcl);
-        }
-
+        points_vec = all_particles[best_particle_index].landmarks[i].mapped_planar_points;
     }
 
+
     sensor_msgs::PointCloud2 final_point_cloud;
-    pcl::toROSMsg(mapped_point_cloud_pcl_[best_particle_index], final_point_cloud);
+    pcl::toROSMsg(points_vec, final_point_cloud);
     final_point_cloud.header.stamp = ros::Time::now();
     final_point_cloud.header.frame_id = "map";
     mapped_points_pub_.publish(final_point_cloud);
