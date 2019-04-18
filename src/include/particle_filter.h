@@ -3,6 +3,8 @@
 #include <math.h>
 #include <fstream>
 #include <random>
+#include <thread>
+#include <functional>
 
 #include "ros/ros.h"
 #include "eigen3/Eigen/Eigen"
@@ -29,6 +31,9 @@
 
 //tools lib
 #include "particle_tools.h"
+
+//boost threading
+#include <boost/thread/thread.hpp>
 
 const float MAHA_DIST_THRESHOLD = 1.635;
 const float MATCHING_THRESHOLD  = 0.3;
@@ -132,7 +137,6 @@ public:
 private:
     Eigen::MatrixXf Q_;
 
-
     bool first_object_;
     bool first_horizontal_plane_,first_vertical_plane;
 
@@ -153,7 +157,14 @@ private:
     std::vector<all_object_info_struct_pf> all_object_map_;
     std::vector<object_info_struct_all_points_pf> new_object_map_;
 
+    std::vector<new_landmarks> new_landmark_for_mapping_;
+
+    std::mutex landmark_lock_;
+    std::mutex particle_lock_;
 public:
+
+    std::thread map_thread_1_;
+
     std::vector<Eigen::VectorXf> init(int state_size,
                                       int num_particles,
                                       std::vector<object_info_struct_pf> mapped_objects);
@@ -182,13 +193,12 @@ public:
                                                        Eigen::VectorXf &final_pose, Eigen::VectorXf VO_pose,
                                                        std::vector<object_info_struct_all_points_pf> &mapped_objects);
 
-    void AllDataAssociation(std::vector<all_object_info_struct_pf> complete_object_info,
-                            std::vector<new_landmarks>& new_landmark_for_mapping);
+    void AllDataAssociation(int i,
+                            std::vector<all_object_info_struct_pf> complete_object_info);
 
 
     void AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
-                         Eigen::VectorXf &final_pose,
-                         std::vector<new_landmarks> new_landmarks_for_mapping);
+                         Eigen::VectorXf &final_pose);
 
     void LandmarkMeasurementModel(particle p,
                                   landmark new_landmark,
@@ -205,10 +215,11 @@ public:
                                        Eigen::VectorXf particle_pose,
                                        Eigen::Matrix3f rotation_mat);
 
-    inline void projectPointsOnPlane(landmark& l,
-                                     all_object_info_struct_pf object);
+    void projectPointsOnPlane(particle_filter::landmark& l,
+                              all_object_info_struct_pf object);
 
-    void MapNewLandmarksForEachParticle(std::vector<all_object_info_struct_pf> complete_object_info,
+    void MapNewLandmarksForEachParticle(int i,
+                                        std::vector<all_object_info_struct_pf> complete_object_info,
                                         std::vector<new_landmarks>& new_landmarks_for_mapping);
 
     int MaxIndex();

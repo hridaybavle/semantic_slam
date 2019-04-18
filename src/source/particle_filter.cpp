@@ -72,12 +72,14 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
     first_keyboard_ = false;
     first_chair_    = false;
 
+    new_landmark_for_mapping_.clear();
+
     Q_.resize(6,6);
     Q_.setZero();
 
-    Q_(0,0) =  1.2;
-    Q_(1,1) =  1.2;
-    Q_(2,2) =  1.2;
+    Q_(0,0) =  0.9;
+    Q_(1,1) =  0.9;
+    Q_(2,2) =  0.9;
     Q_(3,3) =  0.9;
     Q_(4,4) =  0.9;
     Q_(5,5) =  0.9;
@@ -226,13 +228,15 @@ void particle_filter::predictionVO(float deltaT,
 
 }
 
-void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_pf> complete_object_info,
+void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_object_info_struct_pf> complete_object_info,
                                             Eigen::VectorXf &final_pose)
 {
+
 
     //check if its the first object and map it for all particles
     if(first_object_)
     {
+        //boost::thread_group tgroup;
         //computing the landmarks for each particle
         for(int i = 0; i < num_particles_; ++i)
         {
@@ -242,7 +246,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                 Eigen::Matrix3f rotation_mat;
                 rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
 
-                landmark new_landmark;
+                particle_filter::landmark new_landmark;
                 this->landmarkPoseInWorld(new_landmark,
                                           complete_object_info[j].pose,
                                           all_particles_[i].pose,
@@ -254,8 +258,9 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                                              rotation_mat);
 
 
-                this->projectPointsOnPlane(new_landmark,
-                                           complete_object_info[j]);
+                //                tgroup.create_thread(boost::bind(&particle_filter::projectPointsOnPlane, this,
+                //                                                 std::ref(new_landmark),
+                //                                                 std::ref(complete_object_info[j])));
 
                 //create and call the measurement model here
                 Eigen::VectorXf expected_z;
@@ -272,191 +277,199 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<all_object_info_struct_p
                 new_landmark.type               = complete_object_info[j].type;
                 new_landmark.plane_type         = complete_object_info[j].plane_type;
                 all_particles_[i].landmarks.push_back(new_landmark);
+
             }
+
         }
 
         first_object_ = false;
+        //tgroup.join_all();
         return;
     }
 
     //****************** matching and mapping part**********************************************/
-    std::vector<new_landmarks> new_landmark_for_mapping;
-    new_landmark_for_mapping.clear();
+    new_landmark_for_mapping_.clear();
+    boost::thread_group data_ass_group;
 
-    this->AllDataAssociation(complete_object_info, new_landmark_for_mapping);
-    this->AllDataResample(complete_object_info, final_pose, new_landmark_for_mapping);
+    //making the data association step mulithreaded for making it faster
+    for (int i =0; i < num_particles_; ++i)
+    {
+        data_ass_group.create_thread(boost::bind(&particle_filter::AllDataAssociation, this,
+                                                 i,
+                                                 std::ref(complete_object_info)));
+    }
+    data_ass_group.join_all();
+
+    this->AllDataResample(complete_object_info, final_pose);
 
     return;
 
 }
 
-void particle_filter::AllDataAssociation(std::vector<all_object_info_struct_pf> complete_object_info,
-                                         std::vector<new_landmarks> &new_landmark_for_mapping)
+void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_struct_pf> complete_object_info)
 {
 
-    for (int i =0; i < num_particles_; ++i)
+    float current_object_weight = 1;
+    for(int j = 0; j < complete_object_info.size(); ++j)
     {
-        float current_object_weight = 1;
-        for(int j = 0; j < complete_object_info.size(); ++j)
+        bool found_nearest_neighbour = false;
+        float maha_distance=0;
+        float maha_distance_min = std::numeric_limits<float>::max();
+
+        Eigen::VectorXf min_expected_measurements, min_z_diff;
+        min_expected_measurements.resize(6,6), min_z_diff.resize(6,6);
+        Eigen::MatrixXf min_H, min_sig, min_Q;
+
+
+        //for(int k =0; k < all_object_map_.size(); ++k)
+        int neareast_landmarks_id = -1;
+        for(int k =0; k < all_particles_[i].landmarks.size(); ++k)
         {
-            bool found_nearest_neighbour = false;
-            float distance_normal = 0, maha_distance=0;
-            float maha_distance_min = std::numeric_limits<float>::max();
+            //single_matched_landmark = all_particles_[i].landmarks[k];
 
-            Eigen::VectorXf min_expected_measurements, min_z_diff;
-            min_expected_measurements.resize(6,6), min_z_diff.resize(6,6);
-            Eigen::MatrixXf min_H, min_sig, min_Q;
-
-
-            //for(int k =0; k < all_object_map_.size(); ++k)
-            int neareast_landmarks_id = -1;
-            for(int k =0; k < all_particles_[i].landmarks.size(); ++k)
+            if(complete_object_info[j].type == all_particles_[i].landmarks[k].type)
             {
-                //single_matched_landmark = all_particles_[i].landmarks[k];
-
-                if(complete_object_info[j].type == all_particles_[i].landmarks[k].type)
+                if(complete_object_info[j].plane_type == all_particles_[i].landmarks[k].plane_type)
                 {
-                    if(complete_object_info[j].plane_type == all_particles_[i].landmarks[k].plane_type)
+                    //this step for matching with current landmarks
+                    found_nearest_neighbour = true;
+
+                    //calculating the mahalonobis distance
+                    Eigen::VectorXf expected_measurements;
+                    expected_measurements.resize(6,6);
+                    Eigen::MatrixXf H;
+
+                    //get the measurement model
+                    this->LandmarkMeasurementModel(all_particles_[i],
+                                                   all_particles_[i].landmarks[k],
+                                                   expected_measurements,
+                                                   H);
+
+                    //converting the landmark pose in world frame
+                    Eigen::Matrix3f rotation_mat;
+                    rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
+
+                    landmark detected_object;
+                    this->landmarkPoseInWorld(detected_object,
+                                              complete_object_info[j].pose,
+                                              all_particles_[i].pose,
+                                              rotation_mat);
+
+                    this->landmarkNormalsInWorld(detected_object,
+                                                 complete_object_info[j].normal_orientation,
+                                                 all_particles_[i].pose,
+                                                 rotation_mat);
+
+
+                    Eigen::MatrixXf sig = all_particles_[i].landmarks[k].sigma;
+                    Eigen::MatrixXf Q   = H * sig * H.transpose() + Q_;
+
+                    //get the actual measurements
+                    Eigen::VectorXf actual_measurements;
+                    actual_measurements.resize(6,6);
+                    actual_measurements(0) = detected_object.mu(0);
+                    actual_measurements(1) = detected_object.mu(1);
+                    actual_measurements(2) = detected_object.mu(2);
+                    actual_measurements(3) = detected_object.normal_orientation(0);
+                    actual_measurements(4) = detected_object.normal_orientation(1);
+                    actual_measurements(5) = detected_object.normal_orientation(2);
+                    //actual_measurements(6) = complete_object_info[j].normal_orientation(3);
+
+                    //calculate the diff (innovations)
+                    Eigen::VectorXf z_diff;
+                    z_diff.resize(6,6);
+                    z_diff = actual_measurements - expected_measurements;
+
+                    maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
+
+                    //insert the minimum Q, z_diff from above equations so you dont have to do the maths twice
+                    if(maha_distance < maha_distance_min)
                     {
-                        //this step for matching with current landmarks
-                        found_nearest_neighbour = true;
+                        maha_distance_min       = maha_distance;
+                        neareast_landmarks_id   = k;
 
-                        //calculating the mahalonobis distance
-                        Eigen::VectorXf expected_measurements;
-                        expected_measurements.resize(6,6);
-                        Eigen::MatrixXf H;
+                        //filling up the minimum variables for calculating the weights later
+                        min_expected_measurements = expected_measurements;
+                        min_H = H, min_Q = Q;
+                        min_sig = sig;
+                        min_z_diff = z_diff;
 
-                        //get the measurement model
-                        this->LandmarkMeasurementModel(all_particles_[i],
-                                                       all_particles_[i].landmarks[k],
-                                                       expected_measurements,
-                                                       H);
-
-                        //converting the landmark pose in world frame
-                        Eigen::Matrix3f rotation_mat;
-                        rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
-
-                        landmark detected_object;
-                        this->landmarkPoseInWorld(detected_object,
-                                                  complete_object_info[j].pose,
-                                                  all_particles_[i].pose,
-                                                  rotation_mat);
-
-                        this->landmarkNormalsInWorld(detected_object,
-                                                     complete_object_info[j].normal_orientation,
-                                                     all_particles_[i].pose,
-                                                     rotation_mat);
-
-
-                        Eigen::MatrixXf sig = all_particles_[i].landmarks[k].sigma;
-                        Eigen::MatrixXf Q   = H * sig * H.transpose() + Q_;
-
-                        //get the actual measurements
-                        Eigen::VectorXf actual_measurements;
-                        actual_measurements.resize(6,6);
-                        actual_measurements(0) = detected_object.mu(0);
-                        actual_measurements(1) = detected_object.mu(1);
-                        actual_measurements(2) = detected_object.mu(2);
-                        actual_measurements(3) = detected_object.normal_orientation(0);
-                        actual_measurements(4) = detected_object.normal_orientation(1);
-                        actual_measurements(5) = detected_object.normal_orientation(2);
-                        //actual_measurements(6) = complete_object_info[j].normal_orientation(3);
-
-                        //calculate the diff (innovations)
-                        Eigen::VectorXf z_diff;
-                        z_diff.resize(6,6);
-                        z_diff = actual_measurements - expected_measurements;
-
-                        maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
-
-                        //insert the minimum Q, z_diff from above equations so you dont have to do the maths twice
-                        if(maha_distance < maha_distance_min)
-                        {
-                            maha_distance_min       = maha_distance;
-                            neareast_landmarks_id   = k;
-
-                            //filling up the minimum variables for calculating the weights later
-                            min_expected_measurements = expected_measurements;
-                            min_H = H, min_Q = Q;
-                            min_sig = sig;
-                            min_z_diff = z_diff;
-
-                        }
                     }
-
                 }
-            }
 
-            if(found_nearest_neighbour == false)
+            }
+        }
+
+        if(found_nearest_neighbour == false)
+        {
+            landmark_lock_.lock();
+
+            new_landmarks landmark;
+            landmark.particle_id = i;
+            landmark.object_id   = j;
+
+            new_landmark_for_mapping_.push_back(landmark);
+
+            landmark_lock_.unlock();
+
+        }
+        else if(found_nearest_neighbour == true)
+        {
+
+            found_nearest_neighbour = false;
+
+            if(maha_distance_min > MAHA_DIST_THRESHOLD)
             {
+                landmark_lock_.lock();
 
                 new_landmarks landmark;
                 landmark.particle_id = i;
                 landmark.object_id   = j;
+                new_landmark_for_mapping_.push_back(landmark);
 
-                new_landmark_for_mapping.push_back(landmark);
+                landmark_lock_.unlock();
 
             }
-            else if(found_nearest_neighbour == true)
+            else
             {
 
-                found_nearest_neighbour = false;
+                //***********************************************************//
+                //kalman gain
+                Eigen::MatrixXf K = min_sig * min_H.transpose() * min_Q.inverse();
 
-                if(maha_distance_min > MAHA_DIST_THRESHOLD)
-                {
+                all_particles_[i].landmarks[neareast_landmarks_id].mu    = all_particles_[i].landmarks[neareast_landmarks_id].mu + K * min_z_diff;
+                all_particles_[i].landmarks[neareast_landmarks_id].sigma = all_particles_[i].landmarks[neareast_landmarks_id].sigma - K * min_H * min_sig;
 
-                    new_landmarks landmark;
-                    landmark.particle_id = i;
-                    landmark.object_id   = j;
-                    new_landmark_for_mapping.push_back(landmark);
+                float current_weight = exp(-0.5*min_z_diff.transpose()*min_Q.inverse()*min_z_diff)/sqrt(2 * M_PI * min_Q.determinant());
+                //std::cout << "current weight " << current_weight << std::endl;
 
-                    //continue;
-                }
-                else
-                {
+                current_object_weight += current_weight;
 
-                    //***********************************************************//
-                    //kalman gain
-                    Eigen::MatrixXf K = min_sig * min_H.transpose() * min_Q.inverse();
-
-                    all_particles_[i].landmarks[neareast_landmarks_id].mu    = all_particles_[i].landmarks[neareast_landmarks_id].mu + K * min_z_diff;
-                    all_particles_[i].landmarks[neareast_landmarks_id].sigma = all_particles_[i].landmarks[neareast_landmarks_id].sigma - K * min_H * min_sig;
-
-                    float current_weight = exp(-0.5*min_z_diff.transpose()*min_Q.inverse()*min_z_diff)/sqrt(2 * M_PI * min_Q.determinant());
-                    //std::cout << "current weight " << current_weight << std::endl;
-
-                    current_object_weight += current_weight;
-
-                    //                    this->projectPointsOnPlane(all_particles_[i].landmarks[neareast_landmarks_id],
-                    //                                               complete_object_info[j]);
-                }
+                //                    std::thread map_thread(&particle_filter::projectPointsOnPlane, this,
+                //                                           std::ref(all_particles_[i].landmarks[neareast_landmarks_id]),
+                //                                           std::ref(complete_object_info[j]));
             }
-
         }
 
-        //std::cout << "current_object_weight " << current_object_weight << std::endl;
-        all_particles_[i].weight *= current_object_weight;
     }
+
+    //std::cout << "current_object_weight " << current_object_weight << std::endl;
+    all_particles_[i].weight *= current_object_weight;
 }
 
 void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> complete_objec_info,
-                                      Eigen::VectorXf &final_pose,
-                                      std::vector<new_landmarks> new_landmarks_for_mapping)
+                                      Eigen::VectorXf &final_pose)
 {
 
     std::vector<float> weights;
     weights.resize(num_particles_);
 
     float sum=0;
-    float weight_counter=0;
 
     for(int i= 0; i < num_particles_; ++i)
     {
         weights[i] = all_particles_[i].weight;
         sum += weights[i];
-
-        if(weights[i] == 0)
-            weight_counter += 1;
     }
 
     float n_effective=0;
@@ -473,9 +486,17 @@ void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> com
         }
     }
 
-    //std::cout << "sum  " << sum << std::endl;
-    //map all the new landmarks for all particles first
-    this->MapNewLandmarksForEachParticle(complete_objec_info, new_landmarks_for_mapping);
+
+    //map all the new landmarks for all particles first with threads
+    boost::thread_group mapping_group;
+    for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+    {
+        mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
+                                                i,
+                                                std::ref(complete_objec_info),
+                                                std::ref(new_landmark_for_mapping_)));
+    }
+    mapping_group.join_all();
 
     //resample only is the sum is not zero and there are not alot of zeros in the weights
     //otherwise it will return
@@ -512,9 +533,6 @@ void particle_filter::AllDataResample(std::vector<all_object_info_struct_pf> com
     }
 
     all_particles_ = resampled_particles;
-
-    //    for(int i = 0; i < num_particles_; i++)
-    //        std::cout << "particle " << i << " " << "weight after resampling: " << all_particles_[i].weight << std::endl;
 
     Eigen::VectorXf avg_pose;
     avg_pose.resize(state_size_), avg_pose.setZero();
@@ -566,12 +584,12 @@ void particle_filter::LandmarkMeasurementModel(particle p,
 
 }
 
-void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info_struct_pf> complete_object_info,
+void particle_filter::MapNewLandmarksForEachParticle(int i,
+                                                     std::vector<all_object_info_struct_pf> complete_object_info,
                                                      std::vector<new_landmarks> &new_landmarks_for_mapping)
 {
 
     //computing the new landmarks for each particle
-    for(int i = 0; i < new_landmarks_for_mapping.size(); ++i)
     {
         int particle_id = new_landmarks_for_mapping[i].particle_id;
         int object_id   = new_landmarks_for_mapping[i].object_id;
@@ -591,8 +609,10 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
                                      all_particles_[particle_id].pose,
                                      transformation_mat);
 
-        this->projectPointsOnPlane(new_landmark,
-                                   complete_object_info[object_id]);
+
+        //        std::thread map_thread(&particle_filter::projectPointsOnPlane, this,
+        //                               std::ref(new_landmark),
+        //                               std::ref(complete_object_info[object_id]));
 
 
         //create and call the measurement model here
@@ -611,7 +631,9 @@ void particle_filter::MapNewLandmarksForEachParticle(std::vector<all_object_info
         new_landmark.plane_type         = complete_object_info[object_id].plane_type;
         //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
 
+        particle_lock_.lock();
         all_particles_[particle_id].landmarks.push_back(new_landmark);
+        particle_lock_.unlock();
     }
 
 }
@@ -666,8 +688,8 @@ inline void particle_filter::landmarkNormalsInWorld(landmark &l,
 }
 
 
-inline void particle_filter::projectPointsOnPlane(landmark &l,
-                                                  all_object_info_struct_pf object)
+void particle_filter::projectPointsOnPlane(particle_filter::landmark &l,
+                                           particle_filter::all_object_info_struct_pf object)
 {
 
     float proj_x, proj_y, proj_z;
@@ -675,7 +697,7 @@ inline void particle_filter::projectPointsOnPlane(landmark &l,
     proj_y = l.normal_orientation(3) * l.normal_orientation(1);
     proj_z = l.normal_orientation(3) * l.normal_orientation(2);
 
-    for(size_t p =0; p < object.planar_points.size(); ++p)
+    for(size_t p =0; p < object.planar_points.points.size(); ++p)
     {
 
         pcl::PointXYZRGB points;

@@ -182,87 +182,91 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
         //            std::cout << "average color of the region " << (-1*avg_color)/counter << std::endl;
         //        }
 
-        printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
-                centroid[0], centroid[1], centroid[2],
-                model[0], model[1], model[2], model[3]);
-        //        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
-
-        cv::Mat final_pose_centroid;
-        final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
-
-        Eigen::Vector4f normals_extracted;
-        normals_extracted.setZero();
-        normals_extracted(0) = model[0];
-        normals_extracted(1) = model[1];
-        normals_extracted(2) = model[2];
-
-        float dot_product =  this->computeDotProduct(normals_of_the_horizontal_plane_in_cam,
-                                                     normals_extracted);
-
-
-        //checking if the extract plane is a horizontal plane or vertical
-        if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.2 &&
-                fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.2 &&
-                fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.2)
+        if(boundary_cloud->points.size() > 100)
         {
-            //zero if its horizontal plane
-            final_pose_centroid.at<float>(0,7) = 0;
-            final_pose_centroid.at<float>(0,0) = centroid[0];
-            final_pose_centroid.at<float>(0,1) = centroid[1];
-            final_pose_centroid.at<float>(0,2) = centroid[2];
+            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
+                    centroid[0], centroid[1], centroid[2],
+                    model[0], model[1], model[2], model[3]);
+            //        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
 
-            //this is for ensuring all the horizontal planes have upwards normals
-            if(model[1] > 0)
+            cv::Mat final_pose_centroid;
+            final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
+
+            Eigen::Vector4f normals_extracted;
+            normals_extracted.setZero();
+            normals_extracted(0) = model[0];
+            normals_extracted(1) = model[1];
+            normals_extracted(2) = model[2];
+
+            float dot_product =  this->computeDotProduct(normals_of_the_horizontal_plane_in_cam,
+                                                         normals_extracted);
+
+
+            //checking if the extract plane is a horizontal plane or vertical
+            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.2 &&
+                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.2 &&
+                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.2)
             {
-                final_pose_centroid.at<float>(0,3) = -model[0];
-                final_pose_centroid.at<float>(0,4) = -model[1];
-                final_pose_centroid.at<float>(0,5) = -model[2];
-                final_pose_centroid.at<float>(0,6) = -model[3];
+                //zero if its horizontal plane
+                final_pose_centroid.at<float>(0,7) = 0;
+                final_pose_centroid.at<float>(0,0) = centroid[0];
+                final_pose_centroid.at<float>(0,1) = centroid[1];
+                final_pose_centroid.at<float>(0,2) = centroid[2];
+
+                //this is for ensuring all the horizontal planes have upwards normals
+                if(model[1] > 0)
+                {
+                    final_pose_centroid.at<float>(0,3) = -model[0];
+                    final_pose_centroid.at<float>(0,4) = -model[1];
+                    final_pose_centroid.at<float>(0,5) = -model[2];
+                    final_pose_centroid.at<float>(0,6) = -model[3];
+                }
+                else
+                {
+                    final_pose_centroid.at<float>(0,3) = model[0];
+                    final_pose_centroid.at<float>(0,4) = model[1];
+                    final_pose_centroid.at<float>(0,5) = model[2];
+                    final_pose_centroid.at<float>(0,6) = model[3];
+                }
+
+                planar_surf.final_pose_mat        = final_pose_centroid;
+                planar_surf.planar_points.points  = boundary_cloud->points;
+                planes_vec.push_back(planar_surf);
+                final_pose_centroids_vec.push_back(final_pose_centroid);
             }
-            else
+            else if (dot_product < 0.2)
             {
-                final_pose_centroid.at<float>(0,3) = model[0];
-                final_pose_centroid.at<float>(0,4) = model[1];
-                final_pose_centroid.at<float>(0,5) = model[2];
-                final_pose_centroid.at<float>(0,6) = model[3];
+                //std::cout << "Its a vertical plane " << std::endl;
+                //one if its a vertical plane
+                final_pose_centroid.at<float>(0,7) = 1;
+                final_pose_centroid.at<float>(0,0) = centroid[0];
+                final_pose_centroid.at<float>(0,1) = centroid[1];
+                final_pose_centroid.at<float>(0,2) = centroid[2];
+
+                //this is for ensuring all vert normals face towards the left
+                if(model[0] > 0)
+                {
+                    final_pose_centroid.at<float>(0,3) = -model[0];
+                    final_pose_centroid.at<float>(0,4) = -model[1];
+                    final_pose_centroid.at<float>(0,5) = -model[2];
+                    final_pose_centroid.at<float>(0,6) = -model[3];
+                    //std::cout << "\033[1;31m BAD NORMAL\033[0m\n" << std::endl;
+                }
+                else
+                {
+                    final_pose_centroid.at<float>(0,3) = model[0];
+                    final_pose_centroid.at<float>(0,4) = model[1];
+                    final_pose_centroid.at<float>(0,5) = model[2];
+                    final_pose_centroid.at<float>(0,6) = model[3];
+                    //std::cout << "\033[1;34m GOOD NORMAL\033[0m\n" << std::endl;
+                }
+
+                planar_surf.final_pose_mat        = final_pose_centroid;
+                planar_surf.planar_points.points  = boundary_cloud->points;
+                planes_vec.push_back(planar_surf);
+                final_pose_centroids_vec.push_back(final_pose_centroid);
             }
 
-            planar_surf.final_pose_mat        = final_pose_centroid;
-            planar_surf.planar_points.points  = boundary_cloud->points;
-            planes_vec.push_back(planar_surf);
-            final_pose_centroids_vec.push_back(final_pose_centroid);
-        }
-        else if (dot_product < 0.2)
-        {
-            //std::cout << "Its a vertical plane " << std::endl;
-            //one if its a vertical plane
-            final_pose_centroid.at<float>(0,7) = 1;
-            final_pose_centroid.at<float>(0,0) = centroid[0];
-            final_pose_centroid.at<float>(0,1) = centroid[1];
-            final_pose_centroid.at<float>(0,2) = centroid[2];
-
-            //this is for ensuring all vert normals face towards the left
-            if(model[0] > 0)
-            {
-                final_pose_centroid.at<float>(0,3) = -model[0];
-                final_pose_centroid.at<float>(0,4) = -model[1];
-                final_pose_centroid.at<float>(0,5) = -model[2];
-                final_pose_centroid.at<float>(0,6) = -model[3];
-                //std::cout << "\033[1;31m BAD NORMAL\033[0m\n" << std::endl;
-            }
-            else
-            {
-                final_pose_centroid.at<float>(0,3) = model[0];
-                final_pose_centroid.at<float>(0,4) = model[1];
-                final_pose_centroid.at<float>(0,5) = model[2];
-                final_pose_centroid.at<float>(0,6) = model[3];
-                //std::cout << "\033[1;34m GOOD NORMAL\033[0m\n" << std::endl;
-            }
-
-            planar_surf.final_pose_mat        = final_pose_centroid;
-            planar_surf.planar_points.points  = boundary_cloud->points;
-            planes_vec.push_back(planar_surf);
-            final_pose_centroids_vec.push_back(final_pose_centroid);
         }
 
     }

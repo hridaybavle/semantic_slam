@@ -126,7 +126,7 @@ void semantic_slam_ros::run()
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
                                                        final_pose_);
 
-            publishNewMappedObjects(new_mapped_object_vec_);
+            //publishNewMappedObjects(new_mapped_object_vec_);
         }
 
     }

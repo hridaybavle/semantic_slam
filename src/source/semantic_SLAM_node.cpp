@@ -1,5 +1,6 @@
 #include "semantic_SLAM.h"
 
+
 int main(int argc, char **argv)
 {
 
@@ -9,7 +10,7 @@ int main(int argc, char **argv)
     semantic_slam_ros mySemanticSLAM;
     mySemanticSLAM.open(n);
 
-    ros::Rate r(20);
+     ros::Rate r(30);
 
 
  //   while(!mySemanticSLAM.pclViewer->wasStopped())
@@ -23,6 +24,7 @@ int main(int argc, char **argv)
             mySemanticSLAM.run();
             r.sleep();
         }
+
      //   mySemanticSLAM.pclViewer->spinOnce(100);
     }
     return 0;
