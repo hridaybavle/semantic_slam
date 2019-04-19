@@ -223,7 +223,6 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     //check if its the first object and map it for all particles
     if(first_object_)
     {
-        //boost::thread_group tgroup;
         //computing the landmarks for each particle
         for(int i = 0; i < num_particles_; ++i)
         {
@@ -245,9 +244,6 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                                              rotation_mat);
 
 
-                //                tgroup.create_thread(boost::bind(&particle_filter::projectPointsOnPlane, this,
-                //                                                 std::ref(new_landmark),
-                //                                                 std::ref(complete_object_info[j])));
 
                 //create and call the measurement model here
                 Eigen::VectorXf expected_z;
@@ -263,6 +259,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                 new_landmark.sigma =  Hi * Q_ * Hi.transpose();
                 new_landmark.type               = complete_object_info[j].type;
                 new_landmark.plane_type         = complete_object_info[j].plane_type;
+
                 all_particles_[i].landmarks.push_back(new_landmark);
 
             }
@@ -270,15 +267,17 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
         }
 
         first_object_ = false;
-        //tgroup.join_all();
         return;
     }
 
     //****************** matching and mapping part**********************************************/
     new_landmark_for_mapping_.clear();
-    boost::thread_group data_ass_group;
+
+    std::cout << "Here " << std::endl;
 
     //making the data association step mulithreaded for making it faster
+#ifdef use_threading
+    boost::thread_group data_ass_group;
     for (int i =0; i < num_particles_; ++i)
     {
         data_ass_group.create_thread(boost::bind(&particle_filter::AllDataAssociation, this,
@@ -286,20 +285,46 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                                                  std::ref(complete_object_info)));
     }
     data_ass_group.join_all();
+#else
+    for (int i =0; i < num_particles_; ++i)
+    {
+        this->particle_filter::AllDataAssociation(i,complete_object_info);
+    }
+#endif
+
+    std::cout << "Here 1" << std::endl;
 
     //map all the new landmarks for all particles with multithreading
-    boost::thread_group mapping_group;
-    for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+    std::cout << "new_landmark_for_mapping size " << new_landmark_for_mapping_.size() << std::endl;
+    if(new_landmark_for_mapping_.size() > 0)
     {
-        mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
-                                                i,
-                                                std::ref(complete_object_info),
-                                                std::ref(new_landmark_for_mapping_)));
+
+#ifdef use_threading
+        boost::thread_group mapping_group;
+        for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+        {
+            mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
+                                                    i,
+                                                    std::ref(complete_object_info)));
+        }
+        mapping_group.join_all();
+        new_landmark_for_mapping_.clear();
+#else
+        for (int i =0; i < num_particles_; ++i)
+        {
+            this->particle_filter::MapNewLandmarksForEachParticle(i,complete_object_info);
+        }
+#endif
+
     }
-    mapping_group.join_all();
+
+    std::cout << "Here 2" << std::endl;
 
     //resampling
     this->AllDataResample(final_pose);
+
+    std::cout << "Here 3" << std::endl;
+
 
     return;
 
@@ -308,8 +333,29 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
 void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_struct_pf> complete_object_info)
 {
 
-    float current_object_weight = 1;
+#ifdef use_threading
+    boost::thread_group obj_ass_group;
     for(int j = 0; j < complete_object_info.size(); ++j)
+    {
+        obj_ass_group.create_thread(boost::bind(&particle_filter::ObjectLevelDataAssociation, this,
+                                                i,
+                                                j,
+                                                std::ref(complete_object_info)));
+    }
+    obj_ass_group.join_all();
+
+#else
+    for(int j = 0; j < complete_object_info.size(); ++j)
+     this->particle_filter::MapNewLandmarksForEachParticle(i, j, complete_object_info);
+#endif
+
+}
+
+void particle_filter::ObjectLevelDataAssociation(int i, int j,
+                                                 std::vector<all_object_info_struct_pf> complete_object_info)
+{
+
+    float current_object_weight = 1;
     {
         bool found_nearest_neighbour = false;
         float maha_distance=0;
@@ -401,14 +447,12 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
 
         if(found_nearest_neighbour == false)
         {
-            landmark_lock_.lock();
-
             new_landmarks landmark;
             landmark.particle_id = i;
             landmark.object_id   = j;
 
+            landmark_lock_.try_lock();
             new_landmark_for_mapping_.push_back(landmark);
-
             landmark_lock_.unlock();
 
         }
@@ -419,15 +463,15 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
 
             if(maha_distance_min > MAHA_DIST_THRESHOLD)
             {
-                landmark_lock_.lock();
+
 
                 new_landmarks landmark;
                 landmark.particle_id = i;
                 landmark.object_id   = j;
+
+                landmark_lock_.try_lock();
                 new_landmark_for_mapping_.push_back(landmark);
-
                 landmark_lock_.unlock();
-
             }
             else
             {
@@ -436,24 +480,27 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
                 //kalman gain
                 Eigen::MatrixXf K = min_sig * min_H.transpose() * min_Q.inverse();
 
+                particle_lock_.try_lock();
                 all_particles_[i].landmarks[neareast_landmarks_id].mu    = all_particles_[i].landmarks[neareast_landmarks_id].mu + K * min_z_diff;
                 all_particles_[i].landmarks[neareast_landmarks_id].sigma = all_particles_[i].landmarks[neareast_landmarks_id].sigma - K * min_H * min_sig;
+                particle_lock_.unlock();
 
                 float current_weight = exp(-0.5*min_z_diff.transpose()*min_Q.inverse()*min_z_diff)/sqrt(2 * M_PI * min_Q.determinant());
                 //std::cout << "current weight " << current_weight << std::endl;
 
                 current_object_weight += current_weight;
-
-                //                    std::thread map_thread(&particle_filter::projectPointsOnPlane, this,
-                //                                           std::ref(all_particles_[i].landmarks[neareast_landmarks_id]),
-                //                                           std::ref(complete_object_info[j]));
             }
         }
 
     }
 
+    particle_lock_.try_lock();
     all_particles_[i].weight *= current_object_weight;
+    particle_lock_.unlock();
+
+
 }
+
 
 void particle_filter::AllDataResample(Eigen::VectorXf &final_pose)
 {
@@ -570,14 +617,14 @@ void particle_filter::LandmarkMeasurementModel(particle p,
 }
 
 void particle_filter::MapNewLandmarksForEachParticle(int i,
-                                                     std::vector<all_object_info_struct_pf> complete_object_info,
-                                                     std::vector<new_landmarks> &new_landmarks_for_mapping)
+                                                     std::vector<all_object_info_struct_pf> complete_object_info)
 {
 
     //computing the new landmarks for each particle
     {
-        int particle_id = new_landmarks_for_mapping[i].particle_id;
-        int object_id   = new_landmarks_for_mapping[i].object_id;
+        int particle_id = new_landmark_for_mapping_[i].particle_id;
+        int object_id   = new_landmark_for_mapping_[i].object_id;
+
 
         Eigen::Matrix3f transformation_mat;
         transformation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[particle_id].pose);
@@ -593,11 +640,6 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
                                      complete_object_info[object_id].normal_orientation,
                                      all_particles_[particle_id].pose,
                                      transformation_mat);
-
-
-        //        std::thread map_thread(&particle_filter::projectPointsOnPlane, this,
-        //                               std::ref(new_landmark),
-        //                               std::ref(complete_object_info[object_id]));
 
 
         //create and call the measurement model here
@@ -616,7 +658,8 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
         new_landmark.plane_type         = complete_object_info[object_id].plane_type;
         //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
 
-        particle_lock_.lock();
+
+        particle_lock_.try_lock();
         all_particles_[particle_id].landmarks.push_back(new_landmark);
         particle_lock_.unlock();
     }
@@ -673,24 +716,34 @@ inline void particle_filter::landmarkNormalsInWorld(landmark &l,
 }
 
 
-void particle_filter::projectPointsOnPlane(particle_filter::landmark &l,
-                                           particle_filter::all_object_info_struct_pf object)
+void particle_filter::projectPointsOnPlane(int i,
+                                           particle p)
 {
-
     float proj_x, proj_y, proj_z;
-    proj_x = l.normal_orientation(3) * l.normal_orientation(0);
-    proj_y = l.normal_orientation(3) * l.normal_orientation(1);
-    proj_z = l.normal_orientation(3) * l.normal_orientation(2);
 
-    for(size_t p =0; p < object.planar_points.points.size(); ++p)
-    {
+    //    for(int i = 0; i < p.landmarks.size(); ++i)
+    //    {
+    //        proj_x = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(0);
+    //        proj_y = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(1);
+    //        proj_z = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(2);
 
-        pcl::PointXYZRGB points;
-        points.x = object.planar_points.points[p].x - proj_x;
-        points.y = object.planar_points.points[p].y - proj_y;
-        points.z = object.planar_points.points[p].z - proj_z;
 
-        l.mapped_planar_points.points.push_back(points);
-    }
+    //        for(size_t i =0; i < p.landmarks[i].planar_points.points.size(); ++i)
+    //        {
+
+    //            pcl::PointXYZRGB points;
+    //            points.x = p.landmarks[i].planar_points.points[i].x - proj_x;
+    //            points.y = p.landmarks[i].planar_points.points[i].y - proj_y;
+    //            points.z = p.landmarks[i].planar_points.points[i].z - proj_z;
+
+
+    //            particle_lock_.lock();
+    //            all_particles_[i].landmarks[i].mapped_planar_points.push_back(points);
+    //            particle_lock_.unlock();
+    //        }
+
+    //    }
+
+
 }
 

@@ -58,7 +58,7 @@ void semantic_slam_ros::init()
 
     //clearing all the mapped pointcloud data
     mapped_point_cloud_pcl_.clear();
-    mapped_point_cloud_pcl_.resize(num_particles_);
+
     //Display Window
     //    pclViewer->setBackgroundColor (0, 0, 0);
     //    pclViewer->initCameraParameters ();
@@ -126,7 +126,7 @@ void semantic_slam_ros::run()
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
                                                        final_pose_);
 
-            //publishNewMappedObjects(new_mapped_object_vec_);
+            publishNewMappedObjects(new_mapped_object_vec_);
         }
 
     }
@@ -1164,15 +1164,16 @@ void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::obj
     all_particles = particle_filter_obj_.getAllParticles();
     int best_particle_index = this->MaxIndex(all_particles);
 
-    pcl::PointCloud<pcl::PointXYZRGB> points_vec;
+
     for(int i = 0; i < all_particles[best_particle_index].landmarks.size(); ++i)
     {
-        points_vec = all_particles[best_particle_index].landmarks[i].mapped_planar_points;
+        for(int j = 0; j < all_particles[best_particle_index].landmarks[i].mapped_planar_points.points.size(); ++j)
+            mapped_point_cloud_pcl_.push_back(all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j]);
     }
 
 
     sensor_msgs::PointCloud2 final_point_cloud;
-    pcl::toROSMsg(points_vec, final_point_cloud);
+    pcl::toROSMsg(mapped_point_cloud_pcl_, final_point_cloud);
     final_point_cloud.header.stamp = ros::Time::now();
     final_point_cloud.header.frame_id = "map";
     mapped_points_pub_.publish(final_point_cloud);

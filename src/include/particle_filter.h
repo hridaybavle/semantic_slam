@@ -35,6 +35,8 @@
 //boost threading
 #include <boost/thread/thread.hpp>
 
+#define use_threading
+
 const float MAHA_DIST_THRESHOLD = 1.635;
 const float MATCHING_THRESHOLD  = 0.3;
 
@@ -193,9 +195,9 @@ public:
                                                        Eigen::VectorXf &final_pose, Eigen::VectorXf VO_pose,
                                                        std::vector<object_info_struct_all_points_pf> &mapped_objects);
 
-    void AllDataAssociation(int i,
-                            std::vector<all_object_info_struct_pf> complete_object_info);
+    void AllDataAssociation(int i, std::vector<all_object_info_struct_pf> complete_object_info);
 
+    void ObjectLevelDataAssociation(int i, int j, std::vector<all_object_info_struct_pf> complete_object_info);
 
     void AllDataResample(Eigen::VectorXf &final_pose);
 
@@ -214,12 +216,10 @@ public:
                                        Eigen::VectorXf particle_pose,
                                        Eigen::Matrix3f rotation_mat);
 
-    void projectPointsOnPlane(particle_filter::landmark& l,
-                              all_object_info_struct_pf object);
+    void projectPointsOnPlane(int i, particle p);
 
     void MapNewLandmarksForEachParticle(int i,
-                                        std::vector<all_object_info_struct_pf> complete_object_info,
-                                        std::vector<new_landmarks>& new_landmarks_for_mapping);
+                                        std::vector<all_object_info_struct_pf> complete_object_info);
 
     int MaxIndex();
 

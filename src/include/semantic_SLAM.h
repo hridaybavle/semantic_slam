@@ -39,9 +39,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <vtkRenderWindow.h>
 
-//aruco_eye msgs
-#include "aruco_eye_msgs/MarkerList.h"
-
 //bebop imu message
 #include "semantic_SLAM/Ardrone3PilotingStateAttitudeChanged.h"
 
@@ -228,5 +225,5 @@ protected:
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
     std::vector<geometry_msgs::PoseStamped> vo_pose_vec_;
 
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>> mapped_point_cloud_pcl_;
+    pcl::PointCloud<pcl::PointXYZRGB> mapped_point_cloud_pcl_;
 };
