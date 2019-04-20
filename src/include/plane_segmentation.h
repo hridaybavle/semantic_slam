@@ -60,7 +60,7 @@ public:
                                                                 sensor_msgs::PointCloud2 point_cloud,
                                                                 sensor_msgs::PointCloud2& segmented_point_cloud);
 
-    pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    pcl::PointCloud<pcl::Normal>::Ptr computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointIndices::Ptr inliers);
 
     cv::Mat computeHorizontalPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                    pcl::PointCloud<pcl::Normal>::Ptr point_normal,
@@ -80,6 +80,7 @@ public:
 
     std::vector<segmented_planes> multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                          pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                         pcl::PointIndices::Ptr inliers,
                                                          Eigen::Matrix4f transformation_mat);
 
     std::vector<cv::Mat> clusterAndSegmentAllPlanes(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
@@ -123,9 +124,9 @@ public:
 
 
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr preprocessPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr preprocessPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointIndices::Ptr& inliers);
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsamplePointcloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliers(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsamplePointcloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointIndices::Ptr& inliers);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliers(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud, pcl::PointIndices::Ptr& inliers);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr distance_filter(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud);
 };

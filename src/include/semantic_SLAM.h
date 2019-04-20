@@ -188,6 +188,7 @@ protected:
 
     std::vector<particle_filter::all_object_info_struct_pf> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
                                                                                   pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                  pcl::PointIndices::Ptr inliers,
                                                                                   Eigen::Matrix4f transformation_mat,
                                                                                   std::string object_type,
                                                                                   float prob);

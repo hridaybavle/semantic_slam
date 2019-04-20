@@ -85,7 +85,8 @@ plane_segmentation::segmented_objects plane_segmentation::segmentPointCloudData(
     return segmented_objects_to_return;
 }
 
-pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
+pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+                                                                                   pcl::PointIndices::Ptr inliers)
 {
 
     pcl::PointCloud<pcl::Normal>::Ptr normal_cloud (new pcl::PointCloud<pcl::Normal>);
@@ -104,6 +105,7 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     ne.setNormalSmoothingSize (20.0f);
 
     ne.setInputCloud(point_cloud);
+    ne.setIndices(inliers);
     ne.compute (*normal_cloud);
 
 
@@ -121,6 +123,7 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
 
 std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlaneSegmentation(pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
                                                                                              pcl::PointCloud<pcl::Normal>::Ptr point_normal,
+                                                                                             pcl::PointIndices::Ptr inliers,
                                                                                              Eigen::Matrix4f transformation_mat)
 {
     std::vector<cv::Mat> final_pose_centroids_vec;
@@ -145,6 +148,8 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
     mps.setDistanceThreshold (0.02); // 2cm
     mps.setInputNormals (point_normal);
     mps.setInputCloud (point_cloud);
+    mps.setIndices(inliers);
+    //mps.setComparator();
 
 
     std::vector< pcl::PlanarRegion< pcl::PointXYZRGB >, Eigen::aligned_allocator<pcl::PlanarRegion<pcl::PointXYZRGB> > > regions;
@@ -162,8 +167,29 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
         Eigen::Vector4f model = regions[i].getCoefficients ();
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr boundary_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_p (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+        pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
+
+        for(int j = 0; j < inlier_indices[i].indices.size(); ++j)
+        {
+            inliers->indices.push_back(inlier_indices[i].indices[j]);
+        }
+
+
+        // Create the filtering object
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+        extract.setInputCloud (point_cloud);
+        extract.setIndices (inliers);
+        extract.setNegative (false);
+        extract.filter (*cloud_p);
+
+        std::cout << "cloud p size " << cloud_p->size() << std::endl;
+
         boundary_cloud->points = regions[i].getContour ();
-        this->downsamplePointcloud(boundary_cloud);
+        //this->downsamplePointcloud(point_cloud);
+
+
         //        float avg_color=0;
         //        float counter = 0;
         //        for(size_t c=0; c < boundary_cloud.points.size(); ++c)
@@ -230,7 +256,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                 }
 
                 planar_surf.final_pose_mat        = final_pose_centroid;
-                planar_surf.planar_points.points  = boundary_cloud->points;
+                planar_surf.planar_points.points  = cloud_p->points;
                 planes_vec.push_back(planar_surf);
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
@@ -571,18 +597,20 @@ float plane_segmentation::computeDotProduct(Eigen::Vector4f vector_a, Eigen::Vec
 }
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+        pcl::PointIndices::Ptr& inliers)
 {
-    point_cloud = this->downsamplePointcloud(point_cloud);
-    point_cloud = this->removeOutliers(point_cloud);
-    point_cloud = this->distance_filter(point_cloud);
+    point_cloud = this->downsamplePointcloud(point_cloud, inliers);
+    //point_cloud = this->removeOutliers(point_cloud, inliers);
+    //point_cloud = this->distance_filter(point_cloud);
 
     return point_cloud;
 }
 
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::downsamplePointcloud(
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+        pcl::PointIndices::Ptr& inliers)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
@@ -590,18 +618,38 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::downsamplePointcloud(
     sor.setLeafSize (0.1f, 0.1f, 0.1f);
     sor.filter (*cloud_filtered);
 
+    boost::shared_ptr <std::vector<int> > IndicesPtr;
+    IndicesPtr = sor.getIndices();
+
+    for(int i =0; i < IndicesPtr->size(); ++i)
+    {
+        inliers->indices.push_back(IndicesPtr->at(i));
+    }
+
     return cloud_filtered;
 }
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::removeOutliers(
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud)
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
+        pcl::PointIndices::Ptr& inliers)
 {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud (point_cloud);
     sor.setMeanK (50);
     sor.setStddevMulThresh (1.0);
+    sor.setIndices(inliers);
     sor.filter (*cloud_filtered);
+
+    boost::shared_ptr <std::vector<int> > IndicesPtr;
+    IndicesPtr = sor.getIndices();
+    pcl::PointIndices::Ptr new_inliers(new pcl::PointIndices ());
+    for(int i =0; i < IndicesPtr->size(); ++i)
+    {
+        new_inliers->indices.push_back(IndicesPtr->at(i));
+    }
+    inliers = new_inliers;
+    //sor.setKeepOrganized(true);
 
     return cloud_filtered;
 

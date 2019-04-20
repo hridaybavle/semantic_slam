@@ -456,10 +456,15 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
         if(!segmented_objects_from_point_cloud[i].segmented_point_cloud->empty())
         {
+            pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
+            cloud_filtered = plane_segmentation_obj_.preprocessPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                          inliers);
 
             //This calculates the normals of the segmented pointcloud
             pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
-            segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud);
+            segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                                                                inliers);
 
             if(segmented_point_cloud_normal->empty())
                 continue;
@@ -467,6 +472,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             //this computes all the planar surfaces from the detected segmented data
             complete_obj_info_vec = this->segmentPlanarSurfaces(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                                 segmented_point_cloud_normal,
+                                                                inliers,
                                                                 transformation_mat,
                                                                 segmented_objects_from_point_cloud[i].type,
                                                                 segmented_objects_from_point_cloud[i].prob);
@@ -492,6 +498,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
 std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
                                                                                                  pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                                                                 pcl::PointIndices::Ptr inliers,
                                                                                                  Eigen::Matrix4f transformation_mat,
                                                                                                  std::string object_type,
                                                                                                  float prob)
@@ -508,6 +515,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     planar_surf_vec.clear();
     planar_surf_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
                                                                      segmented_point_cloud_normal,
+                                                                     inliers,
                                                                      transformation_mat);
 
     //    std::vector<cv::Mat> final_pose_from_ransac = plane_segmentation_obj_.computeAllPlanes(segmented_point_cloud,

@@ -216,7 +216,7 @@ public:
                                        Eigen::VectorXf particle_pose,
                                        Eigen::Matrix3f rotation_mat);
 
-    void projectPointsOnPlane(int i, particle p);
+    void projectPointsOnPlane(particle p, landmark &l, all_object_info_struct_pf complete_object_info, Eigen::Matrix3f rotation_mat);
 
     void MapNewLandmarksForEachParticle(int i,
                                         std::vector<all_object_info_struct_pf> complete_object_info);

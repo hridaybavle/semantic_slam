@@ -260,6 +260,11 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                 new_landmark.type               = complete_object_info[j].type;
                 new_landmark.plane_type         = complete_object_info[j].plane_type;
 
+//                this->projectPointsOnPlane(all_particles_[i],
+//                                           new_landmark,
+//                                           complete_object_info[j],
+//                                           rotation_mat);
+
                 all_particles_[i].landmarks.push_back(new_landmark);
 
             }
@@ -285,6 +290,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                                                  std::ref(complete_object_info)));
     }
     data_ass_group.join_all();
+
 #else
     for (int i =0; i < num_particles_; ++i)
     {
@@ -295,7 +301,6 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     std::cout << "Here 1" << std::endl;
 
     //map all the new landmarks for all particles with multithreading
-    std::cout << "new_landmark_for_mapping size " << new_landmark_for_mapping_.size() << std::endl;
     if(new_landmark_for_mapping_.size() > 0)
     {
 
@@ -346,7 +351,7 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
 
 #else
     for(int j = 0; j < complete_object_info.size(); ++j)
-     this->particle_filter::MapNewLandmarksForEachParticle(i, j, complete_object_info);
+        this->particle_filter::MapNewLandmarksForEachParticle(i, j, complete_object_info);
 #endif
 
 }
@@ -658,6 +663,10 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
         new_landmark.plane_type         = complete_object_info[object_id].plane_type;
         //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
 
+//        this->projectPointsOnPlane(all_particles_[particle_id],
+//                                   new_landmark,
+//                                   complete_object_info[object_id],
+//                                   transformation_mat);
 
         particle_lock_.try_lock();
         all_particles_[particle_id].landmarks.push_back(new_landmark);
@@ -716,34 +725,39 @@ inline void particle_filter::landmarkNormalsInWorld(landmark &l,
 }
 
 
-void particle_filter::projectPointsOnPlane(int i,
-                                           particle p)
+void particle_filter::projectPointsOnPlane(particle p,
+                                           landmark& l,
+                                           all_object_info_struct_pf complete_object_info,
+                                           Eigen::Matrix3f rotation_mat)
 {
     float proj_x, proj_y, proj_z;
 
-    //    for(int i = 0; i < p.landmarks.size(); ++i)
-    //    {
-    //        proj_x = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(0);
-    //        proj_y = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(1);
-    //        proj_z = p.landmarks[i].normal_orientation(3) * p.landmarks[i].normal_orientation(2);
+
+    proj_x = l.normal_orientation(3) * l.normal_orientation(0);
+    proj_y = l.normal_orientation(3) * l.normal_orientation(1);
+    proj_z = l.normal_orientation(3) * l.normal_orientation(2);
 
 
-    //        for(size_t i =0; i < p.landmarks[i].planar_points.points.size(); ++i)
-    //        {
+    for(size_t i =0; i < complete_object_info.planar_points.points.size(); ++i)
+    {
 
-    //            pcl::PointXYZRGB points;
-    //            points.x = p.landmarks[i].planar_points.points[i].x - proj_x;
-    //            points.y = p.landmarks[i].planar_points.points[i].y - proj_y;
-    //            points.z = p.landmarks[i].planar_points.points[i].z - proj_z;
+        pcl::PointXYZRGB points;
 
+        Eigen::Vector3f object_pose;
+        object_pose(0) = complete_object_info.planar_points.points[i].x;
+        object_pose(1) = complete_object_info.planar_points.points[i].y;
+        object_pose(2) = complete_object_info.planar_points.points[i].z;
 
-    //            particle_lock_.lock();
-    //            all_particles_[i].landmarks[i].mapped_planar_points.push_back(points);
-    //            particle_lock_.unlock();
-    //        }
+        this->landmarkPoseInWorld(l,
+                                  object_pose,
+                                  p.pose,
+                                  rotation_mat);
+        points.x   = l.mu(0);
+        points.y   = l.mu(1);
+        points.z   = l.mu(2);
+        points.rgb = complete_object_info.planar_points.points[i].rgb;
 
-    //    }
-
-
+        l.mapped_planar_points.push_back(points);
+    }
 }
 
