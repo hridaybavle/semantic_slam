@@ -257,8 +257,9 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                 Eigen::MatrixXf Hi = H.inverse().eval();
                 new_landmark.sigma.resize(6,6);
                 new_landmark.sigma =  Hi * Q_ * Hi.transpose();
-                new_landmark.type               = complete_object_info[j].type;
-                new_landmark.plane_type         = complete_object_info[j].plane_type;
+                new_landmark.type                   = complete_object_info[j].type;
+                new_landmark.plane_type             = complete_object_info[j].plane_type;
+                new_landmark.mapped_planar_points   = complete_object_info[j].planar_points;
 
                 //                this->projectPointsOnPlane(all_particles_[i],
                 //                                           new_landmark,
@@ -672,9 +673,9 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
         Eigen::MatrixXf Hi = H.inverse().eval();
 
         new_landmark.sigma =  Hi * Q_ * Hi.transpose();
-        new_landmark.type               = complete_object_info[object_id].type;
-        new_landmark.plane_type         = complete_object_info[object_id].plane_type;
-        //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
+        new_landmark.type                   = complete_object_info[object_id].type;
+        new_landmark.plane_type             = complete_object_info[object_id].plane_type;
+        new_landmark.mapped_planar_points   = complete_object_info[object_id].planar_points;
 
         //        this->projectPointsOnPlane(all_particles_[particle_id],
         //                                   new_landmark,

@@ -14,20 +14,20 @@ semantic_slam_ros::~semantic_slam_ros()
 void semantic_slam_ros::readGroundTruthPoint()
 {
 
-    std::ifstream infile(text_file_);
-    if(!infile.is_open())
-    {
-        std::cerr << "cannot open the ground truth file " << std::endl;
-    }
+    //    std::ifstream infile(text_file_);
+    //    if(!infile.is_open())
+    //    {
+    //        std::cerr << "cannot open the ground truth file " << std::endl;
+    //    }
 
-    points_vec_.clear();
-    geometry_msgs::Point points;
-    while(infile >> points.x >>  points.y >>  points.z)
-    {
-        std::cout << "X: " << points.x  << "Y: " << points.y  << "Z: " << points.z  << std::endl;
+    //    points_vec_.clear();
+    //    geometry_msgs::Point points;
+    //    while(infile >> points.x >>  points.y >>  points.z)
+    //    {
+    //        std::cout << "X: " << points.x  << "Y: " << points.y  << "Z: " << points.z  << std::endl;
 
-        points_vec_.push_back(points);
-    }
+    //        points_vec_.push_back(points);
+    //    }
 
 }
 
@@ -69,10 +69,10 @@ void semantic_slam_ros::init()
 
 
     //Read ros params
-    ros::param::get("~text_file", text_file_);
-    if(text_file_.length() == 0)
-        text_file_ = "/home/hriday/workspace/ros/rovio_semantic_workspace/src/semantic_SLAM/text_files/ground_truth_points.txt";
-    std::cout << "text file " << text_file_ << std::endl;
+    //    ros::param::get("~text_file", text_file_);
+    //    if(text_file_.length() == 0)
+    //        text_file_ = "/home/hriday/workspace/ros/rovio_semantic_workspace/src/semantic_SLAM/text_files/ground_truth_points.txt";
+    //    std::cout << "text file " << text_file_ << std::endl;
 
     return;
 
@@ -561,10 +561,10 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
                      final_pose_(1) * normal_orientation_world_frame(1) +
                      final_pose_(2) * normal_orientation_world_frame(2));
 
-            std::cout << "normal coefficients in world " << normal_orientation_world_frame << std::endl;
-            std::cout << "normal distance in cam "       << planar_surf_vec[j].final_pose_mat.at<float>(0,6) << std::endl;
-            std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
-            std::cout << "end " << std::endl;
+            //            std::cout << "normal coefficients in world " << normal_orientation_world_frame << std::endl;
+            //            std::cout << "normal distance in cam "       << planar_surf_vec[j].final_pose_mat.at<float>(0,6) << std::endl;
+            //            std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
+            //            std::cout << "end " << std::endl;
 
             //filling the vector for the sending it to the PF
             particle_filter::all_object_info_struct_pf complete_obj_info;
@@ -1172,13 +1172,42 @@ void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::obj
     all_particles = particle_filter_obj_.getAllParticles();
     int best_particle_index = this->MaxIndex(all_particles);
 
+    Eigen::Matrix4f transformation_mat;
+    transformation_mat.setOnes();
+    semantic_tools_obj_.transformNormalsToWorld(all_particles[best_particle_index].pose,
+                                                transformation_mat,
+                                                real_sense_pitch_angle);
+
 
     for(int i = 0; i < all_particles[best_particle_index].landmarks.size(); ++i)
     {
         for(int j = 0; j < all_particles[best_particle_index].landmarks[i].mapped_planar_points.points.size(); ++j)
-            mapped_point_cloud_pcl_.push_back(all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j]);
-    }
+        {
+            Eigen::Vector4f landmark_pts_cam_frame, landmark_pts_world_frame;
+            landmark_pts_cam_frame.setOnes(); landmark_pts_world_frame.setOnes();
 
+            landmark_pts_cam_frame(0) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].x;
+            landmark_pts_cam_frame(1) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].y;
+            landmark_pts_cam_frame(2) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].z;
+
+            landmark_pts_world_frame = transformation_mat * landmark_pts_cam_frame;
+
+            landmark_pts_world_frame(0) = landmark_pts_world_frame(0) + all_particles[best_particle_index].pose(0);
+            landmark_pts_world_frame(1) = landmark_pts_world_frame(1) + all_particles[best_particle_index].pose(1);
+            landmark_pts_world_frame(2) = landmark_pts_world_frame(2) + all_particles[best_particle_index].pose(2);
+
+            pcl::PointXYZRGB point;
+            point.x   =  landmark_pts_world_frame(0);
+            point.y   =  landmark_pts_world_frame(1);
+            point.z   =  landmark_pts_world_frame(2);
+            point.rgb =  all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].rgb;
+
+            mapped_point_cloud_pcl_.push_back(point);
+
+        }
+
+
+    }
 
     sensor_msgs::PointCloud2 final_point_cloud;
     pcl::toROSMsg(mapped_point_cloud_pcl_, final_point_cloud);

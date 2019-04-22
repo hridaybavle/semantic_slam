@@ -184,7 +184,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
         extract.setNegative (false);
         extract.filter (*cloud_p);
 
-        std::cout << "cloud p size " << cloud_p->size() << std::endl;
+        //std::cout << "cloud p size " << cloud_p->size() << std::endl;
 
         boundary_cloud->points = regions[i].getContour ();
         //this->downsamplePointcloud(point_cloud);
