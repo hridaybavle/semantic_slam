@@ -260,10 +260,10 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                 new_landmark.type               = complete_object_info[j].type;
                 new_landmark.plane_type         = complete_object_info[j].plane_type;
 
-//                this->projectPointsOnPlane(all_particles_[i],
-//                                           new_landmark,
-//                                           complete_object_info[j],
-//                                           rotation_mat);
+                //                this->projectPointsOnPlane(all_particles_[i],
+                //                                           new_landmark,
+                //                                           complete_object_info[j],
+                //                                           rotation_mat);
 
                 all_particles_[i].landmarks.push_back(new_landmark);
 
@@ -303,19 +303,32 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     //map all the new landmarks for all particles with multithreading
     if(new_landmark_for_mapping_.size() > 0)
     {
+        std::cout << "new landmark data " << new_landmark_for_mapping_.size() << std::endl;
 
 #ifdef use_threading
         boost::thread_group mapping_group;
-        for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+
+        if(new_landmark_for_mapping_.size() <= num_particles_)
         {
-            mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
-                                                    i,
-                                                    std::ref(complete_object_info)));
+            for(int i =0; i < new_landmark_for_mapping_.size(); ++i)
+            {
+
+                mapping_group.create_thread(boost::bind(&particle_filter::MapNewLandmarksForEachParticle, this,
+                                                        i,
+                                                        std::ref(complete_object_info)));
+            }
+            mapping_group.join_all();
         }
-        mapping_group.join_all();
-        new_landmark_for_mapping_.clear();
+        else
+        {
+            for (int i =0; i < new_landmark_for_mapping_.size(); ++i)
+            {
+                this->particle_filter::MapNewLandmarksForEachParticle(i,complete_object_info);
+            }
+        }
+
 #else
-        for (int i =0; i < num_particles_; ++i)
+        for (int i =0; i < new_landmark_for_mapping_.size(); ++i)
         {
             this->particle_filter::MapNewLandmarksForEachParticle(i,complete_object_info);
         }
@@ -351,7 +364,7 @@ void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_stru
 
 #else
     for(int j = 0; j < complete_object_info.size(); ++j)
-        this->particle_filter::MapNewLandmarksForEachParticle(i, j, complete_object_info);
+        this->particle_filter::ObjectLevelDataAssociation(i, j, complete_object_info);
 #endif
 
 }
@@ -521,7 +534,7 @@ void particle_filter::AllDataResample(Eigen::VectorXf &final_pose)
         sum += weights[i];
     }
 
-    float n_effective=0;
+    //float n_effective=0;
     //normalizing the weights
     for (int i = 0; i < num_particles_; ++i)
     {
@@ -530,7 +543,7 @@ void particle_filter::AllDataResample(Eigen::VectorXf &final_pose)
         {
             all_particles_[i].weight = all_particles_[i].weight/sum;
             weights[i]               = weights[i]/sum;
-            n_effective                += pow(weights[i],-2);
+            //n_effective                += pow(weights[i],-2);
         }
     }
 
@@ -663,10 +676,10 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
         new_landmark.plane_type         = complete_object_info[object_id].plane_type;
         //new_landmark.normal_orientation = complete_object_info[j].normal_orientation;
 
-//        this->projectPointsOnPlane(all_particles_[particle_id],
-//                                   new_landmark,
-//                                   complete_object_info[object_id],
-//                                   transformation_mat);
+        //        this->projectPointsOnPlane(all_particles_[particle_id],
+        //                                   new_landmark,
+        //                                   complete_object_info[object_id],
+        //                                   transformation_mat);
 
         particle_lock_.try_lock();
         all_particles_[particle_id].landmarks.push_back(new_landmark);
