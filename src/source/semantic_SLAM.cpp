@@ -126,7 +126,7 @@ void semantic_slam_ros::run()
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
                                                        final_pose_);
 
-            publishNewMappedObjects(new_mapped_object_vec_);
+            //publishNewMappedObjects(new_mapped_object_vec_);
         }
 
     }
@@ -154,8 +154,8 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     rovio_odometry_sub_    = n.subscribe("/rovio/odometry", 1, &semantic_slam_ros::rovioOdometryCallback, this);
     imu_sub_               = n.subscribe("/imu/data", 1, &semantic_slam_ros::imuCallback, this);
     //detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
-    //detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
-    detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
+    detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
+    //detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
     optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/realsense/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
     //this is just for visualizing the path
@@ -289,51 +289,30 @@ void semantic_slam_ros::getIMUdata(float &roll, float &pitch, float &yaw)
 
 //    this->setDetectedObjectInfo(object_info);
 
-
 //}
 
-void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
+
+
+void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
 {
     //std::cout << "objects size " << msg.objects.size() << std::endl;
     std::vector<semantic_SLAM::ObjectInfo>  object_info;
-    object_info.resize(msg.objects.size());
+    object_info.resize(msg.bounding_boxes.size());
 
-    for(int i =0; i < msg.objects.size(); ++i)
+    for(int i =0; i < msg.bounding_boxes.size(); ++i)
     {
-        object_info[i].type   = msg.objects[i].type;
-        object_info[i].tl_x   = msg.objects[i].tl_x;
-        object_info[i].tl_y   = msg.objects[i].tl_y;
-        object_info[i].height = msg.objects[i].height;
-        object_info[i].width  = msg.objects[i].width;
-        object_info[i].prob   = msg.objects[i].prob;
+        object_info[i].type   = msg.bounding_boxes[i].Class;
+        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
+        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
+        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
+        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
+        object_info[i].prob   = msg.bounding_boxes[i].probability;
     }
 
     this->setDetectedObjectInfo(object_info);
 
+
 }
-
-
-
-//void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
-//{
-//    //std::cout << "objects size " << msg.objects.size() << std::endl;
-//    std::vector<semantic_SLAM::ObjectInfo>  object_info;
-//    object_info.resize(msg.bounding_boxes.size());
-
-//    for(int i =0; i < msg.bounding_boxes.size(); ++i)
-//    {
-//        object_info[i].type   = msg.bounding_boxes[i].Class;
-//        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
-//        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
-//        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
-//        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
-//        object_info[i].prob   = msg.bounding_boxes[i].probability;
-//    }
-
-//    this->setDetectedObjectInfo(object_info);
-
-
-//}
 
 void semantic_slam_ros::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
 {
@@ -458,8 +437,8 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
         {
             pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZRGB>);
-            cloud_filtered = plane_segmentation_obj_.preprocessPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
-                                                                          inliers);
+            //            cloud_filtered = plane_segmentation_obj_.preprocessPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+            //                                                                          inliers);
 
             //This calculates the normals of the segmented pointcloud
             pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
@@ -507,10 +486,6 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     std::vector<particle_filter::all_object_info_struct_pf> complete_obj_info_vec;
     complete_obj_info_vec.clear();
 
-    //std::vector<cv::Mat> final_pose_from_plane_vec = plane_segmentation_obj_.clusterAndSegmentAllPlanes(segmented_point_cloud,
-    //                                                                                                        segmented_point_cloud_normal,
-    //                                                                                                        transformation_mat);
-
     std::vector<plane_segmentation::segmented_planes> planar_surf_vec;
     planar_surf_vec.clear();
     planar_surf_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
@@ -518,8 +493,6 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
                                                                      inliers,
                                                                      transformation_mat);
 
-    //    std::vector<cv::Mat> final_pose_from_ransac = plane_segmentation_obj_.computeAllPlanes(segmented_point_cloud,
-    //                                                                                           transformation_mat);
 
     if(!planar_surf_vec.empty())
     {
@@ -531,40 +504,16 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
             final_detected_point_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,0);
             final_detected_point_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,1);
             final_detected_point_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,2);
-            final_detected_point_cam_frame(3) = 1;
-
-            final_detected_point_robot_frame = transformation_mat * final_detected_point_cam_frame;
-
-            Eigen::Vector3f final_pose_of_object_in_robot;
-
-            final_pose_of_object_in_robot(0) = final_detected_point_robot_frame(0);
-            final_pose_of_object_in_robot(1) = final_detected_point_robot_frame(1);
-            final_pose_of_object_in_robot(2) = final_detected_point_robot_frame(2);
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
             //do the same above procedure for the normal orientation
-            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_world_frame;
-            normal_orientation_cam_frame.setOnes(), normal_orientation_world_frame.setOnes();
+            Eigen::Vector4f normal_orientation_cam_frame;
+            normal_orientation_cam_frame.setOnes();
 
             normal_orientation_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,3);
             normal_orientation_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,4);
             normal_orientation_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,5);
-            normal_orientation_cam_frame(3) = 1;
-
-            normal_orientation_world_frame = transformation_mat * normal_orientation_cam_frame;
-
             normal_orientation_cam_frame(3) = planar_surf_vec[j].final_pose_mat.at<float>(0,6);
-
-            //this is to calculate the d distance in world frame
-            float normal_distance_world_frame = normal_orientation_world_frame(3) -
-                    (final_pose_(0) * normal_orientation_world_frame(0) +
-                     final_pose_(1) * normal_orientation_world_frame(1) +
-                     final_pose_(2) * normal_orientation_world_frame(2));
-
-            //            std::cout << "normal coefficients in world " << normal_orientation_world_frame << std::endl;
-            //            std::cout << "normal distance in cam "       << planar_surf_vec[j].final_pose_mat.at<float>(0,6) << std::endl;
-            //            std::cout << "normal distance in world "     << normal_distance_world_frame << std::endl;
-            //            std::cout << "end " << std::endl;
 
             //filling the vector for the sending it to the PF
             particle_filter::all_object_info_struct_pf complete_obj_info;

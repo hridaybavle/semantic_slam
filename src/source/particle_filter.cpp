@@ -259,7 +259,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
                 new_landmark.sigma =  Hi * Q_ * Hi.transpose();
                 new_landmark.type                   = complete_object_info[j].type;
                 new_landmark.plane_type             = complete_object_info[j].plane_type;
-                new_landmark.mapped_planar_points   = complete_object_info[j].planar_points;
+                //new_landmark.mapped_planar_points   = complete_object_info[j].planar_points;
 
                 //                this->projectPointsOnPlane(all_particles_[i],
                 //                                           new_landmark,
@@ -299,12 +299,12 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     }
 #endif
 
-    std::cout << "Here 1" << std::endl;
+    //std::cout << "Here 1" << std::endl;
 
     //map all the new landmarks for all particles with multithreading
     if(new_landmark_for_mapping_.size() > 0)
     {
-        std::cout << "new landmark data " << new_landmark_for_mapping_.size() << std::endl;
+        //std::cout << "new landmark data " << new_landmark_for_mapping_.size() << std::endl;
 
 #ifdef use_threading
         boost::thread_group mapping_group;
@@ -337,12 +337,12 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
 
     }
 
-    std::cout << "Here 2" << std::endl;
+    //std::cout << "Here 2" << std::endl;
 
     //resampling
     this->AllDataResample(final_pose);
 
-    std::cout << "Here 3" << std::endl;
+    //std::cout << "Here 3" << std::endl;
 
 
     return;
@@ -352,21 +352,21 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
 void particle_filter::AllDataAssociation(int i, std::vector<all_object_info_struct_pf> complete_object_info)
 {
 
-#ifdef use_threading
-    boost::thread_group obj_ass_group;
-    for(int j = 0; j < complete_object_info.size(); ++j)
-    {
-        obj_ass_group.create_thread(boost::bind(&particle_filter::ObjectLevelDataAssociation, this,
-                                                i,
-                                                j,
-                                                std::ref(complete_object_info)));
-    }
-    obj_ass_group.join_all();
+    //#ifdef use_threading
+    //    boost::thread_group obj_ass_group;
+    //    for(int j = 0; j < complete_object_info.size(); ++j)
+    //    {
+    //        obj_ass_group.create_thread(boost::bind(&particle_filter::ObjectLevelDataAssociation, this,
+    //                                                i,
+    //                                                j,
+    //                                                std::ref(complete_object_info)));
+    //    }
+    //    obj_ass_group.join_all();
 
-#else
+    //#else
     for(int j = 0; j < complete_object_info.size(); ++j)
         this->particle_filter::ObjectLevelDataAssociation(i, j, complete_object_info);
-#endif
+    //#endif
 
 }
 
@@ -675,7 +675,7 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
         new_landmark.sigma =  Hi * Q_ * Hi.transpose();
         new_landmark.type                   = complete_object_info[object_id].type;
         new_landmark.plane_type             = complete_object_info[object_id].plane_type;
-        new_landmark.mapped_planar_points   = complete_object_info[object_id].planar_points;
+        //new_landmark.mapped_planar_points   = complete_object_info[object_id].planar_points;
 
         //        this->projectPointsOnPlane(all_particles_[particle_id],
         //                                   new_landmark,

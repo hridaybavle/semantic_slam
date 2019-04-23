@@ -93,10 +93,10 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     normal_cloud->clear();
 
 
-    //    if(point_cloud->points.size() < 5000)
-    //    {
-    //        return normal_cloud;
-    //    }
+    if(point_cloud->points.size() < 5000)
+    {
+        return normal_cloud;
+    }
 
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
@@ -105,7 +105,7 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     ne.setNormalSmoothingSize (20.0f);
 
     ne.setInputCloud(point_cloud);
-    ne.setIndices(inliers);
+    //ne.setIndices(inliers);
     ne.compute (*normal_cloud);
 
 
@@ -143,12 +143,12 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
-    mps.setMinInliers (300);
+    mps.setMinInliers (100);
     mps.setAngularThreshold (0.017453 * 2.0); // 2 degrees
     mps.setDistanceThreshold (0.02); // 2cm
     mps.setInputNormals (point_normal);
     mps.setInputCloud (point_cloud);
-    mps.setIndices(inliers);
+    //mps.setIndices(inliers);
     //mps.setComparator();
 
 
@@ -167,52 +167,15 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
         Eigen::Vector4f model = regions[i].getCoefficients ();
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr boundary_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_p (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-        pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
-
-        for(int j = 0; j < inlier_indices[i].indices.size(); ++j)
-        {
-            inliers->indices.push_back(inlier_indices[i].indices[j]);
-        }
-
-
-        // Create the filtering object
-        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-        extract.setInputCloud (point_cloud);
-        extract.setIndices (inliers);
-        extract.setNegative (false);
-        extract.filter (*cloud_p);
-
-        //std::cout << "cloud p size " << cloud_p->size() << std::endl;
 
         boundary_cloud->points = regions[i].getContour ();
         //this->downsamplePointcloud(point_cloud);
 
-
-        //        float avg_color=0;
-        //        float counter = 0;
-        //        for(size_t c=0; c < boundary_cloud.points.size(); ++c)
-        //        {
-        //            if(!std::isnan(boundary_cloud.points[c].rgb))
-        //            {
-        //                avg_color += boundary_cloud.points[c].rgb/pow(10,38);
-        //                counter++;
-        //            }
-
-        //        }
-
-        //        if(counter != 0)
-        //        {
-        //            std::cout << "boundary cloud points size "  << counter << std::endl;
-        //            std::cout << "average color of the region " << (-1*avg_color)/counter << std::endl;
-        //        }
-
         if(boundary_cloud->points.size() > 100)
         {
-            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
-                    centroid[0], centroid[1], centroid[2],
-                    model[0], model[1], model[2], model[3]);
+            //            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
+            //                    centroid[0], centroid[1], centroid[2],
+            //                    model[0], model[1], model[2], model[3]);
             //        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
 
             cv::Mat final_pose_centroid;
@@ -256,7 +219,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                 }
 
                 planar_surf.final_pose_mat        = final_pose_centroid;
-                planar_surf.planar_points.points  = cloud_p->points;
+                planar_surf.planar_points.points  = boundary_cloud->points;
                 planes_vec.push_back(planar_surf);
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
