@@ -69,7 +69,8 @@ public:
         return T_robot_world;
     }
 
-    Eigen::Matrix3f transformNormalsToWorld(Eigen::VectorXf particle_pose)
+    Eigen::Matrix3f transformNormalsToWorld(Eigen::VectorXf particle_pose,
+                                            float cam_pitch_angle)
     {
         Eigen::Matrix3f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam, T_robot_world, transformation_mat;
         rot_x_cam.setZero(3,3), rot_x_robot.setZero(3,3), rot_z_robot.setZero(3,3), translation_cam.setZero(3,3), T_robot_world.setZero(3,3);
@@ -83,13 +84,11 @@ public:
         pitch = particle_pose(4);
         yaw = particle_pose(5);
 
-        float real_sense_pitch_angle = 0.7164;
-
         rot_x_cam(0,0) = 1;
-        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
-        rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
-        rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
-        rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(1,1) =  cos(-cam_pitch_angle);
+        rot_x_cam(1,2) = -sin(-cam_pitch_angle);
+        rot_x_cam(2,1) =  sin(-cam_pitch_angle);
+        rot_x_cam(2,2) =  cos(-cam_pitch_angle);
         rot_x_cam(3,3) = 1;
 
         //rotation of -90

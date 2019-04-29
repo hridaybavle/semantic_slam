@@ -37,7 +37,10 @@ inline bool comparatorlowToHigh(const float& lhs, const float& rhs)
 }
 
 
-std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_particles, std::vector<object_info_struct_pf> mapped_objects)
+std::vector<Eigen::VectorXf> particle_filter::init(int state_size,
+                                                   int num_particles,
+                                                   std::vector<object_info_struct_pf> mapped_objects,
+                                                   float cam_pitch_angle)
 {
     this->state_size_ = state_size;
     this->num_particles_ = num_particles;
@@ -66,6 +69,7 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
     first_horizontal_plane_ = false;
     first_vertical_plane    = false;
 
+    cam_pitch_angle_ = cam_pitch_angle;
     new_landmark_for_mapping_.clear();
 
     Q_.resize(6,6);
@@ -120,6 +124,7 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
         init_pose_vec[i](5) = all_particles_[i].pose(5);
 
     }
+
 
     return init_pose_vec;
 }
@@ -224,7 +229,8 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
             for(int j = 0; j < complete_object_info.size(); ++j)
             {
                 Eigen::Matrix3f rotation_mat;
-                rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
+                rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose,
+                                                                                  cam_pitch_angle_);
 
                 particle_filter::landmark new_landmark;
                 this->landmarkPoseInWorld(new_landmark,
@@ -405,7 +411,8 @@ void particle_filter::ObjectLevelDataAssociation(int i, int j,
 
                     //converting the landmark pose in world frame
                     Eigen::Matrix3f rotation_mat;
-                    rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose);
+                    rotation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[i].pose,
+                                                                                      cam_pitch_angle_);
 
                     landmark detected_object;
                     this->landmarkPoseInWorld(detected_object,
@@ -640,7 +647,8 @@ void particle_filter::MapNewLandmarksForEachParticle(int i,
 
 
         Eigen::Matrix3f transformation_mat;
-        transformation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[particle_id].pose);
+        transformation_mat = particle_filter_tools_obj_.transformNormalsToWorld(all_particles_[particle_id].pose,
+                                                                                cam_pitch_angle_);
 
         landmark new_landmark;
         this->landmarkPoseInWorld(new_landmark,

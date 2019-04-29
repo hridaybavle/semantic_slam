@@ -35,7 +35,7 @@
 //boost threading
 #include <boost/thread/thread.hpp>
 
-//#define use_threading
+#define use_threading
 
 const float MAHA_DIST_THRESHOLD = 3.4;
 const float MATCHING_THRESHOLD  = 0.3;
@@ -139,6 +139,7 @@ public:
 private:
     Eigen::MatrixXf Q_;
 
+    float cam_pitch_angle_;
     bool first_object_;
     bool first_horizontal_plane_,first_vertical_plane;
 
@@ -169,7 +170,7 @@ public:
 
     std::vector<Eigen::VectorXf> init(int state_size,
                                       int num_particles,
-                                      std::vector<object_info_struct_pf> mapped_objects);
+                                      std::vector<object_info_struct_pf> mapped_objects, float cam_pitch_angle);
 
     void predictionVO(float deltaT,
                       Eigen::VectorXf vo_pose_world,

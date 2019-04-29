@@ -53,7 +53,7 @@ void semantic_slam_ros::init()
 
     new_mapped_object_vec_.clear();
 
-    filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, mapped_object_vec);
+    filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, mapped_object_vec, real_sense_pitch_angle);
     final_pose_.resize(6); final_pose_.setZero();
 
     //clearing all the mapped pointcloud data
