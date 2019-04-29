@@ -39,11 +39,6 @@ public:
 
     }
 
-    float crossProduct(Eigen::Vector3f vector_a, Eigen::Vector3f vector_b)
-    {
-
-    }
-
     Eigen::Matrix3f transformRobotToWorld(Eigen::VectorXf particle_pose)
     {
         Eigen::Matrix3f T_robot_world;
@@ -88,6 +83,14 @@ public:
         pitch = particle_pose(4);
         yaw = particle_pose(5);
 
+        float real_sense_pitch_angle = 0.7164;
+
+        rot_x_cam(0,0) = 1;
+        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
+        rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
+        rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(3,3) = 1;
 
         //rotation of -90
         rot_x_robot(0,0) = 1;
@@ -116,7 +119,7 @@ public:
         T_robot_world(2,1) = cos(pitch)*sin(roll);
         T_robot_world(2,2) = cos(pitch)*cos(roll);
 
-        transformation_mat = T_robot_world * rot_z_robot * rot_x_robot;
+        transformation_mat = T_robot_world * rot_z_robot * rot_x_robot * rot_x_cam;
 
         return transformation_mat;
     }

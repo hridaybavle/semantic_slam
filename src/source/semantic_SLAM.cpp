@@ -123,9 +123,12 @@ void semantic_slam_ros::run()
 
         if(!all_obj_complete_info_vec.empty())
         {
+            //ros::Time t1 = ros::Time::now();
+
             particle_filter_obj_.AllObjectMapAndUpdate(all_obj_complete_info_vec,
                                                        final_pose_);
-
+            //ros::Time t2 = ros::Time::now();
+            //std::cout << "data assocation and mapping took " << (t2-t1) << "secs " << std::endl;
             //publishNewMappedObjects(new_mapped_object_vec_);
         }
 
@@ -137,9 +140,6 @@ void semantic_slam_ros::run()
     publishCorresVOPose();
     publishParticlePoses();
     publishBestParticleMap(all_particles_);
-    //publishMappedObjects(mapped_object_vec_);
-    //publishAllMappedObjects(all_mapped_object_vec_);
-
 
     publishGroundTruthPoints(points_vec_);
 
@@ -152,15 +152,15 @@ void semantic_slam_ros::open(ros::NodeHandle n)
 
     //ros subsriber
     rovio_odometry_sub_    = n.subscribe("/rovio/odometry", 1, &semantic_slam_ros::rovioOdometryCallback, this);
+    snap_pose_sub_         = n.subscribe("/SQ04/snap_vislam/vislam/pose",1, &semantic_slam_ros::snapPoseCallback, this);
     imu_sub_               = n.subscribe("/imu/data", 1, &semantic_slam_ros::imuCallback, this);
     //detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
-    detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
+    detected_object_sub_   = n.subscribe("/image_processed/bounding_boxes",1, &semantic_slam_ros::detectedObjectCallback, this);
     //detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
+    //detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
     optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/realsense/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
-    //this is just for visualizing the path
-    optitrack_pose_sub_for_plottin_path_ = n.subscribe("/optitrack_pose",1, &semantic_slam_ros::optitrackPoseForPlottingPathCallback, this);
-
+    vicon_pose_sub_        = n.subscribe("/SQ04/vicon",1, &semantic_slam_ros::viconPoseSubCallback, this);
 
     //Publishers
     particle_poses_pub_             = n.advertise<geometry_msgs::PoseArray>("particle_poses",1);
@@ -203,6 +203,35 @@ void semantic_slam_ros::rovioOdometryCallback(const nav_msgs::Odometry &msg)
     RVIO_pose(0) = msg.pose.pose.position.x;
     RVIO_pose(1) = msg.pose.pose.position.y;
     RVIO_pose(2) = msg.pose.pose.position.z;
+    RVIO_pose(3) = roll;
+    RVIO_pose(4) = pitch;
+    RVIO_pose(5) = yaw;
+
+    this->setRVIOPose(RVIO_pose);
+
+}
+
+void semantic_slam_ros::snapPoseCallback(const geometry_msgs::PoseStamped &msg)
+{
+    //converting quaternions to euler angles
+    tf::Quaternion q(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w);
+    tf::Matrix3x3 m(q);
+
+    double yaw, pitch, roll;
+    m.getEulerYPR(yaw, pitch, roll);
+
+    //this will be improved with proper transforms right now is temp
+    roll  = roll;
+    pitch = -pitch;
+    yaw = -yaw;
+
+    //this RVIO publishes poses in the world frame required by semantic slam so no conversion required
+    Eigen::VectorXf RVIO_pose;
+    RVIO_pose.resize(6), RVIO_pose.setZero();
+
+    RVIO_pose(0) =  msg.pose.position.x;
+    RVIO_pose(1) = (-1)*msg.pose.position.y;
+    RVIO_pose(2) = (-1)*msg.pose.position.z;
     RVIO_pose(3) = roll;
     RVIO_pose(4) = pitch;
     RVIO_pose(5) = yaw;
@@ -271,48 +300,46 @@ void semantic_slam_ros::getIMUdata(float &roll, float &pitch, float &yaw)
 
 }
 
-//void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
-//{
-//    //std::cout << "objects size " << msg.objects.size() << std::endl;
-//    std::vector<semantic_SLAM::ObjectInfo>  object_info;
-//    object_info.resize(msg.objects.size());
-
-//    for(int i =0; i < msg.objects.size(); ++i)
-//    {
-//        object_info[i].type   = msg.objects[i].type;
-//        object_info[i].tl_x   = msg.objects[i].tl_x;
-//        object_info[i].tl_y   = msg.objects[i].tl_y;
-//        object_info[i].height = msg.objects[i].height;
-//        object_info[i].width  = msg.objects[i].width;
-//        object_info[i].prob   = msg.objects[i].prob;
-//    }
-
-//    this->setDetectedObjectInfo(object_info);
-
-//}
-
-
-
-void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
+void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObjects &msg)
 {
     //std::cout << "objects size " << msg.objects.size() << std::endl;
     std::vector<semantic_SLAM::ObjectInfo>  object_info;
-    object_info.resize(msg.bounding_boxes.size());
+    object_info.resize(msg.objects.size());
 
-    for(int i =0; i < msg.bounding_boxes.size(); ++i)
+    for(int i =0; i < msg.objects.size(); ++i)
     {
-        object_info[i].type   = msg.bounding_boxes[i].Class;
-        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
-        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
-        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
-        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
-        object_info[i].prob   = msg.bounding_boxes[i].probability;
+        object_info[i].type   = msg.objects[i].type;
+        object_info[i].tl_x   = msg.objects[i].tl_x;
+        object_info[i].tl_y   = msg.objects[i].tl_y;
+        object_info[i].height = msg.objects[i].height;
+        object_info[i].width  = msg.objects[i].width;
+        object_info[i].prob   = msg.objects[i].prob;
     }
 
     this->setDetectedObjectInfo(object_info);
 
-
 }
+
+//void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
+//{
+//    //std::cout << "objects size " << msg.objects.size() << std::endl;
+//    std::vector<semantic_SLAM::ObjectInfo>  object_info;
+//    object_info.resize(msg.bounding_boxes.size());
+
+//    for(int i =0; i < msg.bounding_boxes.size(); ++i)
+//    {
+//        object_info[i].type   = msg.bounding_boxes[i].Class;
+//        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
+//        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
+//        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
+//        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
+//        object_info[i].prob   = msg.bounding_boxes[i].probability;
+//    }
+
+//    this->setDetectedObjectInfo(object_info);
+
+
+//}
 
 void semantic_slam_ros::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
 {
@@ -367,27 +394,65 @@ void semantic_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
     optitrack_pose.pose.position.z = msg.pose.pose.position.z ;
 
     optitrack_pose_pub_.publish(optitrack_pose);
-}
-
-void semantic_slam_ros::optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped &msg)
-{
-    nav_msgs::Path optitrack_path;
-    geometry_msgs::PoseStamped optitrack_pose;
-    ros::Time current_time = ros::Time::now();
-
-    optitrack_pose.header.stamp = current_time;
-    optitrack_pose.header.frame_id = "map";
-    optitrack_pose.pose.position = msg.pose.position;
-    optitrack_pose.pose.orientation = msg.pose.orientation;
 
 
     optitrack_pose_vec_.push_back(optitrack_pose);
 
-    optitrack_path.header.stamp = current_time;
+    nav_msgs::Path optitrack_path;
+    optitrack_path.header.stamp = msg.header.stamp;
     optitrack_path.header.frame_id = "map";
     optitrack_path.poses = optitrack_pose_vec_;
     optitrack_path_pub_.publish(optitrack_path);
 
+}
+
+//void semantic_slam_ros::optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped &msg)
+//{
+//    nav_msgs::Path optitrack_path;
+//    geometry_msgs::PoseStamped optitrack_pose;
+//    ros::Time current_time = ros::Time::now();
+
+//    optitrack_pose.header.stamp = current_time;
+//    optitrack_pose.header.frame_id = "map";
+//    optitrack_pose.pose.position = msg.pose.position;
+//    optitrack_pose.pose.orientation = msg.pose.orientation;
+
+
+//    optitrack_pose_vec_.push_back(optitrack_pose);
+
+//    optitrack_path.header.stamp = current_time;
+//    optitrack_path.header.frame_id = "map";
+//    optitrack_path.poses = optitrack_pose_vec_;
+//    optitrack_path_pub_.publish(optitrack_path);
+
+
+//}
+
+void semantic_slam_ros::viconPoseSubCallback(const acl_msgs::ViconState &msg)
+{
+    geometry_msgs::PoseStamped vicon_pose;
+    vicon_pose.header.stamp = msg.header.stamp;
+    vicon_pose.header.frame_id = "map";
+
+
+    vicon_pose.pose.position.x = msg.pose.position.x + optitrack_x_transform;
+    vicon_pose.pose.position.y = msg.pose.position.y + optitrack_y_transform;
+    vicon_pose.pose.position.z = msg.pose.position.z + optitrack_z_transform;
+    vicon_pose.pose.orientation = msg.pose.orientation;
+
+    vicon_pose.pose.position.x = cos(-0.15) * vicon_pose.pose.position.x   - sin(-0.15) * vicon_pose.pose.position.y;
+    vicon_pose.pose.position.y = sin(-0.15) * vicon_pose.pose.position.x   + cos(-0.15) * vicon_pose.pose.position.y;
+
+
+    optitrack_pose_pub_.publish(vicon_pose);
+
+    optitrack_pose_vec_.push_back(vicon_pose);
+
+    nav_msgs::Path vicon_path;
+    vicon_path.header.stamp = msg.header.stamp;
+    vicon_path.header.frame_id = "map";
+    vicon_path.poses = optitrack_pose_vec_;
+    optitrack_path_pub_.publish(vicon_path);
 
 }
 
@@ -415,7 +480,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     for (int i = 0; i < object_info.size(); ++i)
     {
         if(object_info[i].type == "chair" || object_info[i].type == "tvmonitor" || object_info[i].type == "book"
-                || object_info[i].type == "keyboard" || object_info[i].type == "laptop")
+                || object_info[i].type == "keyboard" || object_info[i].type == "laptop" || object_info[i].type == "Bucket")
         {
             plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;
             single_segmented_object_from_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
@@ -488,11 +553,14 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
     std::vector<plane_segmentation::segmented_planes> planar_surf_vec;
     planar_surf_vec.clear();
+
+    //ros::Time t1 = ros::Time::now();
     planar_surf_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
                                                                      segmented_point_cloud_normal,
                                                                      inliers,
                                                                      transformation_mat);
-
+    //ros::Time t2=ros::Time::now();
+    //std::cout << "plane segmentation took " << (t2-t1) << "secs " << std::endl;
 
     if(!planar_surf_vec.empty())
     {
@@ -507,7 +575,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
             //do the same above procedure for the normal orientation
-            Eigen::Vector4f normal_orientation_cam_frame;
+            Eigen::Vector4f normal_orientation_cam_frame, normal_orientation_world_frame;
             normal_orientation_cam_frame.setOnes();
 
             normal_orientation_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,3);
@@ -647,176 +715,6 @@ void semantic_slam_ros::publishFinalDetectedObjectPoint(geometry_msgs::Point fin
 
 }
 
-void semantic_slam_ros::publishMappedObjects(std::vector<particle_filter::object_info_struct_pf> mapped_object_vec)
-{
-    visualization_msgs::MarkerArray marker_arrays;
-
-    for(int i =0; i < mapped_object_vec.size(); ++i)
-    {
-        visualization_msgs::Marker marker;
-        marker.header.stamp = ros::Time();
-        marker.header.frame_id = "map";
-        marker.ns = "my_namespace";
-        marker.pose.position.x = mapped_object_vec[i].pose(0);
-        marker.pose.position.y = mapped_object_vec[i].pose(1);
-        marker.pose.position.z = mapped_object_vec[i].pose(2);
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 1.0;
-
-        marker.id = i;
-        marker.action = visualization_msgs::Marker::ADD;
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.scale.x = 0.1;
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.5;
-        marker.color.a = 1.0; // Don't forget to set the alpha!
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-
-        marker_arrays.markers.push_back(marker);
-    }
-
-    mapped_objects_visualizer_pub_.publish(marker_arrays);
-}
-
-void semantic_slam_ros::publishAllMappedObjects(std::vector<particle_filter::all_object_info_struct_pf> mapped_object_vec)
-{
-    visualization_msgs::MarkerArray marker_arrays;
-    int marker_id = 0;
-
-    for(int i =0; i < mapped_object_vec.size(); ++i)
-    {
-        visualization_msgs::Marker marker;
-        marker.header.stamp = ros::Time();
-        marker.header.frame_id = "map";
-        marker.ns = "my_namespace";
-        marker.pose.position.x = mapped_object_vec[i].pose(0);
-        marker.pose.position.y = mapped_object_vec[i].pose(1);
-        marker.pose.position.z = mapped_object_vec[i].pose(2);
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 1.0;
-
-
-        if(mapped_object_vec[i].type == "chair")
-        {
-            if(mapped_object_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-
-            }
-
-            else if(mapped_object_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-
-            }
-        }
-
-        else if(mapped_object_vec[i].type == "tvmonitor")
-        {
-            if(mapped_object_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 0.0;
-                marker.color.b = 0.0;
-
-            }
-
-        }
-
-        else if (mapped_object_vec[i].type == "laptop")
-        {
-            if(mapped_object_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-
-            }
-
-        }
-
-        else if(mapped_object_vec[i].type == "keyboard")
-        {
-            if(mapped_object_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
-
-            }
-
-        }
-
-        else if(mapped_object_vec[i].type == "book")
-        {
-            if(mapped_object_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
-
-            }
-
-        }
-
-        marker_arrays.markers.push_back(marker);
-        marker_id++;
-    }
-
-    detected_planes_pub_.publish(marker_arrays);
-}
 
 void semantic_slam_ros::publishBestParticleMap(std::vector<particle_filter::particle> all_particles)
 {
@@ -948,6 +846,40 @@ void semantic_slam_ros::publishBestParticleMap(std::vector<particle_filter::part
             }
 
         }
+
+        else if(all_particles[best_particle_index].landmarks[i].type == "Bucket")
+        {
+            if(all_particles[best_particle_index].landmarks[i].plane_type == "horizontal")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.3;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.01;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+
+            }
+            else if(all_particles[best_particle_index].landmarks[i].plane_type == "vertical")
+            {
+                marker.id = marker_id;
+                marker.action = visualization_msgs::Marker::ADD;
+                marker.type = visualization_msgs::Marker::CUBE;
+                marker.scale.x = 0.01;
+                marker.scale.y = 0.3;
+                marker.scale.z = 0.3;
+                marker.color.a = 1.0; // Don't forget to set the alpha!
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+
+            }
+
+        }
+
 
         marker_arrays.markers.push_back(marker);
         marker_id++;

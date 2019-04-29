@@ -66,12 +66,6 @@ std::vector<Eigen::VectorXf> particle_filter::init(int state_size, int num_parti
     first_horizontal_plane_ = false;
     first_vertical_plane    = false;
 
-    first_chair_    = false;
-    first_monitor_  = false;
-    first_book_     = false;
-    first_keyboard_ = false;
-    first_chair_    = false;
-
     new_landmark_for_mapping_.clear();
 
     Q_.resize(6,6);
@@ -170,12 +164,12 @@ void particle_filter::predictionVO(float deltaT,
         //std::cout << "new_state_vec_xkk " << " " << i << " " << new_state_vec_xkk << std::endl;
 
         //adding gaussian noise to each normal distribution for each VO measurement
-        std::normal_distribution<float> dist_x(new_state_vec_xkk(0), 0.0009);
-        std::normal_distribution<float> dist_y(new_state_vec_xkk(1), 0.0009);
-        std::normal_distribution<float> dist_z(new_state_vec_xkk(2), 0.0009);
-        std::normal_distribution<float> dist_roll(new_state_vec_xkk(3), 0.0000);
-        std::normal_distribution<float> dist_pitch(new_state_vec_xkk(4), 0.0000);
-        std::normal_distribution<float> dist_yaw(new_state_vec_xkk(5), 0.0000);
+        std::normal_distribution<float> dist_x(new_state_vec_xkk(0), 0.002);
+        std::normal_distribution<float> dist_y(new_state_vec_xkk(1), 0.002);
+        std::normal_distribution<float> dist_z(new_state_vec_xkk(2), 0.002);
+        std::normal_distribution<float> dist_roll(new_state_vec_xkk(3), 0.000000);
+        std::normal_distribution<float> dist_pitch(new_state_vec_xkk(4), 0.000000);
+        std::normal_distribution<float> dist_yaw(new_state_vec_xkk(5), 0.000000);
 
         //updating each particle value based on the normal distribution
         all_particles_[i].pose(0) = dist_x(gen);
@@ -279,7 +273,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     //****************** matching and mapping part**********************************************/
     new_landmark_for_mapping_.clear();
 
-    std::cout << "Here " << std::endl;
+    //std::cout << "Here " << std::endl;
 
     //making the data association step mulithreaded for making it faster
 #ifdef use_threading

@@ -93,10 +93,10 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     normal_cloud->clear();
 
 
-    if(point_cloud->points.size() < 5000)
-    {
-        return normal_cloud;
-    }
+    //    if(point_cloud->points.size() < 5000)
+    //    {
+    //        return normal_cloud;
+    //    }
 
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
@@ -192,9 +192,9 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
 
             //checking if the extract plane is a horizontal plane or vertical
-            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.2 &&
-                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.2 &&
-                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.2)
+            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
+                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
+                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
             {
                 //zero if its horizontal plane
                 final_pose_centroid.at<float>(0,7) = 0;
@@ -223,7 +223,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                 planes_vec.push_back(planar_surf);
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
-            else if (dot_product < 0.2)
+            else if (dot_product < 0.3)
             {
                 //std::cout << "Its a vertical plane " << std::endl;
                 //one if its a vertical plane

@@ -45,12 +45,12 @@ public:
         //                  << "pitch: " << pitch << std::endl
         //                  << "yaw: "   << yaw << std::endl;
 
-        //        rot_x_cam(0,0) = 1;
-        //        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
-        //        rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
-        //        rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
-        //        rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
-        //        rot_x_cam(3,3) = 1;
+        rot_x_cam(0,0) = 1;
+        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
+        rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
+        rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(3,3) = 1;
 
         //rotation of -90
         rot_x_robot(0,0) = 1;
@@ -98,7 +98,7 @@ public:
         //    T_robot_world(2,3) = z;
         //    T_robot_world(3,3) = 1;
 
-        transformation_mat = T_robot_world * rot_z_robot * rot_x_robot /** rot_x_cam*/;
+        transformation_mat = T_robot_world * rot_z_robot * rot_x_robot * rot_x_cam;
     }
 
     void transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat)

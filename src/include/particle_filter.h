@@ -35,9 +35,9 @@
 //boost threading
 #include <boost/thread/thread.hpp>
 
-#define use_threading
+//#define use_threading
 
-const float MAHA_DIST_THRESHOLD = 1.635;
+const float MAHA_DIST_THRESHOLD = 3.4;
 const float MATCHING_THRESHOLD  = 0.3;
 
 class particle_filter

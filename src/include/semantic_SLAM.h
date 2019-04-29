@@ -57,13 +57,16 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 
-const float real_sense_pitch_angle =0*(M_PI/180);
+//acl_msgs for vicon data
+#include "acl_msgs/ViconState.h"
+
+const float real_sense_pitch_angle =43*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 100;
 
-const float optitrack_x_transform =  2.9;
-const float optitrack_y_transform = -0.1;
-const float optitrack_z_transform = -0.05;
+const float optitrack_x_transform =  8.39;
+const float optitrack_y_transform = -0.26;
+const float optitrack_z_transform = -0.11;
 
 class semantic_slam_ros
 {
@@ -101,6 +104,9 @@ protected:
     ros::Subscriber rovio_odometry_sub_;
     void rovioOdometryCallback(const nav_msgs::Odometry& msg);
 
+    ros::Subscriber snap_pose_sub_;
+    void snapPoseCallback(const geometry_msgs::PoseStamped& msg);
+
     ros::Subscriber imu_sub_;
     void imuCallback(const sensor_msgs::Imu& msg);
 
@@ -117,6 +123,9 @@ protected:
 
     ros::Subscriber optitrack_pose_sub_for_plottin_path_;
     void optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped& msg);
+
+    ros::Subscriber vicon_pose_sub_;
+    void viconPoseSubCallback(const acl_msgs::ViconState& msg);
 
     ros::Publisher particle_poses_pub_;
     void publishParticlePoses();
