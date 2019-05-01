@@ -26,6 +26,7 @@ This package is a general Partcle-filter-SLAM library
   <depend>pcl_conversions</depend>
   <depend>darknet_ros_msgs</depend>
   <depend>acl_msgs</depend>
+  <depend>ndt_omp</depend>	
 
 </package>
 

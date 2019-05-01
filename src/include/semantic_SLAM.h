@@ -39,9 +39,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <vtkRenderWindow.h>
 
-//bebop imu message
-#include "semantic_SLAM/Ardrone3PilotingStateAttitudeChanged.h"
-
 //darknet object detector
 #include "semantic_SLAM/DetectedObjects.h"
 #include "semantic_SLAM/ObjectInfo.h"
@@ -60,7 +57,7 @@
 //acl_msgs for vicon data
 #include "acl_msgs/ViconState.h"
 
-const float real_sense_pitch_angle =43*(M_PI/180);
+const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
 const int num_particles_ = 100;
 

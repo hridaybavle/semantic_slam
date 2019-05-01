@@ -169,9 +169,9 @@ void particle_filter::predictionVO(float deltaT,
         //std::cout << "new_state_vec_xkk " << " " << i << " " << new_state_vec_xkk << std::endl;
 
         //adding gaussian noise to each normal distribution for each VO measurement
-        std::normal_distribution<float> dist_x(new_state_vec_xkk(0), 0.002);
-        std::normal_distribution<float> dist_y(new_state_vec_xkk(1), 0.002);
-        std::normal_distribution<float> dist_z(new_state_vec_xkk(2), 0.002);
+        std::normal_distribution<float> dist_x(new_state_vec_xkk(0), 0.001);
+        std::normal_distribution<float> dist_y(new_state_vec_xkk(1), 0.001);
+        std::normal_distribution<float> dist_z(new_state_vec_xkk(2), 0.001);
         std::normal_distribution<float> dist_roll(new_state_vec_xkk(3), 0.000000);
         std::normal_distribution<float> dist_pitch(new_state_vec_xkk(4), 0.000000);
         std::normal_distribution<float> dist_yaw(new_state_vec_xkk(5), 0.000000);
@@ -282,7 +282,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     //std::cout << "Here " << std::endl;
 
     //making the data association step mulithreaded for making it faster
-#ifdef use_threading
+#ifdef use_data_ass_threading
     boost::thread_group data_ass_group;
     for (int i =0; i < num_particles_; ++i)
     {
@@ -306,7 +306,7 @@ void particle_filter::AllObjectMapAndUpdate(std::vector<particle_filter::all_obj
     {
         //std::cout << "new landmark data " << new_landmark_for_mapping_.size() << std::endl;
 
-#ifdef use_threading
+#ifdef use_mapping_thread
         boost::thread_group mapping_group;
 
         if(new_landmark_for_mapping_.size() <= num_particles_)

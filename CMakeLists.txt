@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 2.8.3)
 set(PROJECT_NAME semantic_SLAM)
 project(${PROJECT_NAME})
 
-### Use version 2011 of C++ (c++11). NO! Not working with PCL
-add_definitions(-std=c++11)
-
+add_definitions(-std=c++14 -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2)
+set(CMAKE_CXX_FLAGS "-std=c++14 -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 
 # Set the build type.  Options are:
@@ -17,8 +17,8 @@ add_definitions(-std=c++11)
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 #SET(CMAKE_BUILD_TYPE Release) # Release, RelWithDebInfo
 
-
-
+# pcl 1.7 causes a segfault when it is built with debug mode
+set(CMAKE_BUILD_TYPE "RELEASE")
 
 set(SEMANTIC_SLAM_SOURCE_DIR
     src/sources)
@@ -27,30 +27,34 @@ set(SEMANTIC_SLAM_INCLUDE_DIR
     src/include
     )
 
-set(SEMANTIC_SLAM_SOURCE_FILES
-    #General
-    src/source/semantic_SLAM.cpp
-    src/source/semantic_SLAM_node.cpp
-    src/source/plane_segmentation.cpp
-    src/source/particle_filter.cpp
-    )
+FILE(GLOB_RECURSE SEMANTIC_SLAM_SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/source/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/source/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/source/hdl_graph_slam/*.cpp)
 
+FILE(GLOB_RECURSE SEMANTIC_SLAM_HEADER_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/g2o/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include/hdl_graph_slam/*.hpp)
 
-set(SEMANTIC_SLAM_HEADER_FILES
-    #General
-    src/include/semantic_SLAM.h
-    src/include/plane_segmentation.h
-    src/inlcude/tools.h
-    src/inlcude/particle_filter.h
-    src/inlcude/particle_tools.h
-    )
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_generation cv_bridge image_transport darknet_ros_msgs
+    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_generation cv_bridge image_transport darknet_ros_msgs ndt_omp
     pcl_ros pcl_msgs pcl_conversions acl_msgs)
 
 find_package(PCL 1.7 REQUIRED
     COMPONENTS common io sample_consensus segmentation filters)
+
+find_package(G2O REQUIRED)
+include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIR} ${G2O_INCLUDE_DIRS})
+link_directories(${G2O_LIBRARY_DIRS})
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 
 find_package(OpenCV REQUIRED)
@@ -70,7 +74,6 @@ endif()
 
 add_message_files(
     FILES
-    bebop/Ardrone3PilotingStateAttitudeChanged.msg
     ObjectInfo.msg
     DetectedObjects.msg
     MappedPointCloud.msg
@@ -85,14 +88,14 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS ${SEMANTIC_SLAM_INCLUDE_DIR}
     LIBRARIES semantic_SLAM OpenCV PCL
-    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_runtime cv_bridge image_transport darknet_ros_msgs
+    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_runtime cv_bridge image_transport darknet_ros_msgs ndt_omp
     pcl_ros pcl_msgs pcl_conversions acl_msgs
     )
 
 
 include_directories(${SEMANTIC_SLAM_INCLUDE_DIR})
 include_directories(${catkin_INCLUDE_DIRS})
-include_directories(${EIGEN3_INCLUDE_DIRS})
+include_directories(SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 
@@ -101,25 +104,34 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 
-add_library(SEMANTIC_SLAM ${SEMANTIC_SLAM_SOURCE_FILES})
+add_library(SEMANTIC_SLAM ${SEMANTIC_SLAM_SOURCE_FILES} ${SEMANTIC_SLAM_HEADER_FILES})
+add_dependencies(SEMANTIC_SLAM ${PROJECT_NAME}_gencpp)
 add_dependencies(SEMANTIC_SLAM ${catkin_EXPORTED_TARGETS})
 target_link_libraries(SEMANTIC_SLAM ${catkin_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${EIGEN3_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
+target_link_libraries(SEMANTIC_SLAM ${G2O_TYPES_DATA}
+    ${G2O_CORE_LIBRARY}
+    ${G2O_STUFF_LIBRARY}
+    ${G2O_SOLVER_PCG}
+    ${G2O_SOLVER_CSPARSE}
+    ${G2O_TYPES_SLAM3D}
+    ${G2O_TYPES_SLAM3D_ADDONS})
 
-add_executable(${PROJECT_NAME}_node ${SEMANTIC_SLAM_SOURCE_FILES})
+add_executable(${PROJECT_NAME}_node src/test/semantic_SLAM_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node SEMANTIC_SLAM)
 target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
-target_link_libraries(${PROJECT_NAME}_node ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
 
-add_executable(depth_synchronization_node src/source/depth_image_synchronizer.cpp)
+add_executable(semantic_graph_SLAM_node src/test/semantic_graph_SLAM_node.cpp)
+add_dependencies(semantic_graph_SLAM_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(semantic_graph_SLAM_node SEMANTIC_SLAM)
+target_link_libraries(semantic_graph_SLAM_node ${OpenCV_LIBS})
+target_link_libraries(semantic_graph_SLAM_node ${catkin_LIBRARIES})
+
+add_executable(depth_synchronization_node src/test/depth_image_synchronizer.cpp)
 add_dependencies(depth_synchronization_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(depth_synchronization_node SEMANTIC_SLAM)
 target_link_libraries(depth_synchronization_node ${OpenCV_LIBS})
 target_link_libraries(depth_synchronization_node ${catkin_LIBRARIES})
-
-add_executable(mono_image_pub_node src/source/mono_image_pub_node.cpp)
-add_dependencies(mono_image_pub_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(mono_image_pub_node ${OpenCV_LIBS})
-target_link_libraries(mono_image_pub_node ${catkin_LIBRARIES})

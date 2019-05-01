@@ -35,9 +35,10 @@
 //boost threading
 #include <boost/thread/thread.hpp>
 
-#define use_threading
+#define use_data_ass_threading
+//#define use_mapping_thread
 
-const float MAHA_DIST_THRESHOLD = 3.4;
+const float MAHA_DIST_THRESHOLD = 1.635;
 const float MATCHING_THRESHOLD  = 0.3;
 
 class particle_filter
@@ -164,6 +165,7 @@ private:
 
     std::mutex landmark_lock_;
     std::mutex particle_lock_;
+
 public:
 
     std::thread map_thread_1_;

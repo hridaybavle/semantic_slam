@@ -1,0 +1,6 @@
+<!-- Launches: altitude_from_rgbd_node -->
+<launch>
+			
+	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen" />
+
+</launch>

@@ -53,6 +53,7 @@ void semantic_slam_ros::init()
 
     new_mapped_object_vec_.clear();
 
+
     filtered_pose_ = particle_filter_obj_.init(state_size_, num_particles_, mapped_object_vec, real_sense_pitch_angle);
     final_pose_.resize(6); final_pose_.setZero();
 
@@ -80,7 +81,6 @@ void semantic_slam_ros::init()
 
 void semantic_slam_ros::run()
 {
-
     current_time_ = (double) ros::Time::now().sec + ((double) ros::Time::now().nsec / (double) 1E9);
 
     //std::cout << "current time  " << current_time_ << std::endl;
@@ -155,9 +155,9 @@ void semantic_slam_ros::open(ros::NodeHandle n)
     snap_pose_sub_         = n.subscribe("/SQ04/snap_vislam/vislam/pose",1, &semantic_slam_ros::snapPoseCallback, this);
     imu_sub_               = n.subscribe("/imu/data", 1, &semantic_slam_ros::imuCallback, this);
     //detected_object_sub_   = n.subscribe("/retinanet/bbs",1, &semantic_slam_ros::detectedObjectCallback, this);
-    detected_object_sub_   = n.subscribe("/image_processed/bounding_boxes",1, &semantic_slam_ros::detectedObjectCallback, this);
+    //detected_object_sub_   = n.subscribe("/image_processed/bounding_boxes",1, &semantic_slam_ros::detectedObjectCallback, this);
     //detected_object_sub_   = n.subscribe("/darknet_ros/detected_objects",1, &semantic_slam_ros::detectedObjectCallback, this);
-    //detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
+    detected_object_sub_   = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_slam_ros::detectedObjectDarknetCallback, this);
     point_cloud_sub_       = n.subscribe("/depth_registered/points", 1, &semantic_slam_ros::pointCloudCallback, this);
     optitrack_pose_sub_    = n.subscribe("/vrpn_client_node/realsense/pose", 1, &semantic_slam_ros::optitrackPoseCallback, this);
     vicon_pose_sub_        = n.subscribe("/SQ04/vicon",1, &semantic_slam_ros::viconPoseSubCallback, this);
@@ -320,26 +320,26 @@ void semantic_slam_ros::detectedObjectCallback(const semantic_SLAM::DetectedObje
 
 }
 
-//void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
-//{
-//    //std::cout << "objects size " << msg.objects.size() << std::endl;
-//    std::vector<semantic_SLAM::ObjectInfo>  object_info;
-//    object_info.resize(msg.bounding_boxes.size());
+void semantic_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg)
+{
+    //std::cout << "objects size " << msg.objects.size() << std::endl;
+    std::vector<semantic_SLAM::ObjectInfo>  object_info;
+    object_info.resize(msg.bounding_boxes.size());
 
-//    for(int i =0; i < msg.bounding_boxes.size(); ++i)
-//    {
-//        object_info[i].type   = msg.bounding_boxes[i].Class;
-//        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
-//        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
-//        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
-//        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
-//        object_info[i].prob   = msg.bounding_boxes[i].probability;
-//    }
+    for(int i =0; i < msg.bounding_boxes.size(); ++i)
+    {
+        object_info[i].type   = msg.bounding_boxes[i].Class;
+        object_info[i].tl_x   = msg.bounding_boxes[i].xmin;
+        object_info[i].tl_y   = msg.bounding_boxes[i].ymin;
+        object_info[i].height = abs(msg.bounding_boxes[i].ymax - msg.bounding_boxes[i].ymin);
+        object_info[i].width  = abs(msg.bounding_boxes[i].xmax - msg.bounding_boxes[i].xmin);
+        object_info[i].prob   = msg.bounding_boxes[i].probability;
+    }
 
-//    this->setDetectedObjectInfo(object_info);
+    this->setDetectedObjectInfo(object_info);
 
 
-//}
+}
 
 void semantic_slam_ros::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
 {
@@ -1024,77 +1024,6 @@ void semantic_slam_ros::publishDetectedPlanes(std::vector<particle_filter::all_o
 
     mapped_objects_visualizer_pub_.publish(marker_arrays);
 
-}
-
-
-//void semantic_slam_ros::publishDetectedPlanesPointCloud(std::vector<particle_filter::all_object_info_struct_pf> detected_object_vec)
-//{
-//    pcl::PointCloud<pcl::PointXYZRGB> point_cloud_pcl;
-
-//    for(int i =0; i < detected_object_vec.size(); ++i)
-//    {
-//        for(int j=0; j < detected_object_vec[i].segmented_point_cloud_plane->points.size(); ++j)
-//        {
-//            point_cloud_pcl.points.push_back(detected_object_vec[i].segmented_point_cloud_plane->points[j]);
-//        }
-//    }
-
-//    sensor_msgs::PointCloud2 point_cloud;
-//    pcl::toROSMsg(point_cloud_pcl, point_cloud);
-//    point_cloud.header.stamp = ros::Time::now();
-//    point_cloud.header.frame_id = "cam";
-//    detected_planes_point_cloud_pub_.publish(point_cloud);
-//}
-
-
-void semantic_slam_ros::publishNewMappedObjects(std::vector<particle_filter::object_info_struct_all_points_pf> mapped_object_vec)
-{
-    std::vector<particle_filter::particle> all_particles;
-    all_particles = particle_filter_obj_.getAllParticles();
-    int best_particle_index = this->MaxIndex(all_particles);
-
-    Eigen::Matrix4f transformation_mat;
-    transformation_mat.setOnes();
-    semantic_tools_obj_.transformNormalsToWorld(all_particles[best_particle_index].pose,
-                                                transformation_mat,
-                                                real_sense_pitch_angle);
-
-
-    for(int i = 0; i < all_particles[best_particle_index].landmarks.size(); ++i)
-    {
-        for(int j = 0; j < all_particles[best_particle_index].landmarks[i].mapped_planar_points.points.size(); ++j)
-        {
-            Eigen::Vector4f landmark_pts_cam_frame, landmark_pts_world_frame;
-            landmark_pts_cam_frame.setOnes(); landmark_pts_world_frame.setOnes();
-
-            landmark_pts_cam_frame(0) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].x;
-            landmark_pts_cam_frame(1) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].y;
-            landmark_pts_cam_frame(2) = all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].z;
-
-            landmark_pts_world_frame = transformation_mat * landmark_pts_cam_frame;
-
-            landmark_pts_world_frame(0) = landmark_pts_world_frame(0) + all_particles[best_particle_index].pose(0);
-            landmark_pts_world_frame(1) = landmark_pts_world_frame(1) + all_particles[best_particle_index].pose(1);
-            landmark_pts_world_frame(2) = landmark_pts_world_frame(2) + all_particles[best_particle_index].pose(2);
-
-            pcl::PointXYZRGB point;
-            point.x   =  landmark_pts_world_frame(0);
-            point.y   =  landmark_pts_world_frame(1);
-            point.z   =  landmark_pts_world_frame(2);
-            point.rgb =  all_particles[best_particle_index].landmarks[i].mapped_planar_points.points[j].rgb;
-
-            mapped_point_cloud_pcl_.push_back(point);
-
-        }
-
-
-    }
-
-    sensor_msgs::PointCloud2 final_point_cloud;
-    pcl::toROSMsg(mapped_point_cloud_pcl_, final_point_cloud);
-    final_point_cloud.header.stamp = ros::Time::now();
-    final_point_cloud.header.frame_id = "map";
-    mapped_points_pub_.publish(final_point_cloud);
 }
 
 void semantic_slam_ros::publishGroundTruthPoints(std::vector<geometry_msgs::Point> points)
