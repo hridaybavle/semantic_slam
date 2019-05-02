@@ -46,7 +46,14 @@
 #include <g2o/edge_se3_priorxy.hpp>
 
 //plane segmentation
-#include "plane_segmentation.h"
+//#include "plane_segmentation.h"
+
+//darknet bounding boxes
+#include "darknet_ros_msgs/BoundingBox.h"
+#include "darknet_ros_msgs/BoundingBoxes.h"
+
+//segmented pointcloud acc to detection
+#include "point_cloud_segmentation.h"
 
 class semantic_graph_slam
 {
@@ -64,21 +71,27 @@ protected:
     //messages sync
     ros::Subscriber odom_pose_sub_;
     ros::Subscriber cloud_sub_;
+    ros::Subscriber detected_object_sub_;
 
 
-public:
+protected:
     void VIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
+    void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
 
 private:
-    void predictionVIO(float deltaT,
-                       Eigen::VectorXf& vo_pose_world,
-                       Eigen::VectorXf &final_pose);
-
+    //point cloud related
     void setPointCloudData(sensor_msgs::PointCloud2 point_cloud);
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
     sensor_msgs::PointCloud2 point_cloud_msg_;
     bool point_cloud_available_;
+
+private:
+    //detection related
+    bool object_detection_available_;
+    std::vector<semantic_SLAM::ObjectInfo> object_info_;
+    void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
+    void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
 
 private:
     bool flush_keyframe_queue();
@@ -86,6 +99,11 @@ private:
 
     std::mutex trans_odom2map_mutex;
     Eigen::Matrix4f trans_odom2map_;
+
+protected:
+    //robot pose related
+    Eigen::VectorXf robot_pose_;
+    float cam_angle_;
 
 private:
 
