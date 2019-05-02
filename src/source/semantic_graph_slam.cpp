@@ -17,7 +17,9 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
     graph_slam_.reset(new hdl_graph_slam::GraphSLAM());
     inf_calclator_.reset(new hdl_graph_slam::InformationMatrixCalculator(n));
+    loop_detector_.reset(new hdl_graph_slam::LoopDetector(n));
     trans_odom2map_.setIdentity();
+    landmarks_vec_.clear();
 
     object_detection_available_ = false;
     point_cloud_available_      = false;
@@ -31,33 +33,65 @@ void semantic_graph_slam::run()
 
     if(flush_keyframe_queue())
     {
+        //loop detection
+        //        std::vector<hdl_graph_slam::Loop::Ptr> loops = loop_detector_->detect(keyframes_, new_keyframes_, *graph_slam_);
+        //        for(const auto& loop : loops) {
+        //            Eigen::Isometry3d relpose(loop->relative_pose.cast<double>());
+        //            Eigen::MatrixXd information_matrix = inf_calclator_->calc_information_matrix(loop->key1->cloud, loop->key2->cloud, relpose);
+        //            graph_slam_->add_se3_edge(loop->key1->node, loop->key2->node, relpose, information_matrix);
+        //        }
+
+        //semantic data association and mapping
+        if(object_detection_available_ && point_cloud_available_)
+        {
+            std::vector<semantic_SLAM::ObjectInfo> object_info;
+            this->getDetectedObjectInfo(object_info);
+
+            sensor_msgs::PointCloud2 point_cloud_msg;
+            this->getPointCloudData(point_cloud_msg);
+
+            for(int i = 0; i < new_keyframes_.size(); ++i)
+            {
+                Eigen::Isometry3d trans = new_keyframes_[i]->node->estimate();
+                Eigen::VectorXf robot_pose = hdl_graph_slam::matrix2vector(trans.matrix().cast<float>());
+
+                std::cout << "robot pose " << robot_pose << std::endl;
+
+                std::vector<detected_object> seg_obj_vec = point_cloud_segmentation::segmentallPointCloudData(robot_pose,
+                                                                                                              cam_angle_,
+                                                                                                              object_info,
+                                                                                                              point_cloud_msg);
+
+                 std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
+
+                std::vector<landmark> current_landmarks_vec = data_ass_obj_.find_matches(seg_obj_vec,
+                                                                                         robot_pose,
+                                                                                         cam_angle_);
+
+                std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
+
+                //add the segmented landmarks to the graph for the current keyframe
+                this->flush_landmark_queue(current_landmarks_vec,
+                                           new_keyframes_[i]);
+
+            }
+        }
+
+
+        //graph slam opitimization
         std::copy(new_keyframes_.begin(), new_keyframes_.end(), std::back_inserter(keyframes_));
         new_keyframes_.clear();
+
         //optimizing the graph
         std::cout << "optimizing the graph " << std::endl;
         graph_slam_->optimize();
         const auto& keyframe = keyframes_.back();
-        Eigen::Isometry3d trans = keyframe->node->estimate() * keyframe->odom.inverse();
-        trans_odom2map_mutex.lock();
-        trans_odom2map_ = trans.matrix().cast<float>();
-        trans_odom2map_mutex.unlock();
+        Eigen::Isometry3d trans = keyframe->node->estimate();
+        std::cout << "curr_key_trans " << trans.matrix().cast<float>() << std::endl;
 
         return;
     }
 
-    if(object_detection_available_ && point_cloud_available_)
-    {
-        std::vector<semantic_SLAM::ObjectInfo> object_info;
-        this->getDetectedObjectInfo(object_info);
-
-        sensor_msgs::PointCloud2 point_cloud_msg;
-        this->getPointCloudData(point_cloud_msg);
-
-        point_cloud_segmentation::segmentallPointCloudData(robot_pose_, cam_angle_, object_info, point_cloud_msg);
-    }
-
-
-    //std::cout << "translation " << keyframe->odom.translation() << std::endl;
 
 }
 
@@ -92,7 +126,9 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     sensor_msgs::PointCloud2 cloud_msg;
     this->getPointCloudData(cloud_msg);
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+    std::vector<int> indices;
     pcl::fromROSMsg(cloud_msg, *cloud);
+    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
 
     double accum_d = keyframe_updater_->get_accum_distance();
     hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, accum_d, cloud));
@@ -164,11 +200,6 @@ bool semantic_graph_slam::flush_keyframe_queue()
     }
 
 
-    trans_odom2map_mutex.lock();
-    Eigen::Isometry3d odom2map(trans_odom2map_.cast<double>());
-    trans_odom2map_mutex.unlock();
-
-
     int num_processed = 0;
     for(int i=0; i<std::min<int>(keyframe_queue_.size(), max_keyframes_per_update_); i++)
     {
@@ -177,7 +208,7 @@ bool semantic_graph_slam::flush_keyframe_queue()
         const auto& keyframe = keyframe_queue_[i];
         new_keyframes_.push_back(keyframe);
 
-        Eigen::Isometry3d odom = odom2map * keyframe->odom;
+        Eigen::Isometry3d odom = keyframe->odom;
         keyframe->node = graph_slam_->add_se3_node(odom);
         keyframe_hash_[keyframe->stamp] = keyframe;
         std::cout << "added new keyframe to the graph" << std::endl;
@@ -202,3 +233,27 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
 }
 
+void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan_queue,
+                                               hdl_graph_slam::KeyFrame::Ptr current_keyframe)
+{
+
+    if(current_lan_queue.empty())
+        return;
+
+    for(int i = 0; i < current_lan_queue.size(); ++i)
+    {
+        if(current_lan_queue[i].is_new_landmark)
+        {
+            current_lan_queue[i].node = graph_slam_->add_point_xyz_node(current_lan_queue[i].pose.cast<double>());
+            std::cout << "added the landmark position node " << std::endl;
+        }
+
+        //add an edge between landmark and the current keyframe
+        Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
+
+        graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].pose.cast<double>(), information.cast<double>());
+        std::cout << "added an edge between the landmark and it keyframe " << std::endl;
+
+    }
+
+}

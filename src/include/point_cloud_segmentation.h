@@ -1,26 +1,28 @@
 #include "plane_segmentation.h"
 #include "tools.h"
+#include "detected_object.h"
 
 namespace point_cloud_segmentation {
 
 plane_segmentation plane_seg_obj;
 
-void segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
-                           pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
-                           pcl::PointIndices::Ptr inliers,
-                           Eigen::Matrix4f transformation_mat,
-                           std::string object_type,
-                           float prob)
+std::vector<detected_object> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_point_cloud,
+                                                   pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
+                                                   pcl::PointIndices::Ptr inliers,
+                                                   Eigen::Matrix4f transformation_mat,
+                                                   std::string object_type,
+                                                   float prob)
 {
+    std::vector<detected_object> complete_obj_info_vec;
 
     std::vector<plane_segmentation::segmented_planes> planar_surf_vec;
     planar_surf_vec.clear();
 
     //ros::Time t1 = ros::Time::now();
     planar_surf_vec = plane_seg_obj.multiPlaneSegmentation(segmented_point_cloud,
-                                                                     segmented_point_cloud_normal,
-                                                                     inliers,
-                                                                     transformation_mat);
+                                                           segmented_point_cloud_normal,
+                                                           inliers,
+                                                           transformation_mat);
 
     if(!planar_surf_vec.empty())
     {
@@ -42,16 +44,38 @@ void segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZRGB>::Ptr segmented_poin
             normal_orientation_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,4);
             normal_orientation_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,5);
             normal_orientation_cam_frame(3) = planar_surf_vec[j].final_pose_mat.at<float>(0,6);
+
+            detected_object complete_obj_info;
+
+
+            //if its zeros its horizontal else its vertical
+            if(planar_surf_vec[j].final_pose_mat.at<float>(0,7) == 0)
+                complete_obj_info.plane_type = "horizontal";
+            else if(planar_surf_vec[j].final_pose_mat.at<float>(0,7) == 1)
+                complete_obj_info.plane_type = "vertical";
+
+            complete_obj_info.type                          = object_type;
+            complete_obj_info.prob                          = prob;
+            complete_obj_info.pose(0)                       = final_detected_point_cam_frame(0);
+            complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
+            complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);
+            complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
+            //complete_obj_info.planar_points                 = planar_surf_vec[j].planar_points;
+
+            complete_obj_info_vec.push_back(complete_obj_info);
+
         }
     }
+
+    return complete_obj_info_vec;
 
 }
 
 
-void segmentallPointCloudData(Eigen::VectorXf robot_pose,
-                              float cam_angle,
-                              std::vector<semantic_SLAM::ObjectInfo> object_info,
-                              sensor_msgs::PointCloud2 point_cloud){
+std::vector<detected_object> segmentallPointCloudData(Eigen::VectorXf robot_pose,
+                                                      float cam_angle,
+                                                      std::vector<semantic_SLAM::ObjectInfo> object_info,
+                                                      sensor_msgs::PointCloud2 point_cloud){
 
     sensor_msgs::PointCloud2 segmented_point_cloud;
     std::vector<plane_segmentation::segmented_objects> segmented_objects_from_point_cloud;
@@ -63,6 +87,8 @@ void segmentallPointCloudData(Eigen::VectorXf robot_pose,
                                          cam_angle);
 
 
+    std::vector<detected_object> complete_obj_info_vec;
+    complete_obj_info_vec.clear();
 
     //This segments the PC according to the received bounding box data in the 2D image
     segmented_objects_from_point_cloud.clear();
@@ -98,18 +124,19 @@ void segmentallPointCloudData(Eigen::VectorXf robot_pose,
                 continue;
 
             //this computes all the planar surfaces from the detected segmented data
-            segmentPlanarSurfaces(segmented_objects_from_point_cloud[i].segmented_point_cloud,
-                                  segmented_point_cloud_normal,
-                                  inliers,
-                                  transformation_mat,
-                                  segmented_objects_from_point_cloud[i].type,
-                                  segmented_objects_from_point_cloud[i].prob);
+            complete_obj_info_vec = segmentPlanarSurfaces(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                                                          segmented_point_cloud_normal,
+                                                          inliers,
+                                                          transformation_mat,
+                                                          segmented_objects_from_point_cloud[i].type,
+                                                          segmented_objects_from_point_cloud[i].prob);
 
 
         }
 
     }
 
+    return complete_obj_info_vec;
 
 }
 

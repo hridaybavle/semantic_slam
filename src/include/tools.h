@@ -1,3 +1,6 @@
+#ifndef SEMANTIC_TOOLS_H
+#define SEMANTIC_TOOLS_H
+
 #include <iostream>
 #include <string>
 #include <math.h>
@@ -206,3 +209,4 @@ public:
 
 };
 
+#endif

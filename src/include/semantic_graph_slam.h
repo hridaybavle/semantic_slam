@@ -45,6 +45,12 @@
 #include <g2o/edge_se3_plane.hpp>
 #include <g2o/edge_se3_priorxy.hpp>
 
+//landmarks
+#include "landmark.h"
+
+//data association
+#include "data_association.h"
+
 //plane segmentation
 //#include "plane_segmentation.h"
 
@@ -55,12 +61,16 @@
 //segmented pointcloud acc to detection
 #include "point_cloud_segmentation.h"
 
+
 class semantic_graph_slam
 {
 
 public:
     semantic_graph_slam();
     ~semantic_graph_slam();
+
+public:
+  data_association data_ass_obj_;
 
 public:
     void run();
@@ -100,6 +110,10 @@ private:
     std::mutex trans_odom2map_mutex;
     Eigen::Matrix4f trans_odom2map_;
 
+private:
+    void flush_landmark_queue(std::vector<landmark> current_lan_queue,
+                              hdl_graph_slam::KeyFrame::Ptr current_keyframe);
+
 protected:
     //robot pose related
     Eigen::VectorXf robot_pose_;
@@ -112,6 +126,12 @@ private:
     std::vector<hdl_graph_slam::KeyFrame::Ptr> keyframes_;
     std::unordered_map<ros::Time, hdl_graph_slam::KeyFrame::Ptr, RosTimeHash> keyframe_hash_;
     std::deque<hdl_graph_slam::KeyFrame::Ptr> keyframe_queue_;
+
+    //landmark relared params
+    std::vector<landmark> landmarks_vec_;
+
+    //loop detector
+    std::unique_ptr<hdl_graph_slam::LoopDetector> loop_detector_;
 
     std::mutex keyframe_queue_mutex;
 
