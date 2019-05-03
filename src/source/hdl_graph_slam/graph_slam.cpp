@@ -37,6 +37,10 @@ GraphSLAM::GraphSLAM() {
   g2o::OptimizationAlgorithm* solver = solver_factory->construct(g2o_solver_name, solver_property);
   graph->setAlgorithm(solver);
 
+  g2o::ParameterSE3Offset* cameraOffset = new g2o::ParameterSE3Offset;
+  cameraOffset->setId(0);
+  graph->addParameter(cameraOffset);
+
   if (!graph->solver()) {
     std::cerr << std::endl;
     std::cerr << "error : failed to allocate solver!!" << std::endl;
@@ -114,6 +118,7 @@ g2o::EdgeSE3PointXYZ* GraphSLAM::add_se3_point_xyz_edge(g2o::VertexSE3* v_se3, g
   edge->setInformation(information_matrix);
   edge->vertices()[0] = v_se3;
   edge->vertices()[1] = v_xyz;
+  edge->setParameterId(0, 0);
   graph->addEdge(edge);
 
   return edge;

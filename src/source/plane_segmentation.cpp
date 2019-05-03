@@ -142,6 +142,8 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
+    std::cout << "normals_of_the_horizontal_plane_in_cam " << normals_of_the_horizontal_plane_in_cam << std::endl;
+
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
     mps.setMinInliers (500);
     mps.setAngularThreshold (0.017453 * 2.0); // 2 degrees
@@ -173,10 +175,10 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
         if(boundary_cloud->points.size() > 100)
         {
-            //            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
-            //                    centroid[0], centroid[1], centroid[2],
-            //                    model[0], model[1], model[2], model[3]);
-            //        std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
+            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
+                    centroid[0], centroid[1], centroid[2],
+                    model[0], model[1], model[2], model[3]);
+            //std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
 
             cv::Mat final_pose_centroid;
             final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
@@ -192,9 +194,9 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
 
             //checking if the extract plane is a horizontal plane or vertical
-            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
-                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
-                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
+            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.4 &&
+                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.4 &&
+                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.4)
             {
                 //zero if its horizontal plane
                 final_pose_centroid.at<float>(0,7) = 0;
@@ -223,7 +225,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                 planes_vec.push_back(planar_surf);
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
-            else if (dot_product < 0.3)
+            else if (dot_product < 0.4)
             {
                 //std::cout << "Its a vertical plane " << std::endl;
                 //one if its a vertical plane

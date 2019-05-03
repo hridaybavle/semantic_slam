@@ -123,14 +123,18 @@ std::vector<detected_object> segmentallPointCloudData(Eigen::VectorXf robot_pose
             if(segmented_point_cloud_normal->empty())
                 continue;
 
+            std::vector<detected_object> current_obj_info_vec;
+            current_obj_info_vec.clear();
             //this computes all the planar surfaces from the detected segmented data
-            complete_obj_info_vec = segmentPlanarSurfaces(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+            current_obj_info_vec =  segmentPlanarSurfaces(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                           segmented_point_cloud_normal,
                                                           inliers,
                                                           transformation_mat,
                                                           segmented_objects_from_point_cloud[i].type,
                                                           segmented_objects_from_point_cloud[i].prob);
 
+            for(int j = 0; j < current_obj_info_vec.size(); ++j)
+                complete_obj_info_vec.push_back(current_obj_info_vec[j]);
 
         }
 

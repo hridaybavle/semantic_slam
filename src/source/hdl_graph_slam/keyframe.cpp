@@ -7,9 +7,10 @@
 
 namespace hdl_graph_slam {
 
-KeyFrame::KeyFrame(const ros::Time& stamp, const Eigen::Isometry3d& odom, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud)
+KeyFrame::KeyFrame(const ros::Time& stamp, const Eigen::Isometry3d& odom, const Eigen::MatrixXf& odom_cov, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud)
   : stamp(stamp),
     odom(odom),
+    odom_cov(odom_cov),
     accum_distance(accum_distance),
     cloud(cloud),
     node(nullptr)

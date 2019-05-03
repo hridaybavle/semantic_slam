@@ -7,7 +7,7 @@
 #include <boost/optional.hpp>
 
 namespace g2o {
-  class VertexSE3;
+class VertexSE3;
 }
 
 namespace hdl_graph_slam {
@@ -17,24 +17,25 @@ namespace hdl_graph_slam {
  */
 struct KeyFrame {
 public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  using PointT = pcl::PointXYZI;
-  using Ptr = std::shared_ptr<KeyFrame>;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    using PointT = pcl::PointXYZI;
+    using Ptr = std::shared_ptr<KeyFrame>;
 
-  KeyFrame(const ros::Time& stamp, const Eigen::Isometry3d& odom, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud);
-  ~KeyFrame();
+    KeyFrame(const ros::Time& stamp, const Eigen::Isometry3d& odom, const Eigen::MatrixXf& odom_cov, double accum_distance, const pcl::PointCloud<PointT>::ConstPtr& cloud);
+    ~KeyFrame();
 
-  void dump(const std::string& directory);
+    void dump(const std::string& directory);
 
 public:
-  ros::Time stamp;                                // timestamp
-  Eigen::Isometry3d odom;                         // odometry (estimated by scan_matching_odometry)
-  double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
-  pcl::PointCloud<PointT>::ConstPtr cloud;        // point cloud
-  boost::optional<Eigen::Vector4d> floor_coeffs;  // detected floor's coefficients
-  boost::optional<Eigen::Vector3d> utm_coord;     // UTM coord obtained by GPS
+    ros::Time stamp;                                // timestamp
+    Eigen::Isometry3d odom;                         // odometry (estimated by scan_matching_odometry)
+    Eigen::MatrixXf odom_cov;                       // odometry covariance
+    double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
+    pcl::PointCloud<PointT>::ConstPtr cloud;        // point cloud
+    boost::optional<Eigen::Vector4d> floor_coeffs;  // detected floor's coefficients
+    boost::optional<Eigen::Vector3d> utm_coord;     // UTM coord obtained by GPS
 
-  g2o::VertexSE3* node;                           // node instance
+    g2o::VertexSE3* node;                           // node instance
 };
 
 /**
@@ -42,19 +43,19 @@ public:
  */
 struct KeyFrameSnapshot {
 public:
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  using PointT = KeyFrame::PointT;
-  using Ptr = std::shared_ptr<KeyFrameSnapshot>;
+    using PointT = KeyFrame::PointT;
+    using Ptr = std::shared_ptr<KeyFrameSnapshot>;
 
-  KeyFrameSnapshot(const KeyFrame::Ptr& key);
-  KeyFrameSnapshot(const Eigen::Isometry3d& pose, const pcl::PointCloud<PointT>::ConstPtr& cloud);
+    KeyFrameSnapshot(const KeyFrame::Ptr& key);
+    KeyFrameSnapshot(const Eigen::Isometry3d& pose, const pcl::PointCloud<PointT>::ConstPtr& cloud);
 
-  ~KeyFrameSnapshot();
+    ~KeyFrameSnapshot();
 
 public:
-  Eigen::Isometry3d pose;                   // pose estimated by graph optimization
-  pcl::PointCloud<PointT>::ConstPtr cloud;  // point cloud
+    Eigen::Isometry3d pose;                   // pose estimated by graph optimization
+    pcl::PointCloud<PointT>::ConstPtr cloud;  // point cloud
 };
 
 }

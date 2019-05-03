@@ -76,6 +76,7 @@ public:
     void run();
     void open(ros::NodeHandle n);
     void init(ros::NodeHandle n);
+    void saveGraph();
 
 protected:
     //messages sync
@@ -112,7 +113,7 @@ private:
 
 private:
     void flush_landmark_queue(std::vector<landmark> current_lan_queue,
-                              hdl_graph_slam::KeyFrame::Ptr current_keyframe);
+                              const auto current_keyframe);
 
 protected:
     //robot pose related
