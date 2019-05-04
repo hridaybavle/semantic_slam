@@ -30,7 +30,7 @@ Eigen::MatrixXd InformationMatrixCalculator::calc_information_matrix(const pcl::
     return inf;
   }
 
-  double fitness_score = 0.1 ;//calc_fitness_score(cloud1, cloud2, relpose);
+  double fitness_score = 0.9 ;//calc_fitness_score(cloud1, cloud2, relpose);
 
   double min_var_x = std::pow(min_stddev_x, 2);
   double max_var_x = std::pow(max_stddev_x, 2);

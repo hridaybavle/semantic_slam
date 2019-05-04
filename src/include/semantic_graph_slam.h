@@ -91,6 +91,13 @@ protected:
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
 
 private:
+    //odom related
+    bool rvio_pose_available_;
+    Eigen::Isometry3d corrected_pose_, prev_odom_pose_;
+    void setRVIOPose(Eigen::Isometry3d RVIO_pose);
+    void getRVIOPose(Eigen::Isometry3d& RVIO_pose);
+
+private:
     //point cloud related
     void setPointCloudData(sensor_msgs::PointCloud2 point_cloud);
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);

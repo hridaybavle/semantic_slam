@@ -114,9 +114,9 @@ public:
                                                                              expected_meas);
                         //sigma needs to be recovered from the graph someway
                         Eigen::MatrixXf sigma; sigma.resize(3,3);
-                        sigma << 0.1,0,  0,
-                                0,0.1,0,
-                                0,  0,0.1;
+                        sigma << 0.9,0,  0,
+                                0,0.9,0,
+                                0,  0,0.9;
 
                         Eigen::MatrixXf Q = H * sigma * H.transpose() + Q_;
 

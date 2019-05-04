@@ -15,6 +15,7 @@ namespace g2o {
   class EdgeSE3PointXYZ;
   class EdgeSE3PriorXY;
   class EdgeSE3PriorXYZ;
+  class EdgePointXYZ;
 }
 
 namespace hdl_graph_slam {
@@ -74,6 +75,17 @@ public:
    * @return registered edge
    */
   g2o::EdgeSE3PointXYZ* add_se3_point_xyz_edge(g2o::VertexSE3* v_se3, g2o::VertexPointXYZ* v_xyz, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix);
+
+  /**
+   * @brief add an edge between two point_xyz nodes
+   * @param v1_xyz        point_xyz node
+   * @param v2_xyz        point_xyz node
+   * @param xyz           xyz coordinate
+   * @param information   information_matrix (it must be 3x3)
+   * @return registered edge
+   */
+
+  g2o::EdgePointXYZ* add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* v1_xyz, g2o::VertexPointXYZ* v2_xyz, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix);
 
   /**
    * @brief add a prior edge to an SE3 node
