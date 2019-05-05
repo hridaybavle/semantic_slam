@@ -70,7 +70,7 @@ public:
     ~semantic_graph_slam();
 
 public:
-  data_association data_ass_obj_;
+    data_association data_ass_obj_;
 
 public:
     void run();
@@ -80,6 +80,22 @@ public:
 
 protected:
     //messages sync
+    //    message_filters::Subscriber<nav_msgs::Odometry> odom_msg_sub_;
+    //    message_filters::Subscriber<sensor_msgs::PointCloud2> point_cloud_msg_sub_;
+    //    message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> bb_sub_;
+
+    //    typedef message_filters::sync_policies::ApproximateTime<nav_msgs::Odometry,
+    //    sensor_msgs::PointCloud2,
+    //    darknet_ros_msgs::BoundingBoxes> SyncPolicy;
+
+    //    message_filters::Synchronizer<SyncPolicy> sync;
+
+    //    void synMsgsCallback(const nav_msgs::OdometryConstPtr &odom_msg,
+    //                         const sensor_msgs::PointCloud2ConstPtr &cloud_msg,
+    //                         const darknet_ros_msgs::BoundingBoxesConstPtr &bbs_msg);
+
+    //subscribers
+protected:
     ros::Subscriber odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
@@ -89,6 +105,18 @@ protected:
     void VIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
+
+    //publishers
+protected:
+    ros::Publisher landmarks_pub_;
+    ros::Publisher keyframe_pose_pub_;
+
+protected:
+    void publishLandmarks();
+    void publishKeyframePoses();
+
+private:
+    geometry_msgs::PoseArray pose_array_;
 
 private:
     //odom related

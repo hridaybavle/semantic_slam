@@ -40,7 +40,7 @@ static geometry_msgs::TransformStamped matrix2transform(const ros::Time& stamp, 
     return odom_trans;
 }
 
-static geometry_msgs::Pose matrix2pose(const Eigen::Matrix4f& pose) {
+static geometry_msgs::Pose matrix2pose(const ros::Time& stamp, const Eigen::Matrix4f& pose, std::string frame_id) {
     Eigen::Quaternionf quat(pose.block<3, 3>(0, 0));
     quat.normalize();
     geometry_msgs::Quaternion odom_quat;
@@ -52,8 +52,8 @@ static geometry_msgs::Pose matrix2pose(const Eigen::Matrix4f& pose) {
     geometry_msgs::Pose odom_pose;
 
     odom_pose.position.x  = pose(0, 3);
-    odom_pose.position.x  = pose(1, 3);
-    odom_pose.position.x  = pose(2, 3);
+    odom_pose.position.y  = pose(1, 3);
+    odom_pose.position.z  = pose(2, 3);
     odom_pose.orientation = odom_quat;
 
     return odom_pose;

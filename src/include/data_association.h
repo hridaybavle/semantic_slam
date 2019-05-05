@@ -45,7 +45,7 @@ private:
         Q_(1,1) = 0.9;
         Q_(2,2) = 0.9;
 
-        MAHA_DIST_THRESHOLD = 0.58;
+        MAHA_DIST_THRESHOLD = 1.5;
     }
 
 
@@ -157,7 +157,6 @@ public:
                                                                cam_angle));
                 else
                 {
-                    //FIXME:::add this landmark as a vertex and add an edge between the matched landmark and this one
                     landmark_vec.push_back(landmarks_[neareast_landmarks_id]);
                 }
             }
@@ -179,7 +178,6 @@ public:
         obj_pose_cam << seg_obj_info.pose(0), seg_obj_info.pose(1), seg_obj_info.pose(2);
 
 
-        //FIXME:::::add robots pose here
         Eigen::Vector4f obj_pose_world = this->convertPoseToWorld(robot_pose,
                                                                   cam_angle,
                                                                   obj_pose_cam);
@@ -199,7 +197,7 @@ public:
         new_landmark.type               = seg_obj_info.type;
         landmarks_.push_back(new_landmark);
 
-        std::cout << "new landmark pose " << new_landmark.pose << std::endl;
+        std::cout << "\033[1;31m new landmark pose \033[0m\n" << new_landmark.pose << std::endl;
 
         return new_landmark;
     }
@@ -254,7 +252,7 @@ public:
                                              Eigen::VectorXf& h)
     {
         h.resize(3,3); h.setZero();
-        h = l.node->estimate().cast<float>();
+        h = l.pose;//l.node->estimate().cast<float>();
         std::cout << "h " << h << std::endl;
 
         Eigen::MatrixXf H; H.resize(3,3); H.setZero();
@@ -272,6 +270,11 @@ public:
         landmarks_[id].node = node;
     }
 
+
+    void getMappedLandmarks(std::vector<landmark>& l)
+    {
+        l = landmarks_;
+    }
 };
 
 #endif
