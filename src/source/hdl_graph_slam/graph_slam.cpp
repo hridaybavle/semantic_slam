@@ -115,12 +115,15 @@ g2o::EdgeSE3Plane* GraphSLAM::add_se3_plane_edge(g2o::VertexSE3* v_se3, g2o::Ver
 
 g2o::EdgeSE3PointXYZ* GraphSLAM::add_se3_point_xyz_edge(g2o::VertexSE3* v_se3, g2o::VertexPointXYZ* v_xyz, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix) {
     g2o::EdgeSE3PointXYZ* edge(new g2o::EdgeSE3PointXYZ());
+
+    std::cout << "here 1" << std::endl;
     edge->setMeasurement(xyz);
     edge->setInformation(information_matrix);
     edge->vertices()[0] = v_se3;
     edge->vertices()[1] = v_xyz;
     edge->setParameterId(0, 0);
     graph->addEdge(edge);
+    std::cout << "here 2"  << std::endl;
 
     return edge;
 }

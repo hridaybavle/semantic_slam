@@ -99,33 +99,40 @@ protected:
     ros::Subscriber odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
-
+    ros::Subscriber optitrack_pose_sub_;
 
 protected:
     void VIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
+    void optitrackPoseCallback(const nav_msgs::Odometry& msg);
 
     //publishers
 protected:
     ros::Publisher landmarks_pub_;
     ros::Publisher detected_lans_pub_;
     ros::Publisher keyframe_pose_pub_;
+    ros::Publisher robot_pose_pub_;
+    ros::Publisher keyframe_path_pub_;
+    ros::Publisher optitrack_pose_pub_;
+    ros::Publisher optitrack_path_pub_;
+    ros::Publisher corres_vio_pose_pub_;
+    ros::Publisher corres_vio_path_;
 
 protected:
+    void publishRobotPose();
     void publishLandmarks();
     void publishDetectedLandmarks(Eigen::VectorXf robot_pose, std::vector<detected_object> det_obj_info);
     void publishKeyframePoses();
-
-private:
-    geometry_msgs::PoseArray pose_array_;
+    void publishCorresVIOPose();
 
 private:
     //odom related
-    bool rvio_pose_available_;
-    Eigen::Isometry3d corrected_pose_, prev_odom_pose_;
-    void setRVIOPose(Eigen::Isometry3d RVIO_pose);
-    void getRVIOPose(Eigen::Isometry3d& RVIO_pose);
+    bool first_key_added_;
+    Eigen::Isometry3d prev_odom_, vio_pose_;
+    std::vector<geometry_msgs::PoseStamped> vio_pose_vec_;
+
+    void setVIOPose(Eigen::Isometry3d vio_pose);
 
 private:
     //point cloud related
@@ -142,6 +149,10 @@ private:
     void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
 
 private:
+    //optitrack related
+    std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
+
+private:
     bool flush_keyframe_queue();
     int max_keyframes_per_update_;
 
@@ -149,12 +160,15 @@ private:
     Eigen::Matrix4f trans_odom2map_;
 
 private:
+    //landmark related functions
+    std::vector<landmark> semantic_data_ass(const hdl_graph_slam::KeyFrame::Ptr curr_keyframe);
+
     void flush_landmark_queue(std::vector<landmark> current_lan_queue,
                               const auto current_keyframe);
 
 protected:
     //robot pose related
-    Eigen::VectorXf robot_pose_;
+    Eigen::Isometry3d robot_pose_;
     float cam_angle_;
 
 private:

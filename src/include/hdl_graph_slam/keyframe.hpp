@@ -25,6 +25,7 @@ public:
 
     KeyFrame(const ros::Time& stamp,
              const Eigen::Isometry3d& odom,
+             const Eigen::Isometry3d& robot_pose,
              const Eigen::MatrixXf& odom_cov,
              double accum_distance,
              const pcl::PointCloud<PointT>::ConstPtr& cloud,
@@ -37,6 +38,7 @@ public:
 public:
     ros::Time stamp;                                // timestamp
     Eigen::Isometry3d odom;                         // odometry (estimated by scan_matching_odometry)
+    Eigen::Isometry3d robot_pose;                    // corrected pose of the robot
     Eigen::MatrixXf odom_cov;                       // odometry covariance
     double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
     pcl::PointCloud<PointT>::ConstPtr cloud;        // point cloud

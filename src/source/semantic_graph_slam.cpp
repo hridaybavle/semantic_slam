@@ -21,19 +21,22 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     loop_detector_.reset(new hdl_graph_slam::LoopDetector(n));
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
+    robot_pose_.setIdentity();
+    vio_pose_.setIdentity();
+    prev_odom_.setIdentity();
+
 
     object_detection_available_ = false;
     point_cloud_available_      = false;
-    rvio_pose_available_        = false;
+    first_key_added_            = false;
     max_keyframes_per_update_   = 10;
 
-    robot_pose_.setZero(6);
     cam_angle_ = 0;
 }
 
 void semantic_graph_slam::run()
 {
-
+    //add keyframe nodes to graph if keyframes available
     if(flush_keyframe_queue())
     {
         //loop detection
@@ -44,37 +47,16 @@ void semantic_graph_slam::run()
         //            graph_slam_->add_se3_edge(loop->key1->node, loop->key2->node, relpose, information_matrix);
         //        }
 
-        //semantic data association and mapping
+        //add semantic data nodes to graph if available
         for(int i = 0; i < new_keyframes_.size(); ++i)
         {
             if(!new_keyframes_[i]->obj_info.empty())
             {
-                std::vector<semantic_SLAM::ObjectInfo> object_info = new_keyframes_[i]->obj_info;
-
-                sensor_msgs::PointCloud2 point_cloud_msg = new_keyframes_[i]->cloud_msg;
-
-                Eigen::Isometry3d trans = new_keyframes_[i]->node->estimate();
-                Eigen::VectorXf robot_pose = hdl_graph_slam::matrix2vector(trans.matrix().cast<float>());
-
-                std::cout << "robot pose " << robot_pose << std::endl;
-                std::vector<detected_object> seg_obj_vec = point_cloud_segmentation::segmentallPointCloudData(robot_pose,
-                                                                                                              cam_angle_,
-                                                                                                              object_info,
-                                                                                                              point_cloud_msg);
-
-                std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
-
-                std::vector<landmark> current_landmarks_vec = data_ass_obj_.find_matches(seg_obj_vec,
-                                                                                         robot_pose,
-                                                                                         cam_angle_);
-
-                std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
-
-                this->publishDetectedLandmarks(robot_pose, seg_obj_vec);
+                //segmenting and matching keyframes
+                std::vector<landmark> current_landmarks_vec = this->semantic_data_ass(new_keyframes_[i]);
                 //add the segmented landmarks to the graph for the current keyframe
                 this->flush_landmark_queue(current_landmarks_vec,
                                            new_keyframes_[i]);
-
             }
         }
 
@@ -83,35 +65,22 @@ void semantic_graph_slam::run()
         new_keyframes_.clear();
 
         //optimizing the graph
-        //std::cout << "optimizing the graph " << std::endl;
+        std::cout << "optimizing the graph " << std::endl;
         graph_slam_->optimize();
-        const auto& keyframe = keyframes_.back();
-        Eigen::Isometry3d trans = keyframe->node->estimate();
-        //std::cout << "curr_key_trans " << trans.translation().cast<float>() << std::endl;
 
         //getting the optimized pose
-        //corrected_pose_ = trans;
+        const auto& keyframe = keyframes_.back();
+
+        robot_pose_ = keyframe->node->estimate();
+        first_key_added_ = true;
 
         publishLandmarks();
         publishKeyframePoses();
-
-        return;
-
-    }
-    else
-    {
-
-        //adding the odom to the prev opitimized pose if no new keyframe is available
-        //        Eigen::Isometry3d current_pose;
-        //        this->getRVIOPose(current_pose);
-
-        //        corrected_pose_ =  corrected_pose_  + current_pose;
-        //        //add prev_odom prove properly this part is not finished properly
-        //        prev_odom_pose_ = current_pose;
-
-        return;
     }
 
+    this->publishCorresVIOPose();
+    this->publishRobotPose();
+    return;
 }
 
 
@@ -131,11 +100,18 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     odom_pose_sub_          = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam::VIOCallback, this);
     cloud_sub_              = n.subscribe("/depth_registered/points",1,&semantic_graph_slam::PointCloudCallback, this);
     detected_object_sub_    = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam::detectedObjectDarknetCallback, this);
+    optitrack_pose_sub_     = n.subscribe("/vrpn_client_node/realsense/pose",1,&semantic_graph_slam::optitrackPoseCallback, this);
 
     //publishers
     keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
     landmarks_pub_          = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
     detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmars",1);
+    robot_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("robot_pose",1);
+    keyframe_path_pub_      = n.advertise<nav_msgs::Path>("robot_path",1);
+    optitrack_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
+    optitrack_path_pub_     = n.advertise<nav_msgs::Path>("optitrack_path",1);
+    corres_vio_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    corres_vio_path_         = n.advertise<nav_msgs::Path>("corres_vo_path",1);
 
 }
 
@@ -150,17 +126,22 @@ void semantic_graph_slam::open(ros::NodeHandle n)
 void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
 
+
     const ros::Time& stamp      = odom_msg->header.stamp;
     Eigen::Isometry3d odom      = hdl_graph_slam::odom2isometry(odom_msg);
     Eigen::MatrixXf odom_cov    = hdl_graph_slam::arrayToMatrix(odom_msg);
 
-    //dont update keyframes only if the keyframe time is less or no detection is available
+
+    //dont update keyframes if the keyframe time is less or no detection is available
     if(!keyframe_updater_->update(odom, stamp) /*&& !object_detection_available_*/)
     {
-        if(keyframe_queue_.empty())
+        if(first_key_added_)
         {
-            //std::cout << "no keyframes in queue " << std::endl;
+            Eigen::Isometry3d pose_inc = prev_odom_.inverse() * odom;
+            robot_pose_ = robot_pose_ * pose_inc;
         }
+
+        prev_odom_ = odom;
         return;
     }
 
@@ -177,34 +158,44 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
         this->getDetectedObjectInfo(obj_info);
 
     double accum_d = keyframe_updater_->get_accum_distance();
-    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, odom_cov, accum_d, cloud, cloud_msg, obj_info));
+    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud, cloud_msg, obj_info));
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue_.push_back(keyframe);
     std::cout << "added keyframe in queue" << std::endl;
 
-    this->setRVIOPose(odom);
+
+    this->setVIOPose(odom);
+    prev_odom_ = odom;
+
+    return;
 }
 
-void semantic_graph_slam::setRVIOPose(Eigen::Isometry3d RVIO_pose)
+void semantic_graph_slam::setVIOPose(Eigen::Isometry3d vio_pose)
 {
-
-    //RVIO_pose_ = RVIO_pose;
-    rvio_pose_available_ = true;
-
-}
-
-void semantic_graph_slam::getRVIOPose(Eigen::Isometry3d &RVIO_pose)
-{
-    //RVIO_pose = RVIO_pose_;
-    rvio_pose_available_ = false;
-
+    vio_pose_ = vio_pose;
 }
 
 void semantic_graph_slam::PointCloudCallback(const sensor_msgs::PointCloud2 &msg)
 {
 
     this->setPointCloudData(msg);
+}
+
+void semantic_graph_slam::setPointCloudData(sensor_msgs::PointCloud2 point_cloud)
+{
+
+    point_cloud_available_ = true;
+    this->point_cloud_msg_ = point_cloud;
+
+}
+
+void semantic_graph_slam::getPointCloudData(sensor_msgs::PointCloud2 &point_cloud)
+{
+
+    point_cloud_available_ = false;
+    point_cloud = this->point_cloud_msg_;
+
 }
 
 void semantic_graph_slam::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes &msg)
@@ -235,23 +226,6 @@ void semantic_graph_slam::getDetectedObjectInfo(std::vector<semantic_SLAM::Objec
 {
     object_detection_available_ = false;
     object_info = this->object_info_;
-}
-
-
-void semantic_graph_slam::setPointCloudData(sensor_msgs::PointCloud2 point_cloud)
-{
-
-    point_cloud_available_ = true;
-    this->point_cloud_msg_ = point_cloud;
-
-}
-
-void semantic_graph_slam::getPointCloudData(sensor_msgs::PointCloud2 &point_cloud)
-{
-
-    point_cloud_available_ = false;
-    point_cloud = this->point_cloud_msg_;
-
 }
 
 bool semantic_graph_slam::flush_keyframe_queue()
@@ -293,6 +267,33 @@ bool semantic_graph_slam::flush_keyframe_queue()
     keyframe_queue_.erase(keyframe_queue_.begin(), keyframe_queue_.begin() + num_processed + 1);
 
     return true;
+
+}
+
+std::vector<landmark> semantic_graph_slam::semantic_data_ass(const hdl_graph_slam::KeyFrame::Ptr curr_keyframe)
+{
+
+    std::vector<semantic_SLAM::ObjectInfo> object_info = curr_keyframe->obj_info;
+    sensor_msgs::PointCloud2 point_cloud_msg = curr_keyframe->cloud_msg;
+    Eigen::VectorXf current_robot_pose = hdl_graph_slam::matrix2vector(curr_keyframe->robot_pose.matrix().cast<float>());
+    std::cout << "current robot pose " << current_robot_pose << std::endl;
+
+
+    std::vector<detected_object> seg_obj_vec = point_cloud_segmentation::segmentallPointCloudData(current_robot_pose,
+                                                                                                  cam_angle_,
+                                                                                                  object_info,
+                                                                                                  point_cloud_msg);
+    std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
+
+
+    std::vector<landmark> current_landmarks_vec = data_ass_obj_.find_matches(seg_obj_vec,
+                                                                             current_robot_pose,
+                                                                             cam_angle_);
+
+    std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
+    this->publishDetectedLandmarks(current_robot_pose, seg_obj_vec);
+
+    return current_landmarks_vec;
 
 }
 
@@ -476,23 +477,84 @@ void semantic_graph_slam::publishDetectedLandmarks(Eigen::VectorXf robot_pose, s
 
 void semantic_graph_slam::publishKeyframePoses()
 {
-    pose_array_.poses.clear();
-    pose_array_.header.stamp = ros::Time::now();
-    pose_array_.header.frame_id = "map";
+    ros::Time current_time = ros::Time::now();
+
+    geometry_msgs::PoseArray pose_array;
+    pose_array.header.stamp = current_time;
+    pose_array.header.frame_id = "map";
+
+    nav_msgs::Path final_path;
+    final_path.header.stamp = current_time;
+    final_path.header.frame_id = "map";
 
     //copying the new keyframes for publishing
     geometry_msgs::Pose key_pose;
+    geometry_msgs::PoseStamped key_pose_stamped;
     for(int i=0; i < keyframes_.size(); ++i)
     {
         key_pose = hdl_graph_slam::matrix2pose(ros::Time::now(),
                                                keyframes_[i]->node->estimate().matrix().cast<float>(),
                                                "map");
-        pose_array_.poses.push_back(key_pose);
+
+        key_pose_stamped.header.stamp = current_time;
+        key_pose_stamped.pose = key_pose;
+
+        pose_array.poses.push_back(key_pose);
+        final_path.poses.push_back(key_pose_stamped);
     }
 
+    keyframe_pose_pub_.publish(pose_array);
+    keyframe_path_pub_.publish(final_path);
+}
 
-    keyframe_pose_pub_.publish(pose_array_);
+void semantic_graph_slam::publishRobotPose()
+{
+    geometry_msgs::PoseStamped robot_pose = hdl_graph_slam::matrix2posestamped(ros::Time::now(),
+                                                                               robot_pose_.matrix().cast<float>(),
+                                                                               "map");
+    robot_pose_pub_.publish(robot_pose);
 
+}
+
+void semantic_graph_slam::optitrackPoseCallback(const nav_msgs::Odometry &msg)
+{
+    geometry_msgs::PoseStamped optitrack_pose;
+    optitrack_pose.header.stamp = ros::Time::now();
+    optitrack_pose.header.frame_id = "map";
+
+    optitrack_pose.pose.position.x = msg.pose.pose.position.x ;
+    optitrack_pose.pose.position.y = msg.pose.pose.position.y ;
+    optitrack_pose.pose.position.z = msg.pose.pose.position.z ;
+
+    optitrack_pose_pub_.publish(optitrack_pose);
+
+    optitrack_pose_vec_.push_back(optitrack_pose);
+
+    nav_msgs::Path optitrack_path;
+    optitrack_path.header.stamp = msg.header.stamp;
+    optitrack_path.header.frame_id = "map";
+    optitrack_path.poses = optitrack_pose_vec_;
+    optitrack_path_pub_.publish(optitrack_path);
+
+}
+
+void semantic_graph_slam::publishCorresVIOPose()
+{
+    ros::Time current_time = ros::Time::now();
+
+    geometry_msgs::PoseStamped corres_vio_pose = hdl_graph_slam::matrix2posestamped(current_time,
+                                                                                    vio_pose_.matrix().cast<float>(),
+                                                                                    "map");
+
+    corres_vio_pose_pub_.publish(corres_vio_pose);
+
+    nav_msgs::Path vio_path;
+    vio_path.header.stamp = current_time;
+    vio_path.header.frame_id = "map";
+
+    vio_pose_vec_.push_back(corres_vio_pose);
+    vio_path.poses = vio_pose_vec_;
+    corres_vio_path_.publish(vio_path);
 }
 
 void semantic_graph_slam::saveGraph()

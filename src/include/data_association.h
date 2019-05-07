@@ -46,7 +46,7 @@ private:
         Q_(1,1) = 10.1;
         Q_(2,2) = 10.1;
 
-        MAHA_DIST_THRESHOLD = 0.8;
+        MAHA_DIST_THRESHOLD = 0.5;
     }
 
 
@@ -340,7 +340,7 @@ public:
                                              Eigen::VectorXf& h)
     {
         h.resize(3,3); h.setZero();
-        h = l.pose; //l.node->estimate().cast<float>();
+        h = l.node->estimate().cast<float>();
 
         Eigen::MatrixXf H; H.resize(3,3); H.setZero();
 
