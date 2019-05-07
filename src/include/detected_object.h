@@ -20,6 +20,7 @@ struct detected_object {
     std::string type;
     std::string plane_type;
     Eigen::Vector3f pose;
+    Eigen::Vector3f world_pose;
     Eigen::Vector4f normal_orientation;
 
 };

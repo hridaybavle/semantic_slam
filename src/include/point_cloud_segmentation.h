@@ -28,12 +28,14 @@ std::vector<detected_object> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZ
     {
         for(int j = 0; j < planar_surf_vec.size(); ++j)
         {
-            Eigen::Vector4f final_detected_point_cam_frame;
-            final_detected_point_cam_frame.setOnes();
+            Eigen::Vector4f final_detected_point_cam_frame, final_detected_point_world_frame;
+            final_detected_point_cam_frame.setOnes(), final_detected_point_world_frame.setOnes();
 
             final_detected_point_cam_frame(0) = planar_surf_vec[j].final_pose_mat.at<float>(0,0);
             final_detected_point_cam_frame(1) = planar_surf_vec[j].final_pose_mat.at<float>(0,1);
             final_detected_point_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,2);
+
+            final_detected_point_world_frame = transformation_mat * final_detected_point_cam_frame;
 
             //pose_vec.push_back(final_pose_of_object_in_robot);
             //do the same above procedure for the normal orientation
@@ -60,6 +62,9 @@ std::vector<detected_object> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZ
             complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
             complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);
             complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
+            complete_obj_info.world_pose << final_detected_point_world_frame(0),
+                    final_detected_point_world_frame(1),
+                    final_detected_point_world_frame(2);
             //complete_obj_info.planar_points                 = planar_surf_vec[j].planar_points;
 
             complete_obj_info_vec.push_back(complete_obj_info);

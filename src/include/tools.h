@@ -104,18 +104,19 @@ public:
         transformation_mat = T_robot_world * rot_z_robot * rot_x_robot * rot_x_cam;
     }
 
-    void transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat)
+    void transformPoseFromCameraToRobot(Eigen::Matrix4f &transformation_mat,
+                                        const float real_sense_pitch_angle)
     {
 
         Eigen::Matrix4f rot_x_cam, rot_x_robot, rot_z_robot, translation_cam;
         rot_x_cam.setZero(4,4), rot_x_robot.setZero(4,4), rot_z_robot.setZero(4,4), translation_cam.setZero(4,4);
 
-        //    rot_x_cam(0,0) = 1;
-        //    rot_x_cam(1,1) =  cos(-slamdunk_pitch_angle);
-        //    rot_x_cam(1,2) = -sin(-slamdunk_pitch_angle);
-        //    rot_x_cam(2,1) =  sin(-slamdunk_pitch_angle);
-        //    rot_x_cam(2,2) =  cos(-slamdunk_pitch_angle);
-        //    rot_x_cam(3,3) = 1;
+        rot_x_cam(0,0) = 1;
+        rot_x_cam(1,1) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(1,2) = -sin(-real_sense_pitch_angle);
+        rot_x_cam(2,1) =  sin(-real_sense_pitch_angle);
+        rot_x_cam(2,2) =  cos(-real_sense_pitch_angle);
+        rot_x_cam(3,3) = 1;
 
         //rotation of -90
         rot_x_robot(0,0) = 1;
@@ -133,41 +134,7 @@ public:
         rot_z_robot(2,2) = 1;
         rot_z_robot(3,3) = 1;
 
-        //tranlation of 5cm in x, 10cm in y and 1.5cm in z
-        //        translation_cam(0,0) = 1;
-        //        translation_cam(0,3) = -0.05;
-        //        translation_cam(1,1) = 1;
-        //        translation_cam(1,3) = 0.0;
-        //        translation_cam(2,2) = 1;
-        //        translation_cam(2,3) = -0.015;
-        //        translation_cam(3,3) = 1;
-
-
-        //transformation from robot to world
-        //    T_robot_world(0,0) = cos(yaw)*cos(pitch);
-        //    T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-        //    T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
-
-        //    T_robot_world(1,0) = sin(yaw)*cos(pitch);
-        //    T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-        //    T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
-
-        //    T_robot_world(2,0) = -sin(pitch);
-        //    T_robot_world(2,1) = cos(pitch)*sin(roll);
-        //    T_robot_world(2,2) = cos(pitch)*cos(roll);
-
-        //fill the x, y and z variables over here if there is a fixed transform between the camera and the world frame
-        //currently its they are all zero as the pose is obtained of the camera with respect to the world.
-        //    T_robot_world(0,3) = prev_pose_x_;
-        //    T_robot_world(1,3) = prev_pose_y_;
-        //    T_robot_world(2,3) = prev_pose_z_;
-        //    T_robot_world(3,3) = 1;
-
-        transformation_mat = /*translation_cam **/ rot_z_robot * rot_x_robot /** rot_x_cam*/ ;
-
-
-        //std::cout << "transformation matrix " << transformation_mat << std::endl;
-
+        transformation_mat = rot_z_robot * rot_x_robot * rot_x_cam;
     }
 
     void transformIMUtoWorld(float ax, float ay, float az, Eigen::Matrix4f &transformation_mat)
@@ -205,6 +172,12 @@ public:
         transformation_mat = T_robot_world * rot_x_imu;
 
 
+    }
+
+
+    inline float dist(float x1, float x2, float y1, float y2, float z1, float z2)
+    {
+        return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1) + (z2 - z1) *  (z2 - z1));
     }
 
 };

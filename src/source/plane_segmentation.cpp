@@ -194,9 +194,9 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
 
             //checking if the extract plane is a horizontal plane or vertical
-            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.4 &&
-                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.4 &&
-                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.4)
+            if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
+                    fabs(model[1]) - fabs(normals_of_the_horizontal_plane_in_cam(1)) < 0.3 &&
+                    fabs(model[2]) - fabs(normals_of_the_horizontal_plane_in_cam(2)) < 0.3)
             {
                 //zero if its horizontal plane
                 final_pose_centroid.at<float>(0,7) = 0;
@@ -225,7 +225,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                 planes_vec.push_back(planar_surf);
                 final_pose_centroids_vec.push_back(final_pose_centroid);
             }
-            else if (dot_product < 0.4)
+            else if (dot_product < 0.3)
             {
                 //std::cout << "Its a vertical plane " << std::endl;
                 //one if its a vertical plane

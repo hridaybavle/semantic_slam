@@ -39,6 +39,7 @@ GraphSLAM::GraphSLAM() {
 
     g2o::ParameterSE3Offset* cameraOffset = new g2o::ParameterSE3Offset;
     cameraOffset->setId(0);
+    //cameraOffset->setOffset();
     graph->addParameter(cameraOffset);
 
     if (!graph->solver()) {
@@ -51,8 +52,8 @@ GraphSLAM::GraphSLAM() {
     }
     std::cout << "done" << std::endl;
 
-    floor_plane_node = add_plane_node(Eigen::Vector4d(0.0, 0.0, 1.0, 0.0));
-    floor_plane_node->setFixed(true);
+    //floor_plane_node = add_plane_node(Eigen::Vector4d(0.0, 0.0, 1.0, 0.0));
+    //floor_plane_node->setFixed(true);
 }
 
 /**
@@ -163,10 +164,10 @@ void GraphSLAM::optimize() {
         return;
     }
 
-    std::cout << std::endl;
-    std::cout << "--- pose graph optimization ---" << std::endl;
-    std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
-    std::cout << "optimizing... " << std::flush;
+    //std::cout << std::endl;
+    //std::cout << "--- pose graph optimization ---" << std::endl;
+    //std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
+    //std::cout << "optimizing... " << std::flush;
 
     graph->initializeOptimization();
     graph->setVerbose(false);
@@ -178,10 +179,10 @@ void GraphSLAM::optimize() {
 
 
     auto t2 = ros::Time::now();
-    std::cout << "done" << std::endl;
-    std::cout << "iterations: " << iterations << std::endl;
-    std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
-    std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+    //std::cout << "done" << std::endl;
+    //std::cout << "iterations: " << iterations << std::endl;
+    //std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
+    //std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
 }
 
 void GraphSLAM::save(const std::string& filename) {

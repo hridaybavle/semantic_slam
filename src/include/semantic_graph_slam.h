@@ -109,10 +109,12 @@ protected:
     //publishers
 protected:
     ros::Publisher landmarks_pub_;
+    ros::Publisher detected_lans_pub_;
     ros::Publisher keyframe_pose_pub_;
 
 protected:
     void publishLandmarks();
+    void publishDetectedLandmarks(Eigen::VectorXf robot_pose, std::vector<detected_object> det_obj_info);
     void publishKeyframePoses();
 
 private:

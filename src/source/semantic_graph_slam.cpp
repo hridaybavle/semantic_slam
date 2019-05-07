@@ -70,6 +70,7 @@ void semantic_graph_slam::run()
 
                 std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
 
+                this->publishDetectedLandmarks(robot_pose, seg_obj_vec);
                 //add the segmented landmarks to the graph for the current keyframe
                 this->flush_landmark_queue(current_landmarks_vec,
                                            new_keyframes_[i]);
@@ -92,11 +93,11 @@ void semantic_graph_slam::run()
         new_keyframes_.clear();
 
         //optimizing the graph
-        std::cout << "optimizing the graph " << std::endl;
+        //std::cout << "optimizing the graph " << std::endl;
         graph_slam_->optimize();
         const auto& keyframe = keyframes_.back();
         Eigen::Isometry3d trans = keyframe->node->estimate();
-        std::cout << "curr_key_trans " << trans.translation().cast<float>() << std::endl;
+        //std::cout << "curr_key_trans " << trans.translation().cast<float>() << std::endl;
 
         //getting the optimized pose
         //corrected_pose_ = trans;
@@ -144,6 +145,7 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     //publishers
     keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
     landmarks_pub_          = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
+    detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmars",1);
 
 }
 
@@ -163,7 +165,7 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     Eigen::MatrixXf odom_cov    = hdl_graph_slam::arrayToMatrix(odom_msg);
 
     //dont update keyframes only if the keyframe time is less or no detection is available
-    if(!keyframe_updater_->update(odom, stamp) && !object_detection_available_)
+    if(!keyframe_updater_->update(odom, stamp) /*&& !object_detection_available_*/)
     {
         if(keyframe_queue_.empty())
         {
@@ -325,7 +327,7 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
 
         //add an edge between landmark and the current keyframe
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
-        graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].node->estimate(), information.cast<double>());
+        graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
         std::cout << "added an edge between the landmark and it keyframe " << std::endl;
 
     }
@@ -342,158 +344,86 @@ void semantic_graph_slam::publishLandmarks()
 
     for(int i=0; i < l_vec.size(); ++i)
     {
+
+        Eigen::Vector3d lan_node_pose = l_vec[i].node->estimate();
+
         visualization_msgs::Marker marker;
-        marker.header.stamp = ros::Time();
+        marker.header.stamp = ros::Time::now();
         marker.header.frame_id = "map";
         marker.ns = "my_namespace";
-        marker.pose.position.x = l_vec[i].pose(0);
-        marker.pose.position.y = l_vec[i].pose(1);
-        marker.pose.position.z = l_vec[i].pose(2);
+        marker.id = marker_id;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.pose.position.x = lan_node_pose(0);
+        marker.pose.position.y = lan_node_pose(1);
+        marker.pose.position.z = lan_node_pose(2);
         marker.pose.orientation.x = 0.0;
         marker.pose.orientation.y = 0.0;
         marker.pose.orientation.z = 0.0;
         marker.pose.orientation.w = 1.0;
 
+        if(l_vec[i].plane_type == "horizontal")
+        {
+            marker.scale.x = 0.3;
+            marker.scale.y = 0.3;
+            marker.scale.z = 0.01;
+
+        }
+        else if(l_vec[i].plane_type == "vertical")
+        {
+            marker.scale.x = 0.01;
+            marker.scale.y = 0.3;
+            marker.scale.z = 0.3;
+        }
+
+
         if(l_vec[i].type == "chair")
         {
-            if(l_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-
-            }
-
-            else if(l_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
-
-            }
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
         }
-
         else if(l_vec[i].type == "tvmonitor")
         {
-            if(l_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 0.0;
-                marker.color.b = 0.0;
 
-            }
-
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
         }
-
         else if (l_vec[i].type == "laptop")
         {
-            if(l_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 1.0;
-                marker.color.b = 0.0;
 
-            }
-
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
         }
-
         else if(l_vec[i].type == "keyboard")
         {
-            if(l_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 1.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
 
-            }
-
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
         }
-
         else if(l_vec[i].type == "book")
         {
-            if(l_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
 
-            }
 
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
         }
-
         else if(l_vec[i].type == "Bucket")
         {
-            if(l_vec[i].plane_type == "horizontal")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.3;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.01;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
 
-            }
-            else if(l_vec[i].plane_type == "vertical")
-            {
-                marker.id = marker_id;
-                marker.action = visualization_msgs::Marker::ADD;
-                marker.type = visualization_msgs::Marker::CUBE;
-                marker.scale.x = 0.01;
-                marker.scale.y = 0.3;
-                marker.scale.z = 0.3;
-                marker.color.a = 1.0; // Don't forget to set the alpha!
-                marker.color.r = 0.0;
-                marker.color.g = 0.0;
-                marker.color.b = 1.0;
-
-            }
-
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
         }
 
         marker_arrays.markers.push_back(marker);
@@ -502,6 +432,57 @@ void semantic_graph_slam::publishLandmarks()
 
     landmarks_pub_.publish(marker_arrays);
 }
+
+void semantic_graph_slam::publishDetectedLandmarks(Eigen::VectorXf robot_pose, std::vector<detected_object> det_obj_info)
+{
+
+    visualization_msgs::MarkerArray marker_arrays;
+    int marker_id = 0;
+
+    for(int i=0; i < det_obj_info.size(); ++i)
+    {
+        visualization_msgs::Marker marker;
+        marker.header.stamp = ros::Time::now();
+        marker.header.frame_id = "map";
+        marker.ns = "my_namespace";
+        marker.id = marker_id;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.pose.position.x = det_obj_info[i].world_pose(0) + robot_pose(0);
+        marker.pose.position.y = det_obj_info[i].world_pose(1) + robot_pose(1);
+        marker.pose.position.z = det_obj_info[i].world_pose(2) + robot_pose(2);
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+        marker.color.a = 1.0; // Don't forget to set the alpha!
+        marker.color.r = 1.0;
+        marker.color.g = 1.0;
+        marker.color.b = 1.0;
+
+        if(det_obj_info[i].plane_type == "horizontal")
+        {
+            marker.scale.x = 0.3;
+            marker.scale.y = 0.3;
+            marker.scale.z = 0.01;
+
+        }
+        else if(det_obj_info[i].plane_type == "vertical")
+        {
+            marker.scale.x = 0.01;
+            marker.scale.y = 0.3;
+            marker.scale.z = 0.3;
+        }
+
+        marker_arrays.markers.push_back(marker);
+        marker_id++;
+    }
+
+    detected_lans_pub_.publish(marker_arrays);
+
+
+}
+
 
 void semantic_graph_slam::publishKeyframePoses()
 {

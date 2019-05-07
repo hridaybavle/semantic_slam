@@ -20,6 +20,7 @@ public:
 
     int id;
     Eigen::Vector3f pose;
+    Eigen::Vector3f local_pose;
     Eigen::Matrix3f covariance;
     bool is_new_landmark;
     std::string type;
