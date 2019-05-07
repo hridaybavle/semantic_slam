@@ -78,16 +78,6 @@ void semantic_graph_slam::run()
             }
         }
 
-        //copying the new keyframes for publishing
-        geometry_msgs::Pose key_pose;
-        for(int i=0; i < new_keyframes_.size(); ++i)
-        {
-            key_pose = hdl_graph_slam::matrix2pose(ros::Time::now(),
-                                                   new_keyframes_[i]->node->estimate().matrix().cast<float>(),
-                                                   "map");
-            pose_array_.poses.push_back(key_pose);
-        }
-
         //graph slam opitimization
         std::copy(new_keyframes_.begin(), new_keyframes_.end(), std::back_inserter(keyframes_));
         new_keyframes_.clear();
@@ -486,8 +476,21 @@ void semantic_graph_slam::publishDetectedLandmarks(Eigen::VectorXf robot_pose, s
 
 void semantic_graph_slam::publishKeyframePoses()
 {
+    pose_array_.poses.clear();
     pose_array_.header.stamp = ros::Time::now();
     pose_array_.header.frame_id = "map";
+
+    //copying the new keyframes for publishing
+    geometry_msgs::Pose key_pose;
+    for(int i=0; i < keyframes_.size(); ++i)
+    {
+        key_pose = hdl_graph_slam::matrix2pose(ros::Time::now(),
+                                               keyframes_[i]->node->estimate().matrix().cast<float>(),
+                                               "map");
+        pose_array_.poses.push_back(key_pose);
+    }
+
+
     keyframe_pose_pub_.publish(pose_array_);
 
 }
