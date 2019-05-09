@@ -19,6 +19,7 @@ struct landmark {
 public:
 
     int id;
+    int vert_id;
     Eigen::Vector3f pose;
     Eigen::Vector3f local_pose;
     Eigen::Matrix3f covariance;

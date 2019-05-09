@@ -50,6 +50,10 @@ find_package(G2O REQUIRED)
 include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIR} ${G2O_INCLUDE_DIRS})
 link_directories(${G2O_LIBRARY_DIRS})
 
+
+FIND_PACKAGE(Cholmod)
+include_directories(${CHOLMOD_INCLUDE_DIR})
+
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -116,7 +120,8 @@ target_link_libraries(SEMANTIC_SLAM ${G2O_TYPES_DATA}
     ${G2O_SOLVER_PCG}
     ${G2O_SOLVER_CSPARSE}
     ${G2O_TYPES_SLAM3D}
-    ${G2O_TYPES_SLAM3D_ADDONS})
+    ${G2O_TYPES_SLAM3D_ADDONS}
+		${CHOLMOD_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_node src/test/semantic_SLAM_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})

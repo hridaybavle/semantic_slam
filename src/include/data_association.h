@@ -42,11 +42,11 @@ private:
         first_object_ = true;
         landmarks_.clear();
         Q_.setZero();
-        Q_(0,0) = 10.1;
-        Q_(1,1) = 10.1;
-        Q_(2,2) = 10.1;
+        Q_(0,0) = 0.9;
+        Q_(1,1) = 0.9;
+        Q_(2,2) = 0.9;
 
-        MAHA_DIST_THRESHOLD = 0.5;
+        MAHA_DIST_THRESHOLD = 0.6;
     }
 
 
@@ -96,8 +96,6 @@ public:
                     if(seg_obj_info[j].plane_type == landmarks_[i].plane_type)
                     {
 
-
-
                         //transform the detected object pose to world frame
                         Eigen::Vector4f obj_pose_cam; obj_pose_cam.setOnes();
 
@@ -112,9 +110,9 @@ public:
                                                                                         cam_angle,
                                                                                         seg_obj_info[j].normal_orientation);
 
-                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.2 &&
-                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.2 &&
-                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.2)
+                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.1 &&
+                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.1 &&
+                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.1)
                         {
 
                             found_nearest_neighbour = true;
@@ -352,7 +350,8 @@ public:
 
     }
 
-    void assignLandmarkNode(int id, g2o::VertexPointXYZ* node)
+    void assignLandmarkNode(int id,
+                            g2o::VertexPointXYZ* node)
     {
         landmarks_[id].node = node;
     }

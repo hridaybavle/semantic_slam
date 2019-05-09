@@ -43,7 +43,6 @@
 #include <g2o/types/slam3d/edge_se3.h>
 #include <g2o/types/slam3d/vertex_se3.h>
 #include <g2o/edge_se3_plane.hpp>
-#include <g2o/edge_se3_priorxy.hpp>
 
 //landmarks
 #include "landmark.h"
@@ -77,6 +76,12 @@ public:
     void open(ros::NodeHandle n);
     void init(ros::NodeHandle n);
     void saveGraph();
+
+    //test stuff
+private:
+    bool counter_;
+    landmark test_landmark_;
+    hdl_graph_slam::KeyFrame::Ptr test_keyframe_;
 
 protected:
     //messages sync
@@ -165,6 +170,8 @@ private:
 
     void flush_landmark_queue(std::vector<landmark> current_lan_queue,
                               const auto current_keyframe);
+
+    void getAndSetLandmarkCov();
 
 protected:
     //robot pose related

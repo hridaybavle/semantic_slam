@@ -1,6 +1,5 @@
 #ifndef KKL_G2O_EDGE_SE3_PLANE_HPP
 #define KKL_G2O_EDGE_SE3_PLANE_HPP
-
 #include <g2o/types/slam3d/edge_se3.h>
 #include <g2o/types/slam3d/vertex_se3.h>
 #include <g2o/types/slam3d_addons/vertex_plane.h>
@@ -27,7 +26,7 @@ namespace g2o {
 		}
 
     virtual bool read(std::istream& is) override {
-      Vector4D v;
+      Eigen::Vector4d v;
 			is >> v(0) >> v(1) >> v(2) >> v(3);
 			setMeasurement(Plane3D(v));
 			for (int i = 0; i < information().rows(); ++i)
@@ -39,7 +38,7 @@ namespace g2o {
 			return true;
 		}
 		virtual bool write(std::ostream& os) const override {
-      Vector4D v = _measurement.toVector();
+      Eigen::Vector4d v = _measurement.toVector();
 			os << v(0) << " " << v(1) << " " << v(2) << " " << v(3) << " ";
 			for (int i = 0; i < information().rows(); ++i)
 				for (int j = i; j < information().cols(); ++j)

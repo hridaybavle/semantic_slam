@@ -6,20 +6,29 @@
 #include <g2o/core/linear_solver.h>
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/core/optimization_algorithm_factory.h>
+#include <g2o/solvers/cholmod/linear_solver_cholmod.h>
 #include <g2o/solvers/pcg/linear_solver_pcg.h>
+#include <g2o/core/block_solver.h>
+#include <g2o/core/solver.h>
 #include <g2o/types/slam3d/types_slam3d.h>
 #include <g2o/types/slam3d/edge_se3_pointxyz.h>
 #include <g2o/types/slam3d_addons/types_slam3d_addons.h>
 #include <g2o/edge_se3_plane.hpp>
-#include <g2o/edge_se3_priorxy.hpp>
-#include <g2o/edge_se3_priorxyz.hpp>
+#include <g2o/core/robust_kernel.h>
+#include <g2o/core/robust_kernel_factory.h>
+#include <g2o/core/robust_kernel_impl.h>
+#include <g2o/core/marginal_covariance_cholesky.h>
+#include <g2o/core/optimization_algorithm_gauss_newton.h>
+#include <g2o/solvers/eigen/linear_solver_eigen.h>
+#include <g2o/solvers/dense/linear_solver_dense.h>
+#include <g2o/core/optimization_algorithm_levenberg.h>
 
 G2O_USE_OPTIMIZATION_LIBRARY(csparse)
 
 namespace g2o {
     G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
-            G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
-            G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
+            //            G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
+            //            G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
 }
 
 namespace hdl_graph_slam {
@@ -28,10 +37,20 @@ namespace hdl_graph_slam {
  * @brief constructor
  */
 GraphSLAM::GraphSLAM() {
+
     graph.reset(new g2o::SparseOptimizer());
 
-    std::string g2o_solver_name = "lm_var";
     std::cout << "construct solver... " << std::endl;
+
+    // Create the block solver - the dimensions are specified because
+    // 3D observations marginalise to a 6D estimate
+    //    std::unique_ptr<g2o::BlockSolver_6_3::LinearSolverType> linearSolver (new g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>());
+    //    std::unique_ptr<g2o::BlockSolver_6_3> solver_ptr (new g2o::BlockSolver_6_3(std::move(linearSolver)));
+    //    g2o::OptimizationAlgorithmLevenberg * solver = new g2o::OptimizationAlgorithmLevenberg(std::move(solver_ptr));
+    //    graph->setAlgorithm(solver);
+
+
+    std::string g2o_solver_name = "lm_var";
     g2o::OptimizationAlgorithmFactory* solver_factory = g2o::OptimizationAlgorithmFactory::instance();
     g2o::OptimizationAlgorithmProperty solver_property;
     g2o::OptimizationAlgorithm* solver = solver_factory->construct(g2o_solver_name, solver_property);
@@ -45,7 +64,7 @@ GraphSLAM::GraphSLAM() {
     if (!graph->solver()) {
         std::cerr << std::endl;
         std::cerr << "error : failed to allocate solver!!" << std::endl;
-        solver_factory->listSolvers(std::cerr);
+        //solver_factory->listSolvers(std::cerr);
         std::cerr << "-------------" << std::endl;
         std::cin.ignore(1);
         return;
@@ -68,6 +87,8 @@ g2o::VertexSE3* GraphSLAM::add_se3_node(const Eigen::Isometry3d& pose) {
     g2o::VertexSE3* vertex(new g2o::VertexSE3());
     vertex->setId(graph->vertices().size());
     vertex->setEstimate(pose);
+    vertex->setMarginalized(false);
+    vertex->setFixed(false);
     graph->addVertex(vertex);
 
     return vertex;
@@ -86,6 +107,7 @@ g2o::VertexPointXYZ* GraphSLAM::add_point_xyz_node(const Eigen::Vector3d& xyz) {
     g2o::VertexPointXYZ* vertex(new g2o::VertexPointXYZ());
     vertex->setId(graph->vertices().size());
     vertex->setEstimate(xyz);
+    vertex->setMarginalized(true);
     graph->addVertex(vertex);
 
     return vertex;
@@ -116,14 +138,16 @@ g2o::EdgeSE3Plane* GraphSLAM::add_se3_plane_edge(g2o::VertexSE3* v_se3, g2o::Ver
 g2o::EdgeSE3PointXYZ* GraphSLAM::add_se3_point_xyz_edge(g2o::VertexSE3* v_se3, g2o::VertexPointXYZ* v_xyz, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix) {
     g2o::EdgeSE3PointXYZ* edge(new g2o::EdgeSE3PointXYZ());
 
-    std::cout << "here 1" << std::endl;
+    g2o::RobustKernelDCS* dcs_robust_kernel;
+
     edge->setMeasurement(xyz);
     edge->setInformation(information_matrix);
     edge->vertices()[0] = v_se3;
     edge->vertices()[1] = v_xyz;
+    edge->setRobustKernel(dcs_robust_kernel);
     edge->setParameterId(0, 0);
     graph->addEdge(edge);
-    std::cout << "here 2"  << std::endl;
+
 
     return edge;
 }
@@ -141,30 +165,29 @@ g2o::EdgePointXYZ* GraphSLAM::add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* 
 }
 
 
-g2o::EdgeSE3PriorXY* GraphSLAM::add_se3_prior_xy_edge(g2o::VertexSE3* v_se3, const Eigen::Vector2d& xy, const Eigen::MatrixXd& information_matrix) {
-    g2o::EdgeSE3PriorXY* edge(new g2o::EdgeSE3PriorXY());
-    edge->setMeasurement(xy);
-    edge->setInformation(information_matrix);
-    edge->vertices()[0] = v_se3;
-    graph->addEdge(edge);
+//g2o::EdgeSE3PriorXY* GraphSLAM::add_se3_prior_xy_edge(g2o::VertexSE3* v_se3, const Eigen::Vector2d& xy, const Eigen::MatrixXd& information_matrix) {
+//    g2o::EdgeSE3PriorXY* edge(new g2o::EdgeSE3PriorXY());
+//    edge->setMeasurement(xy);
+//    edge->setInformation(information_matrix);
+//    edge->vertices()[0] = v_se3;
+//    graph->addEdge(edge);
 
-    return edge;
-}
+//    return edge;
+//}
 
-g2o::EdgeSE3PriorXYZ* GraphSLAM::add_se3_prior_xyz_edge(g2o::VertexSE3* v_se3, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix) {
-    g2o::EdgeSE3PriorXYZ* edge(new g2o::EdgeSE3PriorXYZ());
-    edge->setMeasurement(xyz);
-    edge->setInformation(information_matrix);
-    edge->vertices()[0] = v_se3;
-    graph->addEdge(edge);
+//g2o::EdgeSE3PriorXYZ* GraphSLAM::add_se3_prior_xyz_edge(g2o::VertexSE3* v_se3, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix) {
+//    g2o::EdgeSE3PriorXYZ* edge(new g2o::EdgeSE3PriorXYZ());
+//    edge->setMeasurement(xyz);
+//    edge->setInformation(information_matrix);
+//    edge->vertices()[0] = v_se3;
+//    graph->addEdge(edge);
 
-    return edge;
-}
+//    return edge;
+//}
 
-
-void GraphSLAM::optimize() {
+bool GraphSLAM::optimize() {
     if(graph->edges().size() < 10) {
-        return;
+        return false;
     }
 
     //std::cout << std::endl;
@@ -180,12 +203,37 @@ void GraphSLAM::optimize() {
     auto t1 = ros::Time::now();
     int iterations = graph->optimize(1024);
 
-
     auto t2 = ros::Time::now();
+
+    return true;
     //std::cout << "done" << std::endl;
     //std::cout << "iterations: " << iterations << std::endl;
     //std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
     //std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+}
+
+bool GraphSLAM::computeMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>& spinv,
+                                 g2o::VertexSE3* pose_vert,
+                                 g2o::VertexPointXYZ* lan_vert)
+{
+
+    std::vector<std::pair<int, int> > vert_pairs_vec;
+
+    //if(pose_vert->hessianIndex() >= 0 )
+    {
+        std::cout << "lan vert pose " << lan_vert->estimate() << std::endl;
+
+        std::cout << "vert hessian index greater than zero " << std::endl;
+        vert_pairs_vec.push_back(std::make_pair(pose_vert->hessianIndex(), pose_vert->hessianIndex()));
+        graph->computeMarginals(spinv, vert_pairs_vec);
+        return true;
+    }
+    //else
+    {
+        std::cout << "ver hessian index is less than zero " << std::endl;
+        return false;
+    }
+
 }
 
 void GraphSLAM::save(const std::string& filename) {

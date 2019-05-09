@@ -25,10 +25,10 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-
     object_detection_available_ = false;
     point_cloud_available_      = false;
     first_key_added_            = false;
+    counter_                    = false;
     max_keyframes_per_update_   = 10;
 
     cam_angle_ = 0;
@@ -65,8 +65,12 @@ void semantic_graph_slam::run()
         new_keyframes_.clear();
 
         //optimizing the graph
-        std::cout << "optimizing the graph " << std::endl;
-        graph_slam_->optimize();
+        if(graph_slam_->optimize())
+        {
+            std::cout << "optimizing the graph " << std::endl;
+            //get and set the landmark covariances
+            this->getAndSetLandmarkCov();
+        }
 
         //getting the optimized pose
         const auto& keyframe = keyframes_.back();
@@ -132,7 +136,7 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     Eigen::MatrixXf odom_cov    = hdl_graph_slam::arrayToMatrix(odom_msg);
 
 
-    //dont update keyframes if the keyframe time is less or no detection is available
+    //dont update keyframes if the keyframe time and distance or is less or no detection is available
     if(!keyframe_updater_->update(odom, stamp) /*&& !object_detection_available_*/)
     {
         if(first_key_added_)
@@ -141,10 +145,10 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
             robot_pose_ = robot_pose_ * pose_inc;
         }
 
+        this->setVIOPose(odom);
         prev_odom_ = odom;
         return;
     }
-
 
     sensor_msgs::PointCloud2 cloud_msg;
     this->getPointCloudData(cloud_msg);
@@ -259,7 +263,7 @@ bool semantic_graph_slam::flush_keyframe_queue()
         const auto& prev_keyframe = i == 0 ? keyframes_.back() : keyframe_queue_[i - 1];
 
         Eigen::Isometry3d relative_pose = keyframe->odom.inverse() * prev_keyframe->odom;
-        Eigen::MatrixXd information = /*keyframe->odom_cov.inverse().cast<double>(); */ inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose);
+        Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
         graph_slam_->add_se3_edge(keyframe->node, prev_keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -315,13 +319,51 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
             std::cout << "added the landmark position node " << std::endl;
         }
 
-
         //add an edge between landmark and the current keyframe
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
         graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
         std::cout << "added an edge between the landmark and it keyframe " << std::endl;
 
+        if(!counter_)
+        {
+            test_landmark_ = current_lan_queue[i];
+            test_keyframe_  = current_keyframe;
+            counter_ = true;
+        }
+
     }
+
+}
+
+void semantic_graph_slam::getAndSetLandmarkCov()
+{
+    std::vector<landmark> l;
+    g2o::SparseBlockMatrix<Eigen::MatrixXd> spinv_vec;
+
+    data_ass_obj_.getMappedLandmarks(l);
+
+
+    //for(int i =0; i < keyframes_.size(); ++i)
+    {
+
+        if(graph_slam_->computeMarginals(spinv_vec,
+                                         keyframes_[0]->node,
+                                         l[0].node))
+        {
+
+            std::cout << "spinv block " << spinv_vec.block(0,0)->eval() << std::endl;
+        }
+    }
+
+    //    auto keyframe = keyframes_.back();
+
+    //    if(graph_slam_->computeMarginals(spinv_vec[0],
+    //                                     keyframe->node,
+    //                                     test_landmark_.node))
+    //    {
+    //        std::cout << "spinv block " << 0 << " " << spinv_vec[0].block(0,0)->eval() << std::endl;
+    //    }
+
 
 }
 
@@ -522,14 +564,11 @@ void semantic_graph_slam::optitrackPoseCallback(const nav_msgs::Odometry &msg)
     optitrack_pose.header.stamp = ros::Time::now();
     optitrack_pose.header.frame_id = "map";
 
-    optitrack_pose.pose.position.x = msg.pose.pose.position.x ;
-    optitrack_pose.pose.position.y = msg.pose.pose.position.y ;
-    optitrack_pose.pose.position.z = msg.pose.pose.position.z ;
 
+    optitrack_pose.pose = msg.pose.pose;
     optitrack_pose_pub_.publish(optitrack_pose);
 
     optitrack_pose_vec_.push_back(optitrack_pose);
-
     nav_msgs::Path optitrack_path;
     optitrack_path.header.stamp = msg.header.stamp;
     optitrack_path.header.frame_id = "map";
