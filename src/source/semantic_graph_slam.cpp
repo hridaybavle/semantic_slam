@@ -1,4 +1,26 @@
 #include "semantic_graph_slam.h"
+#include <g2o/stuff/macros.h>
+#include <g2o/core/factory.h>
+#include <g2o/core/block_solver.h>
+#include <g2o/core/linear_solver.h>
+#include <g2o/core/sparse_optimizer.h>
+#include <g2o/core/optimization_algorithm_factory.h>
+#include <g2o/solvers/cholmod/linear_solver_cholmod.h>
+#include <g2o/solvers/pcg/linear_solver_pcg.h>
+#include <g2o/core/block_solver.h>
+#include <g2o/core/solver.h>
+#include <g2o/types/slam3d/types_slam3d.h>
+#include <g2o/types/slam3d/edge_se3_pointxyz.h>
+#include <g2o/types/slam3d_addons/types_slam3d_addons.h>
+#include <g2o/core/robust_kernel.h>
+#include <g2o/core/robust_kernel_factory.h>
+#include <g2o/core/robust_kernel_impl.h>
+#include <g2o/core/marginal_covariance_cholesky.h>
+#include <g2o/core/optimization_algorithm_gauss_newton.h>
+#include <g2o/solvers/eigen/linear_solver_eigen.h>
+#include <g2o/solvers/dense/linear_solver_dense.h>
+#include <g2o/core/optimization_algorithm_levenberg.h>
+#include <g2o/solvers/csparse/linear_solver_csparse.h>
 
 semantic_graph_slam::semantic_graph_slam()
 //    : sync(SyncPolicy(10))
@@ -30,12 +52,21 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     first_key_added_            = false;
     counter_                    = false;
     max_keyframes_per_update_   = 10;
+    odom_increments_            = 10;
 
     cam_angle_ = 0;
 }
 
 void semantic_graph_slam::run()
 {
+    //this is test run
+    //    if(!counter_)
+    //    {
+    //        //this->add_odom_increments();
+    //        this->add_odom_position_increments();
+    //        counter_ = true;
+    //    }
+
     //add keyframe nodes to graph if keyframes available
     if(flush_keyframe_queue())
     {
@@ -168,7 +199,6 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     keyframe_queue_.push_back(keyframe);
     std::cout << "added keyframe in queue" << std::endl;
 
-
     this->setVIOPose(odom);
     prev_odom_ = odom;
 
@@ -262,9 +292,10 @@ bool semantic_graph_slam::flush_keyframe_queue()
         // add edge between keyframes
         const auto& prev_keyframe = i == 0 ? keyframes_.back() : keyframe_queue_[i - 1];
 
-        Eigen::Isometry3d relative_pose = keyframe->odom.inverse() * prev_keyframe->odom;
+
+        Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
         Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
-        graph_slam_->add_se3_edge(keyframe->node, prev_keyframe->node, relative_pose, information);
+        graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
 
@@ -323,47 +354,37 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
         graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
         std::cout << "added an edge between the landmark and it keyframe " << std::endl;
-
-        if(!counter_)
-        {
-            test_landmark_ = current_lan_queue[i];
-            test_keyframe_  = current_keyframe;
-            counter_ = true;
-        }
-
     }
 
 }
 
 void semantic_graph_slam::getAndSetLandmarkCov()
 {
-    std::vector<landmark> l;
-    g2o::SparseBlockMatrix<Eigen::MatrixXd> spinv_vec;
-
-    data_ass_obj_.getMappedLandmarks(l);
-
-
-    //for(int i =0; i < keyframes_.size(); ++i)
-    {
-
-        if(graph_slam_->computeMarginals(spinv_vec,
-                                         keyframes_[0]->node,
-                                         l[0].node))
-        {
-
-            std::cout << "spinv block " << spinv_vec.block(0,0)->eval() << std::endl;
-        }
-    }
-
-    //    auto keyframe = keyframes_.back();
-
-    //    if(graph_slam_->computeMarginals(spinv_vec[0],
-    //                                     keyframe->node,
-    //                                     test_landmark_.node))
+    //    g2o::SparseBlockMatrix<Eigen::MatrixXd> pose_spinv_vec;
+    //    for(int i =0; i < keyframes_.size(); ++i)
     //    {
-    //        std::cout << "spinv block " << 0 << " " << spinv_vec[0].block(0,0)->eval() << std::endl;
+
+    //        if(graph_slam_->computePoseMarginals((pose_spinv_vec),
+    //                                         keyframes_[i]->node))
+    //        {
+
+    //            std::cout << "spinv block " << pose_spinv_vec.block(0,0)->eval() << std::endl;
+    //        }
     //    }
 
+    std::vector<landmark> l;
+    data_ass_obj_.getMappedLandmarks(l);
+    g2o::SparseBlockMatrix<Eigen::MatrixXd> lan_spinv_vec;
+
+    for(int i = 0; i < l.size(); ++i)
+    {
+        if(graph_slam_->computeLandmarkMarginals((lan_spinv_vec),
+                                                 l[i].node))
+        {
+
+            std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
+        }
+    }
 
 }
 
@@ -600,3 +621,95 @@ void semantic_graph_slam::saveGraph()
 {
     graph_slam_->save("/home/hriday/Desktop/test.g2o");
 }
+
+
+//void semantic_graph_slam::add_odom_pose_increments()
+//{
+
+//    Eigen::Isometry3d odom_iso;
+//    Eigen::Quaterniond quat; quat.setIdentity();
+
+//    odom_iso.linear() = quat.toRotationMatrix();
+//    double x,y,z;
+//    x=y=z=0;
+
+//    g2o::VertexSE3* prev_node;
+//    for(int i= 0; i < odom_increments_; ++i)
+//    {
+
+//        g2o::VertexSE3* node;
+//        //adding odom measurements to the graph
+//        odom_iso.translation() = Eigen::Vector3d(x+2*i, y, z);
+//        node = graph_slam_->add_se3_node(odom_iso);
+
+//        if(i >0)
+//        {
+//            Eigen::Matrix3d information; information.setIdentity(6,6);
+//            Eigen::Isometry3d rel_pose;
+//            rel_pose.linear() = quat.toRotationMatrix();
+//            rel_pose.translation() = Eigen::Vector3d(2, 0, 0);
+//            graph_slam_->add_se3_edge(prev_node, node, rel_pose, information);
+//        }
+
+//        prev_node = node;
+
+//    }
+
+//    graph_slam_->optimize();
+//    std::cout << "optimized graph " << std::endl;
+//}
+
+//void semantic_graph_slam::add_odom_position_increments()
+//{
+
+//    g2o::SparseOptimizer graph;
+
+//    typedef g2o::BlockSolver<g2o::BlockSolverTraits<3, 3> >  SlamBlockSolver;
+//    typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType> SlamLinearSolver;
+
+//    auto linearSolver = g2o::make_unique<SlamLinearSolver>();
+//    linearSolver->setBlockOrdering(false);
+//    g2o::OptimizationAlgorithmGaussNewton* solver = new g2o::OptimizationAlgorithmGaussNewton(
+//                g2o::make_unique<SlamBlockSolver>(std::move(linearSolver)));
+//    graph.setAlgorithm(solver);
+
+//    double x,y,z;
+//    x=y=z=0;
+
+//    g2o::VertexPointXYZ*  prev_node;
+//    for(int i= 0; i < odom_increments_; ++i)
+//    {
+
+//        g2o::VertexPointXYZ* node (new g2o::VertexPointXYZ);
+//        //adding odom measurements to the graph
+//        Eigen::Vector3d position;
+//        position = Eigen::Vector3d(x+2*i, y, z);
+//        node->setId(graph.vertices().size());
+//        node->setEstimate(position);
+//        graph.addVertex(node);
+
+//        if(i >0)
+//        {
+//            Eigen::Matrix3d information; information.setIdentity();
+//            Eigen::Vector3d rel_pose;
+//            rel_pose = Eigen::Vector3d(2, 0, 0);
+
+//            g2o::EdgePointXYZ* edge(new g2o::EdgePointXYZ());
+//            edge->setMeasurement(rel_pose);
+//            edge->setInformation(information);
+//            edge->vertices()[0] = prev_node;
+//            edge->vertices()[1] = node;
+//            edge->setParameterId(0, 0);
+//            graph.addEdge(edge);
+//        }
+
+//        prev_node = node;
+
+//    }
+
+//    graph.initializeOptimization();
+//    int iterations = graph.optimize(1024);
+//    std::cout << "optimized graph " << std::endl;
+
+//}
+

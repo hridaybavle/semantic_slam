@@ -42,9 +42,9 @@ private:
         first_object_ = true;
         landmarks_.clear();
         Q_.setZero();
-        Q_(0,0) = 0.9;
-        Q_(1,1) = 0.9;
-        Q_(2,2) = 0.9;
+        Q_(0,0) = 1;
+        Q_(1,1) = 1;
+        Q_(2,2) = 1;
 
         MAHA_DIST_THRESHOLD = 0.6;
     }
@@ -221,6 +221,7 @@ public:
         new_landmark.local_pose << obj_pose_rob(0), obj_pose_rob(1), obj_pose_rob(2);
         new_landmark.pose       << obj_pose_world(0), obj_pose_world(1), obj_pose_world(2);
         new_landmark.covariance         = Q_;
+        std::cout << "new_landmark.covariance " << new_landmark.covariance  << std::endl;
         new_landmark.normal_orientation = obj_normals_world;
         new_landmark.plane_type         = seg_obj_info.plane_type;
         new_landmark.type               = seg_obj_info.type;

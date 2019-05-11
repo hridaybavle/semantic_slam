@@ -40,10 +40,6 @@
 #include <hdl_graph_slam/map_cloud_generator.hpp>
 #include <hdl_graph_slam/nmea_sentence_parser.hpp>
 
-#include <g2o/types/slam3d/edge_se3.h>
-#include <g2o/types/slam3d/vertex_se3.h>
-#include <g2o/edge_se3_plane.hpp>
-
 //landmarks
 #include "landmark.h"
 
@@ -82,6 +78,10 @@ private:
     bool counter_;
     landmark test_landmark_;
     hdl_graph_slam::KeyFrame::Ptr test_keyframe_;
+    int odom_increments_;
+
+    void add_odom_pose_increments();
+    void add_odom_position_increments();
 
 protected:
     //messages sync
