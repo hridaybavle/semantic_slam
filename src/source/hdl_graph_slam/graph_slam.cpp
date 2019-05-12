@@ -11,6 +11,8 @@
 #include <g2o/core/block_solver.h>
 #include <g2o/core/solver.h>
 #include <g2o/types/slam3d/types_slam3d.h>
+#include <g2o/types/slam3d/parameter_se3_offset.h>
+#include <g2o/types/slam2d/types_slam2d.h>
 #include <g2o/types/slam3d/edge_se3_pointxyz.h>
 #include <g2o/types/slam3d_addons/types_slam3d_addons.h>
 #include <g2o/core/robust_kernel.h>
@@ -23,12 +25,12 @@
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 
-G2O_USE_OPTIMIZATION_LIBRARY(csparse)
+//G2O_USE_OPTIMIZATION_LIBRARY(csparse)
 
 namespace g2o {
-    //G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
-    //        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
-    //        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
+//G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
+//        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
+//        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
 }
 
 namespace hdl_graph_slam {
@@ -58,15 +60,18 @@ GraphSLAM::GraphSLAM() {
     //    g2o::OptimizationAlgorithmLevenberg * solver = new g2o::OptimizationAlgorithmLevenberg(std::move(solver_ptr));
     //    graph->setAlgorithm(solver);
 
-    //    std::string g2o_solver_name = "gn_var";
+    //    std::string g2o_solver_name = "lm_var";
     //    g2o::OptimizationAlgorithmFactory* solver_factory = g2o::OptimizationAlgorithmFactory::instance();
     //    g2o::OptimizationAlgorithmProperty solver_property;
     //    g2o::OptimizationAlgorithm* solver = solver_factory->construct(g2o_solver_name, solver_property);
     //    graph->setAlgorithm(solver);
 
-    g2o::ParameterSE3Offset* cameraOffset = new g2o::ParameterSE3Offset;
+    g2o::ParameterSE3Offset* cameraOffset (new g2o::ParameterSE3Offset);
+    Eigen::Quaterniond quat; quat.setIdentity();
+    Eigen::Vector3d trans; trans.setZero();
+    g2o::SE3Quat offset_quat(quat, trans);
     cameraOffset->setId(0);
-    //cameraOffset->setOffset();
+    cameraOffset->setOffset(offset_quat);
     graph->addParameter(cameraOffset);
 
     if (!graph->solver()) {
@@ -89,7 +94,6 @@ GraphSLAM::GraphSLAM() {
 GraphSLAM::~GraphSLAM() {
     graph.reset();
 }
-
 
 g2o::VertexSE3* GraphSLAM::add_se3_node(const Eigen::Isometry3d& pose) {
     g2o::VertexSE3* vertex(new g2o::VertexSE3());
@@ -199,7 +203,7 @@ g2o::EdgePointXYZ* GraphSLAM::add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* 
 //}
 
 bool GraphSLAM::optimize() {
-    if(graph->edges().size() < 10) {
+    if(graph->edges().size() < 5) {
         return false;
     }
 
@@ -221,45 +225,43 @@ bool GraphSLAM::optimize() {
 
     auto t2 = ros::Time::now();
 
+    std::vector<std::pair<int, int> > blockIndices;
+    for (size_t i=0; i<graph->activeVertices().size(); i++){
+        g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
+        if (v->hessianIndex()>=0){
+            blockIndices.push_back(std::make_pair(v->hessianIndex(), v->hessianIndex()));
+        }
+        if (v->hessianIndex()>0){
+            blockIndices.push_back(std::make_pair(v->hessianIndex()-1, v->hessianIndex()));
+        }
+    }
 
-    //    std::vector<std::pair<int, int> > blockIndices;
-    //    for (size_t i=0; i<graph->activeVertices().size(); i++){
-    //        g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
-    //        if (v->hessianIndex()>=0){
-    //            blockIndices.push_back(std::make_pair(v->hessianIndex(), v->hessianIndex()));
-    //        }
-    //        if (v->hessianIndex()>0){
-    //            blockIndices.push_back(std::make_pair(v->hessianIndex()-1, v->hessianIndex()));
-    //        }
-    //    }
+    std::cout << "here 1 " << std::endl;
 
-    //    std::cout << "here 1 " << std::endl;
-
-    //    g2o::SparseBlockMatrix<Eigen::MatrixXd> spinv;
-    //    if (graph->computeMarginals(spinv, blockIndices)) {
-    //        for (size_t i=0; i<graph->activeVertices().size(); i++){
-    //            g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
-    //            std::cerr << "Vertex id:" << v->id() << std::endl;
-    //            if (v->hessianIndex()>=0){
-    //                std::cerr << "inv block :" << v->hessianIndex() << ", " << v->hessianIndex()<< std::endl;
-    //                std::cerr << *(spinv.block(v->hessianIndex(), v->hessianIndex()));
-    //                std::cerr << std::endl;
-    //            }
-    //            if (v->hessianIndex()>0){
-    //                std::cerr << "inv block :" << v->hessianIndex()-1 << ", " << v->hessianIndex()<< std::endl;
-    //                std::cerr << *(spinv.block(v->hessianIndex()-1, v->hessianIndex()));
-    //                std::cerr << std::endl;
-    //            }
-    //        }
-    //    }
-
-
-    return true;
+    g2o::SparseBlockMatrix<Eigen::MatrixXd> spinv;
+    if (graph->computeMarginals(spinv, blockIndices)) {
+        for (size_t i=0; i<graph->activeVertices().size(); i++){
+            g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
+            std::cerr << "Vertex id:" << v->id() << std::endl;
+            if (v->hessianIndex()>=0){
+                std::cerr << "inv block :" << v->hessianIndex() << ", " << v->hessianIndex()<< std::endl;
+                std::cerr << *(spinv.block(v->hessianIndex(), v->hessianIndex()));
+                std::cerr << std::endl;
+            }
+            if (v->hessianIndex()>0){
+                std::cerr << "inv block :" << v->hessianIndex()-1 << ", " << v->hessianIndex()<< std::endl;
+                std::cerr << *(spinv.block(v->hessianIndex()-1, v->hessianIndex()));
+                std::cerr << std::endl;
+            }
+        }
+    }
 
     //std::cout << "done" << std::endl;
     //std::cout << "iterations: " << iterations << std::endl;
     //std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
     //std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+
+    return true;
 }
 
 bool GraphSLAM::computePoseMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>& spinv,
@@ -291,6 +293,7 @@ bool GraphSLAM::computeLandmarkMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>
 {
     if(land_vert->hessianIndex() >= 0 )
     {
+        land_vert->unlockQuadraticForm();
         std::vector<std::pair<int, int> > vert_pairs_vec;
         std::cout << "vert hessian index greater than zero " << std::endl;
         vert_pairs_vec.push_back(std::make_pair(land_vert->hessianIndex(), land_vert->hessianIndex()));

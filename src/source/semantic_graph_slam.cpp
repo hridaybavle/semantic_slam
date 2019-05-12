@@ -1,26 +1,4 @@
 #include "semantic_graph_slam.h"
-#include <g2o/stuff/macros.h>
-#include <g2o/core/factory.h>
-#include <g2o/core/block_solver.h>
-#include <g2o/core/linear_solver.h>
-#include <g2o/core/sparse_optimizer.h>
-#include <g2o/core/optimization_algorithm_factory.h>
-#include <g2o/solvers/cholmod/linear_solver_cholmod.h>
-#include <g2o/solvers/pcg/linear_solver_pcg.h>
-#include <g2o/core/block_solver.h>
-#include <g2o/core/solver.h>
-#include <g2o/types/slam3d/types_slam3d.h>
-#include <g2o/types/slam3d/edge_se3_pointxyz.h>
-#include <g2o/types/slam3d_addons/types_slam3d_addons.h>
-#include <g2o/core/robust_kernel.h>
-#include <g2o/core/robust_kernel_factory.h>
-#include <g2o/core/robust_kernel_impl.h>
-#include <g2o/core/marginal_covariance_cholesky.h>
-#include <g2o/core/optimization_algorithm_gauss_newton.h>
-#include <g2o/solvers/eigen/linear_solver_eigen.h>
-#include <g2o/solvers/dense/linear_solver_dense.h>
-#include <g2o/core/optimization_algorithm_levenberg.h>
-#include <g2o/solvers/csparse/linear_solver_csparse.h>
 
 semantic_graph_slam::semantic_graph_slam()
 //    : sync(SyncPolicy(10))
@@ -55,17 +33,19 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     odom_increments_            = 10;
 
     cam_angle_ = 0;
-}
 
-void semantic_graph_slam::run()
-{
     //this is test run
     //    if(!counter_)
     //    {
     //        //this->add_odom_increments();
-    //        this->add_odom_position_increments();
+    //        this->add_odom_pose_increments();
     //        counter_ = true;
     //    }
+
+}
+
+void semantic_graph_slam::run()
+{
 
     //add keyframe nodes to graph if keyframes available
     if(flush_keyframe_queue())
@@ -100,7 +80,7 @@ void semantic_graph_slam::run()
         {
             std::cout << "optimizing the graph " << std::endl;
             //get and set the landmark covariances
-            this->getAndSetLandmarkCov();
+            //this->getAndSetLandmarkCov();
         }
 
         //getting the optimized pose
@@ -294,7 +274,8 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
-        Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
+        Eigen::MatrixXd information; //= inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
+        information.setIdentity(6,6);
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -623,41 +604,42 @@ void semantic_graph_slam::saveGraph()
 }
 
 
-//void semantic_graph_slam::add_odom_pose_increments()
-//{
+void semantic_graph_slam::add_odom_pose_increments()
+{
 
-//    Eigen::Isometry3d odom_iso;
-//    Eigen::Quaterniond quat; quat.setIdentity();
+    Eigen::Isometry3d odom_iso;
+    Eigen::Quaterniond quat; quat.setIdentity();
 
-//    odom_iso.linear() = quat.toRotationMatrix();
-//    double x,y,z;
-//    x=y=z=0;
+    odom_iso.linear() = quat.toRotationMatrix();
+    double x,y,z;
+    x=y=z=0;
 
-//    g2o::VertexSE3* prev_node;
-//    for(int i= 0; i < odom_increments_; ++i)
-//    {
+    g2o::VertexSE3* prev_node;
+    for(int i= 0; i < odom_increments_; ++i)
+    {
 
-//        g2o::VertexSE3* node;
-//        //adding odom measurements to the graph
-//        odom_iso.translation() = Eigen::Vector3d(x+2*i, y, z);
-//        node = graph_slam_->add_se3_node(odom_iso);
+        g2o::VertexSE3* node;
+        //adding odom measurements to the graph
+        odom_iso.translation() = Eigen::Vector3d(2*i, y, z);
+        node = graph_slam_->add_se3_node(odom_iso);
 
-//        if(i >0)
-//        {
-//            Eigen::Matrix3d information; information.setIdentity(6,6);
-//            Eigen::Isometry3d rel_pose;
-//            rel_pose.linear() = quat.toRotationMatrix();
-//            rel_pose.translation() = Eigen::Vector3d(2, 0, 0);
-//            graph_slam_->add_se3_edge(prev_node, node, rel_pose, information);
-//        }
 
-//        prev_node = node;
+        if(i >0)
+        {
+            Eigen::Matrix3d information; information.setIdentity(6,6);
+            Eigen::Isometry3d rel_pose;
+            rel_pose.linear() = quat.toRotationMatrix();
+            rel_pose.translation() = Eigen::Vector3d(2, 0, 0);
+            g2o::EdgeSE3* edge = graph_slam_->add_se3_edge(prev_node, node, rel_pose, information);
+        }
 
-//    }
+        prev_node = node;
 
-//    graph_slam_->optimize();
-//    std::cout << "optimized graph " << std::endl;
-//}
+    }
+
+    graph_slam_->optimize();
+    std::cout << "optimized graph " << std::endl;
+}
 
 //void semantic_graph_slam::add_odom_position_increments()
 //{

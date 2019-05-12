@@ -5,6 +5,7 @@ project(${PROJECT_NAME})
 
 add_definitions(-std=c++14 -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2)
 set(CMAKE_CXX_FLAGS "-std=c++14 -msse -msse2 -msse3 -msse4 -msse4.1 -msse4.2")
+#set(CMAKE_CXX_FLAGS "-std=c++14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 
@@ -47,7 +48,7 @@ find_package(PCL 1.7 REQUIRED
     COMPONENTS common io sample_consensus segmentation filters)
 
 find_package(G2O REQUIRED)
-include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIR} ${G2O_INCLUDE_DIRS})
+include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIR})
 link_directories(${G2O_LIBRARY_DIRS})
 
 FIND_PACKAGE(Cholmod)
@@ -117,16 +118,7 @@ add_dependencies(SEMANTIC_SLAM ${catkin_EXPORTED_TARGETS})
 target_link_libraries(SEMANTIC_SLAM ${catkin_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${EIGEN3_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
-target_link_libraries(SEMANTIC_SLAM ${G2O_TYPES_DATA}
-		${G2O_LIBS}
-    ${G2O_CORE_LIBRARY}
-    ${G2O_STUFF_LIBRARY}
-    ${G2O_SOLVER_PCG}
-    ${G2O_SOLVER_CSPARSE}
-    ${G2O_TYPES_SLAM3D}
-    ${G2O_TYPES_SLAM3D_ADDONS}
-		${CHOLMOD_LIBRARIES}
-		g2o_csparse_extension)
+target_link_libraries(SEMANTIC_SLAM ${G2O_LIBS})
 
 add_executable(${PROJECT_NAME}_node src/test/semantic_SLAM_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
