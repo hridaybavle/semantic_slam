@@ -65,7 +65,8 @@ public:
     ~semantic_graph_slam();
 
 public:
-    data_association data_ass_obj_;
+    point_cloud_segmentation pc_seg_obj_;
+    std::unique_ptr<data_association> data_ass_obj_;
 
 public:
     void run();
@@ -102,14 +103,18 @@ protected:
     //subscribers
 protected:
     ros::Subscriber rvio_odom_pose_sub_;
+    ros::Subscriber snap_odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
+    ros::Subscriber simple_detected_object_sub_;
     ros::Subscriber optitrack_pose_sub_;
 
 protected:
-    void VIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
+    void rovioVIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
+    void snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
+    void detectedObjectSimpleCallback(const semantic_SLAM::DetectedObjects& msg);
     void optitrackPoseCallback(const nav_msgs::Odometry& msg);
 
     //publishers
@@ -133,6 +138,9 @@ protected:
 
 private:
     //odom related
+    void VIOCallback(const ros::Time& stamp,
+                     Eigen::Isometry3d odom,
+                     Eigen::MatrixXf odom_cov);
     bool first_key_added_;
     Eigen::Isometry3d prev_odom_, vio_pose_;
     std::vector<geometry_msgs::PoseStamped> vio_pose_vec_;

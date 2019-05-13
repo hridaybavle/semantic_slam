@@ -15,6 +15,7 @@ semantic_graph_slam::~semantic_graph_slam()
 
 void semantic_graph_slam::init(ros::NodeHandle n)
 {
+    data_ass_obj_.reset(new data_association(n));
     keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
     graph_slam_.reset(new hdl_graph_slam::GraphSLAM());
     inf_calclator_.reset(new hdl_graph_slam::InformationMatrixCalculator(n));
@@ -32,7 +33,10 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     max_keyframes_per_update_   = 10;
     odom_increments_            = 10;
 
-    cam_angle_ = 0;
+    ros::param::get("~camera_angle", cam_angle_);
+    if(cam_angle_ < 0)
+        cam_angle_ = 0;
+    std::cout << "camera angle " <<  cam_angle_ << std::endl;
 
     //this is test run
     //    if(!counter_)
@@ -86,9 +90,9 @@ void semantic_graph_slam::run()
             const auto& keyframe = keyframes_.back();
 
             robot_pose_ = keyframe->node->estimate();
-            first_key_added_ = true;
 
         }
+        first_key_added_ = true;
         publishLandmarks();
         publishKeyframePoses();
     }
@@ -112,10 +116,12 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     //    sync.registerCallback(boost::bind(&semantic_graph_slam::synMsgsCallback, this, _1, _2, _3));
 
     //subscribers
-    rvio_odom_pose_sub_     = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam::VIOCallback, this);
-    cloud_sub_              = n.subscribe("/depth_registered/points",1,&semantic_graph_slam::PointCloudCallback, this);
-    detected_object_sub_    = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam::detectedObjectDarknetCallback, this);
-    optitrack_pose_sub_     = n.subscribe("/vrpn_client_node/realsense/pose",1,&semantic_graph_slam::optitrackPoseCallback, this);
+    rvio_odom_pose_sub_         = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam::rovioVIOCallback, this);
+    snap_odom_pose_sub_         = n.subscribe("/SQ04/snap_vislam/vislam/pose", 1, &semantic_graph_slam::snapVIOCallback, this);
+    cloud_sub_                  = n.subscribe("/depth_registered/points",1,&semantic_graph_slam::PointCloudCallback, this);
+    detected_object_sub_        = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam::detectedObjectDarknetCallback, this);
+    simple_detected_object_sub_ = n.subscribe("/image_processed/bounding_boxes",1, &semantic_graph_slam::detectedObjectSimpleCallback, this);
+    optitrack_pose_sub_         = n.subscribe("/vrpn_client_node/realsense/pose",1,&semantic_graph_slam::optitrackPoseCallback, this);
 
     //publishers
     keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
@@ -125,8 +131,8 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     keyframe_path_pub_      = n.advertise<nav_msgs::Path>("robot_path",1);
     optitrack_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_     = n.advertise<nav_msgs::Path>("optitrack_path",1);
-    corres_vio_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
-    corres_vio_path_         = n.advertise<nav_msgs::Path>("corres_vo_path",1);
+    corres_vio_pose_pub_    = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    corres_vio_path_        = n.advertise<nav_msgs::Path>("corres_vo_path",1);
 
 }
 
@@ -138,7 +144,7 @@ void semantic_graph_slam::open(ros::NodeHandle n)
 
 //}
 
-void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
+void semantic_graph_slam::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
 
 
@@ -146,7 +152,28 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     Eigen::Isometry3d odom      = hdl_graph_slam::odom2isometry(odom_msg);
     Eigen::MatrixXf odom_cov    = hdl_graph_slam::arrayToMatrix(odom_msg);
 
+    this->VIOCallback(stamp, odom, odom_cov);
 
+    return;
+}
+
+void semantic_graph_slam::snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg)
+{
+
+    const ros::Time& stamp                  = pose_msg.header.stamp;
+    geometry_msgs::PoseStamped pose_enu     = hdl_graph_slam::poseNED2ENU(pose_msg);
+    Eigen::Isometry3d odom                  = hdl_graph_slam::pose2isometry(pose_enu);
+    Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //snap dragon pose doesnt have covariance
+
+    this->VIOCallback(stamp, odom, odom_cov);
+
+    return;
+}
+
+void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
+                                      Eigen::Isometry3d odom,
+                                      Eigen::MatrixXf odom_cov)
+{
     //dont update keyframes if the keyframe time and distance or is less or no detection is available
     if(!keyframe_updater_->update(odom, stamp) /*&& !object_detection_available_*/)
     {
@@ -182,7 +209,9 @@ void semantic_graph_slam::VIOCallback(const nav_msgs::Odometry::ConstPtr &odom_m
     this->setVIOPose(odom);
     prev_odom_ = odom;
 
+
     return;
+
 }
 
 void semantic_graph_slam::setVIOPose(Eigen::Isometry3d vio_pose)
@@ -228,6 +257,26 @@ void semantic_graph_slam::detectedObjectDarknetCallback(const darknet_ros_msgs::
     }
 
     this->setDetectedObjectInfo(object_info);
+}
+
+void semantic_graph_slam::detectedObjectSimpleCallback(const semantic_SLAM::DetectedObjects &msg)
+{
+    //std::cout << "objects size " << msg.objects.size() << std::endl;
+    std::vector<semantic_SLAM::ObjectInfo>  object_info;
+    object_info.resize(msg.objects.size());
+
+    for(int i =0; i < msg.objects.size(); ++i)
+    {
+        object_info[i].type   = msg.objects[i].type;
+        object_info[i].tl_x   = msg.objects[i].tl_x;
+        object_info[i].tl_y   = msg.objects[i].tl_y;
+        object_info[i].height = msg.objects[i].height;
+        object_info[i].width  = msg.objects[i].width;
+        object_info[i].prob   = msg.objects[i].prob;
+    }
+
+    this->setDetectedObjectInfo(object_info);
+
 }
 
 void semantic_graph_slam::setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info)
@@ -294,16 +343,16 @@ std::vector<landmark> semantic_graph_slam::semantic_data_ass(const hdl_graph_sla
     std::cout << "current robot pose " << current_robot_pose << std::endl;
 
 
-    std::vector<detected_object> seg_obj_vec = point_cloud_segmentation::segmentallPointCloudData(current_robot_pose,
-                                                                                                  cam_angle_,
-                                                                                                  object_info,
-                                                                                                  point_cloud_msg);
+    std::vector<detected_object> seg_obj_vec = pc_seg_obj_.segmentallPointCloudData(current_robot_pose,
+                                                                                    cam_angle_,
+                                                                                    object_info,
+                                                                                    point_cloud_msg);
     std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
 
 
-    std::vector<landmark> current_landmarks_vec = data_ass_obj_.find_matches(seg_obj_vec,
-                                                                             current_robot_pose,
-                                                                             cam_angle_);
+    std::vector<landmark> current_landmarks_vec = data_ass_obj_->find_matches(seg_obj_vec,
+                                                                              current_robot_pose,
+                                                                              cam_angle_);
 
     std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
     this->publishDetectedLandmarks(current_robot_pose, seg_obj_vec);
@@ -326,7 +375,7 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
         {
             current_lan_queue[i].node = graph_slam_->add_point_xyz_node(current_lan_queue[i].pose.cast<double>());
             current_lan_queue[i].is_new_landmark = false;
-            data_ass_obj_.assignLandmarkNode(current_lan_queue[i].id, current_lan_queue[i].node);
+            data_ass_obj_->assignLandmarkNode(current_lan_queue[i].id, current_lan_queue[i].node);
             std::cout << "added the landmark position node " << std::endl;
         }
 
@@ -341,7 +390,7 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
 void semantic_graph_slam::getAndSetLandmarkCov()
 {
     std::vector<landmark> l;
-    data_ass_obj_.getMappedLandmarks(l);
+    data_ass_obj_->getMappedLandmarks(l);
     g2o::SparseBlockMatrix<Eigen::MatrixXd> lan_spinv_vec;
 
     std::vector<std::pair<int, int> > vert_pairs_vec;
@@ -365,7 +414,7 @@ void semantic_graph_slam::publishLandmarks()
     visualization_msgs::MarkerArray marker_arrays;
     int marker_id = 0;
     std::vector<landmark> l_vec;
-    data_ass_obj_.getMappedLandmarks(l_vec);
+    data_ass_obj_->getMappedLandmarks(l_vec);
 
     for(int i=0; i < l_vec.size(); ++i)
     {

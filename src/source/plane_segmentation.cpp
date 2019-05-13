@@ -93,10 +93,10 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     normal_cloud->clear();
 
 
-    if(point_cloud->points.size() < 5000)
-    {
-        return normal_cloud;
-    }
+    //    if(point_cloud->points.size() < 5000)
+    //    {
+    //        return normal_cloud;
+    //    }
 
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;

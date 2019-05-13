@@ -1,4 +1,4 @@
-#ifndef ROS_UTILS_HPP
+﻿#ifndef ROS_UTILS_HPP
 #define ROS_UTILS_HPP
 
 #include <Eigen/Dense>
@@ -116,6 +116,64 @@ static Eigen::Isometry3d odom2isometry(const nav_msgs::OdometryConstPtr& odom_ms
     return isometry;
 }
 
+static Eigen::Isometry3d pose2isometry(const geometry_msgs::PoseStamped& pose_msg) {
+    const auto& orientation = pose_msg.pose.orientation;
+    const auto& position = pose_msg.pose.position;
+
+    Eigen::Quaterniond quat;
+    quat.w() = orientation.w;
+    quat.x() = orientation.x;
+    quat.y() = orientation.y;
+    quat.z() = orientation.z;
+
+    Eigen::Isometry3d isometry = Eigen::Isometry3d::Identity();
+    isometry.linear() = quat.toRotationMatrix();
+    isometry.translation() = Eigen::Vector3d(position.x, position.y, position.z);
+
+    return isometry;
+}
+
+static geometry_msgs::PoseStamped poseNED2ENU(const geometry_msgs::PoseStamped& pose_msg) {
+
+
+    //converting quaternions to euler angles
+    tf::Quaternion quat_ned(pose_msg.pose.orientation.x, pose_msg.pose.orientation.y, pose_msg.pose.orientation.z, pose_msg.pose.orientation.w);
+    tf::Matrix3x3  m(quat_ned);
+
+    double yaw, pitch, roll;
+    m.getEulerYPR(yaw, pitch, roll);
+
+    Eigen::Matrix3f trans_mat;
+    trans_mat << 1, 0, 0,
+            0, cos(-3.14), sin(-3.14),
+            0, sin(-3.14), cos(-3.14);
+
+    Eigen::Vector3f angle_ned;
+    angle_ned << roll, pitch, yaw;
+
+    Eigen::Vector3f angle_enu = trans_mat * angle_ned;
+    tf::Quaternion quat_enu = tf::createQuaternionFromRPY(angle_enu(0),angle_enu(1),angle_enu(2));
+
+    //converting the translations
+    Eigen::Vector3f trans_ned;
+    trans_ned << pose_msg.pose.position.x,
+            pose_msg.pose.position.y,
+            pose_msg.pose.position.z;
+
+    Eigen::Vector3f trans_enu = trans_mat * trans_ned;
+
+    geometry_msgs::PoseStamped pose_converted ;
+    pose_converted.pose.position.x    = trans_enu(0);
+    pose_converted.pose.position.y    = trans_enu(1);
+    pose_converted.pose.position.z    = trans_enu(2);
+    pose_converted.pose.orientation.x = quat_enu.x();
+    pose_converted.pose.orientation.y = quat_enu.y();
+    pose_converted.pose.orientation.z = quat_enu.z();
+    pose_converted.pose.orientation.w = quat_enu.w();
+
+    return pose_converted;
+}
+
 static Eigen::MatrixXf arrayToMatrix(const nav_msgs::OdometryConstPtr& odom_msg) {
 
     Eigen::MatrixXf odom_cov; odom_cov.resize(6,6);
@@ -132,7 +190,6 @@ static Eigen::MatrixXf arrayToMatrix(const nav_msgs::OdometryConstPtr& odom_msg)
     return odom_cov;
 
 }
-
 
 }
 

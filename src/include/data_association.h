@@ -1,6 +1,8 @@
 #ifndef DATA_ASSOCIATION
 #define DATA_ASSOCIATION
 
+#include "ros/ros.h"
+
 #include <iostream>
 #include <string>
 #include <math.h>
@@ -17,11 +19,12 @@
 class data_association {
 
 public:
-    data_association()
+    data_association(ros::NodeHandle n)
     {
         std::cout << "data association constructor " << std::endl;
 
-        init();
+
+        init(n);
 
     }
     ~data_association()
@@ -37,7 +40,7 @@ private:
     float MAHA_DIST_THRESHOLD;
     semantic_tools sem_tool_obj_;
 
-    void init()
+    void init(ros::NodeHandle n)
     {
         first_object_ = true;
         landmarks_.clear();
@@ -46,7 +49,14 @@ private:
         Q_(1,1) = 0.9;
         Q_(2,2) = 0.9;
 
-        MAHA_DIST_THRESHOLD = 0.5;
+
+        ros::param::get("~maha_dist", MAHA_DIST_THRESHOLD);
+        if(MAHA_DIST_THRESHOLD == 0)
+            MAHA_DIST_THRESHOLD = 0.5;
+        std::cout << "Maha Distance " <<  MAHA_DIST_THRESHOLD << std::endl;
+
+        //MAHA_DIST_THRESHOLD = 0.5;
+
     }
 
 
