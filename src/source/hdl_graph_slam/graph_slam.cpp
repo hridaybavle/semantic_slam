@@ -25,7 +25,7 @@
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 
-//G2O_USE_OPTIMIZATION_LIBRARY(csparse)
+G2O_USE_OPTIMIZATION_LIBRARY(csparse)
 
 namespace g2o {
 //G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
@@ -44,14 +44,14 @@ GraphSLAM::GraphSLAM() {
 
     std::cout << "construct solver... " << std::endl;
 
-    typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1> > BlockSolver_3_3;
-    BlockSolver_3_3::LinearSolverType* linearSolver
-            = new g2o::LinearSolverCSparse<BlockSolver_3_3::PoseMatrixType>();
-    BlockSolver_3_3* blockSolver
-            = new BlockSolver_3_3(linearSolver);
-    g2o::OptimizationAlgorithmGaussNewton* solver
-            = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
-    graph->setAlgorithm(solver);
+    //    typedef g2o::BlockSolver<g2o::BlockSolverTraits<-1, -1> > BlockSolver_3_3;
+    //    BlockSolver_3_3::LinearSolverType* linearSolver
+    //            = new g2o::LinearSolverCSparse<BlockSolver_3_3::PoseMatrixType>();
+    //    BlockSolver_3_3* blockSolver
+    //            = new BlockSolver_3_3(linearSolver);
+    //    g2o::OptimizationAlgorithmGaussNewton* solver
+    //            = new g2o::OptimizationAlgorithmGaussNewton(blockSolver);
+    //    graph->setAlgorithm(solver);
 
     // Create the block solver - the dimensions are specified because
     // 3D observations marginalise to a 6D estimate
@@ -60,11 +60,11 @@ GraphSLAM::GraphSLAM() {
     //    g2o::OptimizationAlgorithmLevenberg * solver = new g2o::OptimizationAlgorithmLevenberg(std::move(solver_ptr));
     //    graph->setAlgorithm(solver);
 
-    //    std::string g2o_solver_name = "lm_var";
-    //    g2o::OptimizationAlgorithmFactory* solver_factory = g2o::OptimizationAlgorithmFactory::instance();
-    //    g2o::OptimizationAlgorithmProperty solver_property;
-    //    g2o::OptimizationAlgorithm* solver = solver_factory->construct(g2o_solver_name, solver_property);
-    //    graph->setAlgorithm(solver);
+    std::string g2o_solver_name = "lm_var";
+    g2o::OptimizationAlgorithmFactory* solver_factory = g2o::OptimizationAlgorithmFactory::instance();
+    g2o::OptimizationAlgorithmProperty solver_property;
+    g2o::OptimizationAlgorithm* solver = solver_factory->construct(g2o_solver_name, solver_property);
+    graph->setAlgorithm(solver);
 
     g2o::ParameterSE3Offset* cameraOffset (new g2o::ParameterSE3Offset);
     Eigen::Quaterniond quat; quat.setIdentity();
@@ -203,7 +203,7 @@ g2o::EdgePointXYZ* GraphSLAM::add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* 
 //}
 
 bool GraphSLAM::optimize() {
-    if(graph->edges().size() < 5) {
+    if(graph->edges().size() < 10) {
         return false;
     }
 
@@ -225,37 +225,6 @@ bool GraphSLAM::optimize() {
 
     auto t2 = ros::Time::now();
 
-    std::vector<std::pair<int, int> > blockIndices;
-    for (size_t i=0; i<graph->activeVertices().size(); i++){
-        g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
-        if (v->hessianIndex()>=0){
-            blockIndices.push_back(std::make_pair(v->hessianIndex(), v->hessianIndex()));
-        }
-        if (v->hessianIndex()>0){
-            blockIndices.push_back(std::make_pair(v->hessianIndex()-1, v->hessianIndex()));
-        }
-    }
-
-    std::cout << "here 1 " << std::endl;
-
-    g2o::SparseBlockMatrix<Eigen::MatrixXd> spinv;
-    if (graph->computeMarginals(spinv, blockIndices)) {
-        for (size_t i=0; i<graph->activeVertices().size(); i++){
-            g2o::OptimizableGraph::Vertex* v=graph->activeVertices()[i];
-            std::cerr << "Vertex id:" << v->id() << std::endl;
-            if (v->hessianIndex()>=0){
-                std::cerr << "inv block :" << v->hessianIndex() << ", " << v->hessianIndex()<< std::endl;
-                std::cerr << *(spinv.block(v->hessianIndex(), v->hessianIndex()));
-                std::cerr << std::endl;
-            }
-            if (v->hessianIndex()>0){
-                std::cerr << "inv block :" << v->hessianIndex()-1 << ", " << v->hessianIndex()<< std::endl;
-                std::cerr << *(spinv.block(v->hessianIndex()-1, v->hessianIndex()));
-                std::cerr << std::endl;
-            }
-        }
-    }
-
     //std::cout << "done" << std::endl;
     //std::cout << "iterations: " << iterations << std::endl;
     //std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
@@ -264,50 +233,21 @@ bool GraphSLAM::optimize() {
     return true;
 }
 
-bool GraphSLAM::computePoseMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>& spinv,
-                                     g2o::VertexSE3 *pose_vert)
-{
-    if(pose_vert->hessianIndex() >= 0 )
-    {
-
-        std::vector<std::pair<int, int> > vert_pairs_vec;
-        std::cout << "vert hessian index greater than zero " << std::endl;
-        vert_pairs_vec.push_back(std::make_pair(pose_vert->hessianIndex(), pose_vert->hessianIndex()));
-
-
-        if(graph->computeMarginals(spinv, vert_pairs_vec))
-            return true;
-        else
-            return false;
-    }
-    else
-    {
-        std::cout << "ver hessian index is less than zero " << std::endl;
-        return false;
-    }
-
-}
-
 bool GraphSLAM::computeLandmarkMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>& spinv,
-                                         g2o::VertexPointXYZ *land_vert)
+                                         std::vector<std::pair<int, int> > vert_pairs_vec)
 {
-    if(land_vert->hessianIndex() >= 0 )
-    {
-        land_vert->unlockQuadraticForm();
-        std::vector<std::pair<int, int> > vert_pairs_vec;
-        std::cout << "vert hessian index greater than zero " << std::endl;
-        vert_pairs_vec.push_back(std::make_pair(land_vert->hessianIndex(), land_vert->hessianIndex()));
 
-        if(graph->computeMarginals(spinv, vert_pairs_vec))
-            return true;
-        else
-            return false;
+    if(graph->computeMarginals(spinv, vert_pairs_vec))
+    {
+        std::cout << "computed marginals " << std::endl;
+        return true;
     }
     else
     {
-        std::cout << "ver hessian index is less than zero " << std::endl;
+        std::cout << "not computing marginals " << std::endl;
         return false;
     }
+
 
 }
 

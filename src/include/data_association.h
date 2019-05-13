@@ -46,7 +46,7 @@ private:
         Q_(1,1) = 0.9;
         Q_(2,2) = 0.9;
 
-        MAHA_DIST_THRESHOLD = 0.6;
+        MAHA_DIST_THRESHOLD = 0.5;
     }
 
 
@@ -220,6 +220,8 @@ public:
         new_landmark.id              = landmarks_.size();
         new_landmark.local_pose << obj_pose_rob(0), obj_pose_rob(1), obj_pose_rob(2);
         new_landmark.pose       << obj_pose_world(0), obj_pose_world(1), obj_pose_world(2);
+
+        std::cout << "segmented obj num points " << seg_obj_info.num_points << std::endl;
         new_landmark.covariance         = Q_;
         new_landmark.normal_orientation = obj_normals_world;
         new_landmark.plane_type         = seg_obj_info.plane_type;

@@ -80,15 +80,15 @@ void semantic_graph_slam::run()
         {
             std::cout << "optimizing the graph " << std::endl;
             //get and set the landmark covariances
-            //this->getAndSetLandmarkCov();
+            this->getAndSetLandmarkCov();
+
+            //getting the optimized pose
+            const auto& keyframe = keyframes_.back();
+
+            robot_pose_ = keyframe->node->estimate();
+            first_key_added_ = true;
+
         }
-
-        //getting the optimized pose
-        const auto& keyframe = keyframes_.back();
-
-        robot_pose_ = keyframe->node->estimate();
-        first_key_added_ = true;
-
         publishLandmarks();
         publishKeyframePoses();
     }
@@ -112,7 +112,7 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     //    sync.registerCallback(boost::bind(&semantic_graph_slam::synMsgsCallback, this, _1, _2, _3));
 
     //subscribers
-    odom_pose_sub_          = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam::VIOCallback, this);
+    rvio_odom_pose_sub_     = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam::VIOCallback, this);
     cloud_sub_              = n.subscribe("/depth_registered/points",1,&semantic_graph_slam::PointCloudCallback, this);
     detected_object_sub_    = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam::detectedObjectDarknetCallback, this);
     optitrack_pose_sub_     = n.subscribe("/vrpn_client_node/realsense/pose",1,&semantic_graph_slam::optitrackPoseCallback, this);
@@ -274,8 +274,7 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
-        Eigen::MatrixXd information; //= inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
-        information.setIdentity(6,6);
+        Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -341,32 +340,23 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
 
 void semantic_graph_slam::getAndSetLandmarkCov()
 {
-    //    g2o::SparseBlockMatrix<Eigen::MatrixXd> pose_spinv_vec;
-    //    for(int i =0; i < keyframes_.size(); ++i)
-    //    {
-
-    //        if(graph_slam_->computePoseMarginals((pose_spinv_vec),
-    //                                         keyframes_[i]->node))
-    //        {
-
-    //            std::cout << "spinv block " << pose_spinv_vec.block(0,0)->eval() << std::endl;
-    //        }
-    //    }
-
     std::vector<landmark> l;
     data_ass_obj_.getMappedLandmarks(l);
     g2o::SparseBlockMatrix<Eigen::MatrixXd> lan_spinv_vec;
 
-    for(int i = 0; i < l.size(); ++i)
+    std::vector<std::pair<int, int> > vert_pairs_vec;
+    for(int i= 0; i < l.size(); ++i)
     {
-        if(graph_slam_->computeLandmarkMarginals((lan_spinv_vec),
-                                                 l[i].node))
-        {
-
-            std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
-        }
+        l[i].node->unlockQuadraticForm();
+        vert_pairs_vec.push_back(std::make_pair(l[i].node->hessianIndex(), l[i].node->hessianIndex()));
     }
 
+    if(graph_slam_->computeLandmarkMarginals((lan_spinv_vec),
+                                             vert_pairs_vec))
+    {
+        for(int i = 0; i < l.size(); ++i)
+            std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
+    }
 }
 
 void semantic_graph_slam::publishLandmarks()

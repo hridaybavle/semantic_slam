@@ -115,16 +115,10 @@ public:
    */
     bool optimize();
 
-
-    /**
-   * @brief get the cov of the pose
-   */
-    bool computePoseMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd> &spinv, g2o::VertexSE3* pose_vert);
-
     /**
    * @brief get the cov of the landmarks
    */
-    bool computeLandmarkMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd> &spinv, g2o::VertexPointXYZ* land_vert);
+    bool computeLandmarkMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd> &spinv, std::vector<std::pair<int, int> > vert_pairs_vec);
 
     /**
    * @brief save the pose graph

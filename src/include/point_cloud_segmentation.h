@@ -58,6 +58,7 @@ std::vector<detected_object> segmentPlanarSurfaces(pcl::PointCloud<pcl::PointXYZ
 
             complete_obj_info.type                          = object_type;
             complete_obj_info.prob                          = prob;
+            complete_obj_info.num_points                    = planar_surf_vec[j].planar_points.size();
             complete_obj_info.pose(0)                       = final_detected_point_cam_frame(0);
             complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
             complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);

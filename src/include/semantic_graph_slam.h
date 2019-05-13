@@ -101,7 +101,7 @@ protected:
 
     //subscribers
 protected:
-    ros::Subscriber odom_pose_sub_;
+    ros::Subscriber rvio_odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
     ros::Subscriber optitrack_pose_sub_;
