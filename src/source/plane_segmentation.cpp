@@ -1,8 +1,8 @@
 ﻿#include "plane_segmentation.h"
 
-
-plane_segmentation::plane_segmentation()
+plane_segmentation::plane_segmentation(bool use_yolo)
 {
+    use_yolo_ = use_yolo;
     std::cout << "initialized plane segmentation " << std::endl;
 
 }
@@ -92,12 +92,13 @@ pcl::PointCloud<pcl::Normal>::Ptr plane_segmentation::computeNormalsFromPointClo
     pcl::PointCloud<pcl::Normal>::Ptr normal_cloud (new pcl::PointCloud<pcl::Normal>);
     normal_cloud->clear();
 
-
-    //    if(point_cloud->points.size() < 5000)
-    //    {
-    //        return normal_cloud;
-    //    }
-
+    if(use_yolo_)
+    {
+        if(point_cloud->points.size() < 5000)
+        {
+            return normal_cloud;
+        }
+    }
 
     pcl::IntegralImageNormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
     ne.setNormalEstimationMethod (ne.COVARIANCE_MATRIX);
@@ -142,10 +143,8 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
-    std::cout << "normals_of_the_horizontal_plane_in_cam " << normals_of_the_horizontal_plane_in_cam << std::endl;
-
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
-    mps.setMinInliers (500);
+    mps.setMinInliers (100);
     mps.setAngularThreshold (0.017453 * 2.0); // 2 degrees
     mps.setDistanceThreshold (0.02); // 2cm
     mps.setInputNormals (point_normal);

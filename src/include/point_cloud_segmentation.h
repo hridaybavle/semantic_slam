@@ -10,9 +10,12 @@
 
 class point_cloud_segmentation {
 
+public:
+    std::unique_ptr<plane_segmentation> plane_seg_obj;
 
 public:
-    point_cloud_segmentation(){
+    point_cloud_segmentation(bool use_yolo){
+        plane_seg_obj.reset(new plane_segmentation(use_yolo));
         std::cout << "pc segmentation constructor " << std::endl;
     }
 
@@ -20,8 +23,6 @@ public:
         std::cout << "pc segmentation destructor " << std::endl;
     }
 
-public:
-    plane_segmentation plane_seg_obj;
 
 public:
 
@@ -38,7 +39,7 @@ public:
         planar_surf_vec.clear();
 
         //ros::Time t1 = ros::Time::now();
-        planar_surf_vec = plane_seg_obj.multiPlaneSegmentation(segmented_point_cloud,
+        planar_surf_vec = plane_seg_obj->multiPlaneSegmentation(segmented_point_cloud,
                                                                segmented_point_cloud_normal,
                                                                inliers,
                                                                transformation_mat);
@@ -123,7 +124,7 @@ public:
                     || object_info[i].type == "keyboard" || object_info[i].type == "laptop" || object_info[i].type == "Bucket")
             {
                 plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;
-                single_segmented_object_from_point_cloud = plane_seg_obj.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
+                single_segmented_object_from_point_cloud = plane_seg_obj->segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
 
                 if(single_segmented_object_from_point_cloud.type != "spurious")
                     segmented_objects_from_point_cloud.push_back(single_segmented_object_from_point_cloud);
@@ -142,7 +143,7 @@ public:
 
                 //This calculates the normals of the segmented pointcloud
                 pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
-                segmented_point_cloud_normal = plane_seg_obj.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+                segmented_point_cloud_normal = plane_seg_obj->computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                                                           inliers);
 
                 if(segmented_point_cloud_normal->empty())

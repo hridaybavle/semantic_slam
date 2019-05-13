@@ -41,8 +41,9 @@ const int num_centroids_pose = 2;
 class plane_segmentation
 {
 public:
-    plane_segmentation();
+    plane_segmentation(bool use_yolo);
     ~plane_segmentation();
+    bool use_yolo_;
 
     struct segmented_objects {
         std::string type;

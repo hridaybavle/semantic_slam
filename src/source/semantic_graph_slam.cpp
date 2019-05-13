@@ -15,6 +15,31 @@ semantic_graph_slam::~semantic_graph_slam()
 
 void semantic_graph_slam::init(ros::NodeHandle n)
 {
+    //default values
+    object_detection_available_        = false;
+    point_cloud_available_             = false;
+    first_key_added_                   = false;
+    counter_                           = false;
+    update_keyframes_using_detections_ = false;
+    use_yolo_                          = true;
+    max_keyframes_per_update_   = 10;
+    odom_increments_            = 10;
+
+    //values from launch
+    ros::param::get("~camera_angle", cam_angle_);
+    if(cam_angle_ < 0)
+        cam_angle_ = 0;
+    cam_angle_ = cam_angle_ * (M_PI/180);
+    std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
+
+
+    ros::param::get("~update_key_using_det", update_keyframes_using_detections_);
+    ros::param::get("~use_yolo", use_yolo_);
+
+    std::cout << "update keyframe every detection " << update_keyframes_using_detections_<< std::endl;
+    std::cout << "use yolo " << use_yolo_ << std::endl;
+
+    pc_seg_obj_.reset(new point_cloud_segmentation(use_yolo_));
     data_ass_obj_.reset(new data_association(n));
     keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
     graph_slam_.reset(new hdl_graph_slam::GraphSLAM());
@@ -26,17 +51,6 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-    object_detection_available_ = false;
-    point_cloud_available_      = false;
-    first_key_added_            = false;
-    counter_                    = false;
-    max_keyframes_per_update_   = 10;
-    odom_increments_            = 10;
-
-    ros::param::get("~camera_angle", cam_angle_);
-    if(cam_angle_ < 0)
-        cam_angle_ = 0;
-    std::cout << "camera angle " <<  cam_angle_ << std::endl;
 
     //this is test run
     //    if(!counter_)
@@ -175,17 +189,35 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
                                       Eigen::MatrixXf odom_cov)
 {
     //dont update keyframes if the keyframe time and distance or is less or no detection is available
-    if(!keyframe_updater_->update(odom, stamp) /*&& !object_detection_available_*/)
+    if(update_keyframes_using_detections_)
     {
-        if(first_key_added_)
+        if(!keyframe_updater_->update(odom, stamp) && !object_detection_available_ )
         {
-            Eigen::Isometry3d pose_inc = prev_odom_.inverse() * odom;
-            robot_pose_ = robot_pose_ * pose_inc;
-        }
+            if(first_key_added_)
+            {
+                Eigen::Isometry3d pose_inc = prev_odom_.inverse() * odom;
+                robot_pose_ = robot_pose_ * pose_inc;
+            }
 
-        this->setVIOPose(odom);
-        prev_odom_ = odom;
-        return;
+            this->setVIOPose(odom);
+            prev_odom_ = odom;
+            return;
+        }
+    }
+    else
+    {
+        if(!keyframe_updater_->update(odom, stamp))
+        {
+            if(first_key_added_)
+            {
+                Eigen::Isometry3d pose_inc = prev_odom_.inverse() * odom;
+                robot_pose_ = robot_pose_ * pose_inc;
+            }
+
+            this->setVIOPose(odom);
+            prev_odom_ = odom;
+            return;
+        }
     }
 
     sensor_msgs::PointCloud2 cloud_msg;
@@ -343,10 +375,10 @@ std::vector<landmark> semantic_graph_slam::semantic_data_ass(const hdl_graph_sla
     std::cout << "current robot pose " << current_robot_pose << std::endl;
 
 
-    std::vector<detected_object> seg_obj_vec = pc_seg_obj_.segmentallPointCloudData(current_robot_pose,
-                                                                                    cam_angle_,
-                                                                                    object_info,
-                                                                                    point_cloud_msg);
+    std::vector<detected_object> seg_obj_vec = pc_seg_obj_->segmentallPointCloudData(current_robot_pose,
+                                                                                     cam_angle_,
+                                                                                     object_info,
+                                                                                     point_cloud_msg);
     std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
 
 

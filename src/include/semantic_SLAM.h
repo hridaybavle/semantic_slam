@@ -91,7 +91,7 @@ private:
     particle_filter particle_filter_obj_;
 
     //point cloud segmentation class object
-    plane_segmentation plane_segmentation_obj_;
+    std::shared_ptr<plane_segmentation> plane_segmentation_obj_;
 
     //tools for pose conversions
     semantic_tools semantic_tools_obj_;

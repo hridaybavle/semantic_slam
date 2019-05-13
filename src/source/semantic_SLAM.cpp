@@ -1,7 +1,7 @@
 #include "semantic_SLAM.h"
 
 semantic_slam_ros::semantic_slam_ros()
-// : pclViewer (new pcl::visualization::PCLVisualizer ("Point cloud segmented"))
+    // : pclViewer (new pcl::visualization::PCLVisualizer ("Point cloud segmented"))
 {
     std::cout << "semantic SLAM constructor " << std::endl;
 }
@@ -33,6 +33,10 @@ void semantic_slam_ros::readGroundTruthPoint()
 
 void semantic_slam_ros::init()
 {
+
+    bool use_yolo = true;
+    plane_segmentation_obj_.reset(new plane_segmentation(use_yolo));
+
     imu_data_available_ = false, object_detection_available_ = false, point_cloud_available_ = false;
     rvio_pose_available_ = false, imu_first_yaw_ = false;
 
@@ -483,7 +487,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
                 || object_info[i].type == "keyboard" || object_info[i].type == "laptop" || object_info[i].type == "Bucket")
         {
             plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;
-            single_segmented_object_from_point_cloud = plane_segmentation_obj_.segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
+            single_segmented_object_from_point_cloud = plane_segmentation_obj_->segmentPointCloudData(object_info[i], point_cloud, segmented_point_cloud);
 
             if(single_segmented_object_from_point_cloud.type != "spurious")
                 segmented_objects_from_point_cloud.push_back(single_segmented_object_from_point_cloud);
@@ -502,7 +506,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
 
             //This calculates the normals of the segmented pointcloud
             pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
-            segmented_point_cloud_normal = plane_segmentation_obj_.computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
+            segmented_point_cloud_normal = plane_segmentation_obj_->computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
                                                                                                 inliers);
 
             if(segmented_point_cloud_normal->empty())
@@ -554,7 +558,7 @@ std::vector<particle_filter::all_object_info_struct_pf> semantic_slam_ros::segme
     planar_surf_vec.clear();
 
     //ros::Time t1 = ros::Time::now();
-    planar_surf_vec = plane_segmentation_obj_.multiPlaneSegmentation(segmented_point_cloud,
+    planar_surf_vec = plane_segmentation_obj_->multiPlaneSegmentation(segmented_point_cloud,
                                                                      segmented_point_cloud_normal,
                                                                      inliers,
                                                                      transformation_mat);

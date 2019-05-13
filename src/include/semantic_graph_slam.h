@@ -65,7 +65,7 @@ public:
     ~semantic_graph_slam();
 
 public:
-    point_cloud_segmentation pc_seg_obj_;
+    std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
     std::unique_ptr<data_association> data_ass_obj_;
 
 public:
@@ -156,6 +156,8 @@ private:
 
 private:
     //detection related
+    bool update_keyframes_using_detections_;
+    bool use_yolo_;
     bool object_detection_available_;
     std::vector<semantic_SLAM::ObjectInfo> object_info_;
     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
