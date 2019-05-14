@@ -56,6 +56,12 @@
 //segmented pointcloud acc to detection
 #include "point_cloud_segmentation.h"
 
+//acl messages
+#include "acl_msgs/ViconState.h"
+
+const float optitrack_x_transform =  8.39;
+const float optitrack_y_transform = -0.26;
+const float optitrack_z_transform = -0.11;
 
 class semantic_graph_slam
 {
@@ -109,6 +115,7 @@ protected:
     ros::Subscriber detected_object_sub_;
     ros::Subscriber simple_detected_object_sub_;
     ros::Subscriber optitrack_pose_sub_;
+    ros::Subscriber vicon_pose_sub_;
 
 protected:
     void rovioVIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
@@ -117,6 +124,7 @@ protected:
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
     void detectedObjectSimpleCallback(const semantic_SLAM::DetectedObjects& msg);
     void optitrackPoseCallback(const nav_msgs::Odometry& msg);
+    void viconPoseSubCallback(const acl_msgs::ViconState& msg);
 
     //publishers
 protected:

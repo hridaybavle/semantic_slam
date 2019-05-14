@@ -105,7 +105,6 @@ g2o::VertexSE3* GraphSLAM::add_se3_node(const Eigen::Isometry3d& pose) {
     {
         vertex->setFixed(true);
     }
-
     graph->addVertex(vertex);
 
     return vertex;

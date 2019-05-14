@@ -32,7 +32,6 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     cam_angle_ = cam_angle_ * (M_PI/180);
     std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
 
-
     ros::param::get("~update_key_using_det", update_keyframes_using_detections_);
     ros::param::get("~use_yolo", use_yolo_);
 
@@ -136,6 +135,7 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     detected_object_sub_        = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam::detectedObjectDarknetCallback, this);
     simple_detected_object_sub_ = n.subscribe("/image_processed/bounding_boxes",1, &semantic_graph_slam::detectedObjectSimpleCallback, this);
     optitrack_pose_sub_         = n.subscribe("/vrpn_client_node/realsense/pose",1,&semantic_graph_slam::optitrackPoseCallback, this);
+    vicon_pose_sub_             = n.subscribe("/SQ04/vicon",1, &semantic_graph_slam::viconPoseSubCallback, this);
 
     //publishers
     keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
@@ -188,6 +188,7 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
                                       Eigen::Isometry3d odom,
                                       Eigen::MatrixXf odom_cov)
 {
+
     //dont update keyframes if the keyframe time and distance or is less or no detection is available
     if(update_keyframes_using_detections_)
     {
@@ -411,6 +412,7 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
 
         //add an edge between landmark and the current keyframe
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
+        std::cout << "landmark local pose " << current_lan_queue[i].local_pose.cast<double>() << std::endl;
         graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
         std::cout << "added an edge between the landmark and it keyframe " << std::endl;
     }
@@ -448,17 +450,15 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     first_landmark.pose << 1.8, 0, 0;
     first_landmark.local_pose = first_landmark.pose;
     first_landmark.normal_orientation << -0.4, 0.86, 0, 0;
+    first_landmark.covariance  << 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01;
 
     first_lan_vec.push_back(first_landmark);
     data_ass_obj_->addFirstLandmark(first_landmark);
 
     Eigen::Isometry3d odom;
-    odom.translation() = Eigen::Vector3d(0,0,0);
-    Eigen::Quaterniond quat;
-    quat.w() = 1;quat.x() = 0;quat.y() = 0;quat.z() = 0;
-    odom.linear() = quat.toRotationMatrix();
+    odom.setIdentity();
     Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6);
-    double accum_d = 0; pcl::PointCloud<pcl::PointXYZI>::ConstPtr cloud; sensor_msgs::PointCloud2 cloud_msg;
+    double accum_d = 0; pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>()); sensor_msgs::PointCloud2 cloud_msg;
     std::vector<semantic_SLAM::ObjectInfo> obj_info;
 
     hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud, cloud_msg, obj_info));
@@ -685,6 +685,32 @@ void semantic_graph_slam::optitrackPoseCallback(const nav_msgs::Odometry &msg)
     optitrack_path.header.frame_id = "map";
     optitrack_path.poses = optitrack_pose_vec_;
     optitrack_path_pub_.publish(optitrack_path);
+
+}
+
+void semantic_graph_slam::viconPoseSubCallback(const acl_msgs::ViconState &msg)
+{
+    geometry_msgs::PoseStamped vicon_pose;
+    vicon_pose.header.stamp = msg.header.stamp;
+    vicon_pose.header.frame_id = "map";
+
+
+    vicon_pose.pose.position.x = msg.pose.position.x + optitrack_x_transform;
+    vicon_pose.pose.position.y = msg.pose.position.y + optitrack_y_transform;
+    vicon_pose.pose.position.z = msg.pose.position.z + optitrack_z_transform;
+    vicon_pose.pose.orientation = msg.pose.orientation;
+
+    //vicon_pose.pose.position.x = cos(-0.15) * vicon_pose.pose.position.x   - sin(-0.15) * vicon_pose.pose.position.y;
+    //vicon_pose.pose.position.y = sin(-0.15) * vicon_pose.pose.position.x   + cos(-0.15) * vicon_pose.pose.position.y;
+
+    optitrack_pose_pub_.publish(vicon_pose);
+    optitrack_pose_vec_.push_back(vicon_pose);
+
+    nav_msgs::Path vicon_path;
+    vicon_path.header.stamp = msg.header.stamp;
+    vicon_path.header.frame_id = "map";
+    vicon_path.poses = optitrack_pose_vec_;
+    optitrack_path_pub_.publish(vicon_path);
 
 }
 

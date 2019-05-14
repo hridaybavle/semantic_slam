@@ -127,9 +127,9 @@ public:
                                                                                         cam_angle,
                                                                                         seg_obj_info[j].normal_orientation);
 
-                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.1 &&
-                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.1 &&
-                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.1)
+                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.3 &&
+                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.3 &&
+                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.3)
                         {
 
                             found_nearest_neighbour = true;
