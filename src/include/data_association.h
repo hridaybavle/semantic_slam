@@ -62,6 +62,13 @@ private:
 
 public:
 
+    void addFirstLandmark(landmark l)
+    {
+        first_object_ = false;
+        landmarks_.push_back(l);
+
+    }
+
     std::vector<landmark> find_matches(std::vector<detected_object> seg_obj_info,
                                        Eigen::VectorXf robot_pose,
                                        float cam_angle)
@@ -238,6 +245,7 @@ public:
         new_landmark.type               = seg_obj_info.type;
         landmarks_.push_back(new_landmark);
 
+        std::cout << "landmark normal orientation " << new_landmark.normal_orientation << std::endl;
         std::cout << "\033[1;31m new landmark pose \033[0m\n" << new_landmark.pose << std::endl;
 
         return new_landmark;

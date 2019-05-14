@@ -72,6 +72,7 @@ public:
     void run();
     void open(ros::NodeHandle n);
     void init(ros::NodeHandle n);
+    void addFirstPoseAndLandmark();
     void saveGraph();
 
     //test stuff

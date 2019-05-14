@@ -51,7 +51,7 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-
+    //this->addFirstPoseAndLandmark();
     //this is test run
     //    if(!counter_)
     //    {
@@ -349,10 +349,8 @@ bool semantic_graph_slam::flush_keyframe_queue()
             continue;
         }
 
-
         // add edge between keyframes
         const auto& prev_keyframe = i == 0 ? keyframes_.back() : keyframe_queue_[i - 1];
-
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
         Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
@@ -438,6 +436,46 @@ void semantic_graph_slam::getAndSetLandmarkCov()
         for(int i = 0; i < l.size(); ++i)
             std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
     }
+}
+
+void semantic_graph_slam::addFirstPoseAndLandmark()
+{
+    std::vector<landmark> first_lan_vec;
+    landmark first_landmark;
+    first_landmark.is_new_landmark = true;
+    first_landmark.type = "Bucket";
+    first_landmark.plane_type = "vertical";
+    first_landmark.pose << 1.8, 0, 0;
+    first_landmark.local_pose = first_landmark.pose;
+    first_landmark.normal_orientation << -0.4, 0.86, 0, 0;
+
+    first_lan_vec.push_back(first_landmark);
+    data_ass_obj_->addFirstLandmark(first_landmark);
+
+    Eigen::Isometry3d odom;
+    odom.translation() = Eigen::Vector3d(0,0,0);
+    Eigen::Quaterniond quat;
+    quat.w() = 1;quat.x() = 0;quat.y() = 0;quat.z() = 0;
+    odom.linear() = quat.toRotationMatrix();
+    Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6);
+    double accum_d = 0; pcl::PointCloud<pcl::PointXYZI>::ConstPtr cloud; sensor_msgs::PointCloud2 cloud_msg;
+    std::vector<semantic_SLAM::ObjectInfo> obj_info;
+
+    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud, cloud_msg, obj_info));
+    keyframe_queue_.push_back(keyframe);
+
+    if(flush_keyframe_queue())
+    {
+        for(int i = 0; i < new_keyframes_.size(); ++i)
+            flush_landmark_queue(first_lan_vec,
+                                 new_keyframes_[i]);
+
+        std::copy(new_keyframes_.begin(), new_keyframes_.end(), std::back_inserter(keyframes_));
+        new_keyframes_.clear();
+    }
+
+    std::cout << "add the first landmark and keyframe pose " << std::endl;
+    return;
 }
 
 void semantic_graph_slam::publishLandmarks()

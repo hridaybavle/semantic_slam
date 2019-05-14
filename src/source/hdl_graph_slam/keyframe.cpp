@@ -14,54 +14,55 @@ KeyFrame::KeyFrame(const ros::Time& stamp,
                    const pcl::PointCloud<PointT>::ConstPtr& cloud,
                    const sensor_msgs::PointCloud2& cloud_msg,
                    std::vector<semantic_SLAM::ObjectInfo>& obj_info)
-  : stamp(stamp),
-    odom(odom),
-    robot_pose(robot_pose),
-    odom_cov(odom_cov),
-    accum_distance(accum_distance),
-    cloud(cloud),
-    cloud_msg(cloud_msg),
-    obj_info(obj_info),
-    node(nullptr)
+    : stamp(stamp),
+      odom(odom),
+      robot_pose(robot_pose),
+      odom_cov(odom_cov),
+      accum_distance(accum_distance),
+      cloud(cloud),
+      cloud_msg(cloud_msg),
+      obj_info(obj_info),
+      node(nullptr)
 {}
 
 KeyFrame::~KeyFrame() {
 
 }
 
+
 void KeyFrame::dump(const std::string& directory) {
-  if(!boost::filesystem::is_directory(directory)) {
-    boost::filesystem::create_directory(directory);
-  }
+    if(!boost::filesystem::is_directory(directory)) {
+        boost::filesystem::create_directory(directory);
+    }
 
-  std::ofstream ofs(directory + "/data");
-  ofs << "stamp " << stamp.sec << " " << stamp.nsec << "\n";
+    std::ofstream ofs(directory + "/data");
+    ofs << "stamp " << stamp.sec << " " << stamp.nsec << "\n";
 
-  ofs << "odom\n";
-  ofs << odom.matrix() << "\n";
+    ofs << "odom\n";
+    ofs << odom.matrix() << "\n";
 
-  ofs << "accum_distance " << accum_distance << "\n";
+    ofs << "accum_distance " << accum_distance << "\n";
 
-  if(floor_coeffs) {
-    ofs << "floor_coeffs " << floor_coeffs->transpose() << "\n";
-  }
+    if(floor_coeffs) {
+        ofs << "floor_coeffs " << floor_coeffs->transpose() << "\n";
+    }
 
-  if(node) {
-    ofs << "id " << node->id() << "\n";
-  }
+    if(node) {
+        ofs << "id " << node->id() << "\n";
+    }
 
-  pcl::io::savePCDFileBinary(directory + "/cloud.pcd", *cloud);
+    pcl::io::savePCDFileBinary(directory + "/cloud.pcd", *cloud);
 
 }
 
 KeyFrameSnapshot::KeyFrameSnapshot(const Eigen::Isometry3d& pose, const pcl::PointCloud<PointT>::ConstPtr& cloud)
-  : pose(pose),
-    cloud(cloud)
+    : pose(pose),
+      cloud(cloud)
 {}
 
 KeyFrameSnapshot::KeyFrameSnapshot(const KeyFrame::Ptr& key)
-  : pose(key->node->estimate()),
-    cloud(key->cloud)
+    : pose(key->node->estimate()),
+      cloud(key->cloud)
 {}
 
 
