@@ -50,7 +50,7 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-    //this->addFirstPoseAndLandmark();
+    this->addFirstPoseAndLandmark();
     //this is test run
     //    if(!counter_)
     //    {
@@ -355,6 +355,7 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
         Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
+        //std::cout << "information mat " << information << std::endl;
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -436,7 +437,11 @@ void semantic_graph_slam::getAndSetLandmarkCov()
                                              vert_pairs_vec))
     {
         for(int i = 0; i < l.size(); ++i)
-            std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
+        {
+            //std::cout << "landmark spinv block " << lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval() << std::endl;
+            data_ass_obj_->setLandmarkCovs(i,
+                                           lan_spinv_vec.block(l[i].node->hessianIndex(),l[i].node->hessianIndex())->eval().cast<float>());
+        }
     }
 }
 
@@ -700,8 +705,8 @@ void semantic_graph_slam::viconPoseSubCallback(const acl_msgs::ViconState &msg)
     vicon_pose.pose.position.z = msg.pose.position.z + optitrack_z_transform;
     vicon_pose.pose.orientation = msg.pose.orientation;
 
-    //vicon_pose.pose.position.x = cos(-0.15) * vicon_pose.pose.position.x   - sin(-0.15) * vicon_pose.pose.position.y;
-    //vicon_pose.pose.position.y = sin(-0.15) * vicon_pose.pose.position.x   + cos(-0.15) * vicon_pose.pose.position.y;
+    vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   - sin(-0.074) * vicon_pose.pose.position.y;
+    vicon_pose.pose.position.y = sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) * vicon_pose.pose.position.y;
 
     optitrack_pose_pub_.publish(vicon_pose);
     optitrack_pose_vec_.push_back(vicon_pose);

@@ -127,9 +127,9 @@ public:
                                                                                         cam_angle,
                                                                                         seg_obj_info[j].normal_orientation);
 
-                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.3 &&
-                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.3 &&
-                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.3)
+                        //                        if(fabs(obj_normals_world(0) -  landmarks_[i].normal_orientation(0)) < 0.1 &&
+                        //                                fabs(obj_normals_world(1) -  landmarks_[i].normal_orientation(1)) < 0.1 &&
+                        //                                fabs(obj_normals_world(2) -  landmarks_[i].normal_orientation(2)) < 0.1)
                         {
 
                             found_nearest_neighbour = true;
@@ -139,9 +139,8 @@ public:
                                                                                  expected_meas);
                             //sigma needs to be recovered from the graph someway
                             Eigen::MatrixXf sigma; sigma.resize(3,3);
-                            sigma << 0.1,0,  0,
-                                    0, 0.1,0,
-                                    0,  0, 0.1;
+                            sigma = landmarks_[i].covariance;
+                            std::cout << "landmark " << i << "sigma " << sigma << std::endl;
 
                             Eigen::MatrixXf Q = H * sigma * H.transpose() + Q_;
 
@@ -151,12 +150,12 @@ public:
                             Eigen::VectorXf z_diff; z_diff.resize(3);
                             z_diff = actual_meas - expected_meas;
 
-
                             std::cout << "actual meas " << actual_meas << std::endl;
                             std::cout << "expected meas " << expected_meas << std::endl;
                             std::cout << "z_diff " << z_diff << std::endl;
 
-                            //maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
+                            double cov_maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
+                            std::cout << "cov maha distance " << cov_maha_distance << std::endl;
 
                             maha_distance = sem_tool_obj_.dist(actual_meas(0), expected_meas(0),
                                                                actual_meas(1), expected_meas(1),
@@ -376,6 +375,12 @@ public:
         landmarks_[id].node = node;
     }
 
+    inline void setLandmarkCovs(int id,
+                                Eigen::Matrix3f cov)
+    {
+        landmarks_[id].covariance = cov;
+
+    }
 
     void getMappedLandmarks(std::vector<landmark>& l)
     {

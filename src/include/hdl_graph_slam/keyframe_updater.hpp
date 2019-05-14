@@ -21,8 +21,8 @@ public:
         : is_first(true),
           prev_keypose(Eigen::Isometry3d::Identity())
     {
-        keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.25);
-        keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.25);
+        keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.5);
+        keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.5);
         keyframe_delta_time  = pnh.param<double>("keyframe_delta_angle", 1.0);
 
         accum_distance = 0.0;
@@ -48,9 +48,9 @@ public:
         double da = std::acos(Eigen::Quaterniond(delta.linear()).w());
 
         //updating based on time
-        if((current_time - prev_time).sec  < keyframe_delta_time /*&&
-                        dx < keyframe_delta_trans &&
-                        da < keyframe_delta_angle*/)
+        if((current_time - prev_time).sec  < keyframe_delta_time &&
+                dx < keyframe_delta_trans &&
+                da < keyframe_delta_angle)
         {
             return false;
         }
