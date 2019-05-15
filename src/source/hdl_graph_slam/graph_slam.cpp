@@ -99,7 +99,6 @@ g2o::VertexSE3* GraphSLAM::add_se3_node(const Eigen::Isometry3d& pose) {
     g2o::VertexSE3* vertex(new g2o::VertexSE3());
     vertex->setId(graph->vertices().size());
     vertex->setEstimate(pose);
-    vertex->setMarginalized(false);
     //fixing the first node pose
     if(graph->vertices().size() == 0)
     {
@@ -124,7 +123,6 @@ g2o::VertexPointXYZ* GraphSLAM::add_point_xyz_node(const Eigen::Vector3d& xyz) {
     g2o::VertexPointXYZ* vertex(new g2o::VertexPointXYZ());
     vertex->setId(graph->vertices().size());
     vertex->setEstimate(xyz);
-    vertex->setMarginalized(false);
     graph->addVertex(vertex);
 
     return vertex;

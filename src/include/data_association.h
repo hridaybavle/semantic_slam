@@ -39,24 +39,38 @@ private:
     Eigen::Matrix3f Q_;
     float MAHA_DIST_THRESHOLD;
     semantic_tools sem_tool_obj_;
+    double land_noise_low_, land_noise_high_;
+    bool use_maha_dist_;
 
     void init(ros::NodeHandle n)
     {
-        first_object_ = true;
+        first_object_   = true;
+        use_maha_dist_  = true;
         landmarks_.clear();
         Q_.setZero();
-        Q_(0,0) = 0.9;
-        Q_(1,1) = 0.9;
-        Q_(2,2) = 0.9;
-
 
         ros::param::get("~maha_dist", MAHA_DIST_THRESHOLD);
         if(MAHA_DIST_THRESHOLD == 0)
             MAHA_DIST_THRESHOLD = 0.5;
         std::cout << "Maha Distance " <<  MAHA_DIST_THRESHOLD << std::endl;
 
-        //MAHA_DIST_THRESHOLD = 0.5;
+        ros::param::get("~land_noise_low", land_noise_low_);
+        if(land_noise_low_ == 0)
+            land_noise_low_ = 0.5;
+        std::cout << "land_noise_low " <<  land_noise_low_ << std::endl;
 
+        ros::param::get("~land_noise_high", land_noise_high_);
+        if(land_noise_high_ == 0)
+            land_noise_high_ = 0.9;
+        std::cout << "land_noise_high " <<  land_noise_high_ << std::endl;
+
+        ros::param::get("~use_maha_dist", use_maha_dist_);
+        std::cout << "use_maha_dist " <<  use_maha_dist_ << std::endl;
+
+        Q_(0,0) = land_noise_low_;
+        Q_(1,1) = land_noise_low_;
+        Q_(2,2) = land_noise_low_;
+        //MAHA_DIST_THRESHOLD = 0.5;
     }
 
 
@@ -106,6 +120,21 @@ public:
         for(int j=0; j < seg_obj_info.size(); ++j)
         {
             int neareast_landmarks_id;
+
+            std::cout << "seg_obj_info " << j << " points:" <<seg_obj_info[j].num_points << std::endl;
+            //            if(seg_obj_info[j].num_points < 300)
+            //            {
+            //                Q_(0,0) = land_noise_high_;
+            //                Q_(1,1) = land_noise_high_;
+            //                Q_(2,2) = land_noise_high_;
+            //            }
+            //            else
+            //            {
+            //                Q_(0,0) = land_noise_low_;
+            //                Q_(1,1) = land_noise_low_;
+            //                Q_(2,2) = land_noise_low_;
+            //            }
+
             for(int i = 0; i < landmarks_.size(); ++i)
             {
                 if(seg_obj_info[j].type == landmarks_[i].type)
@@ -137,31 +166,38 @@ public:
                             Eigen::VectorXf expected_meas;
                             Eigen::MatrixXf H   = this->landmarkMeasurementModel(landmarks_[i],
                                                                                  expected_meas);
-                            //sigma needs to be recovered from the graph someway
-                            Eigen::MatrixXf sigma; sigma.resize(3,3);
-                            sigma = landmarks_[i].covariance;
-                            std::cout << "landmark " << i << "sigma " << sigma << std::endl;
-
-                            Eigen::MatrixXf Q = H * sigma * H.transpose() + Q_;
 
                             Eigen::VectorXf actual_meas; actual_meas.resize(3);
                             actual_meas = obj_pose_world;
 
-                            Eigen::VectorXf z_diff; z_diff.resize(3);
-                            z_diff = actual_meas - expected_meas;
-
                             std::cout << "actual meas " << actual_meas << std::endl;
                             std::cout << "expected meas " << expected_meas << std::endl;
-                            std::cout << "z_diff " << z_diff << std::endl;
 
-                            double cov_maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
-                            std::cout << "cov maha distance " << cov_maha_distance << std::endl;
+                            //sigma recovered from graph slam optimization
+                            if(use_maha_dist_)
+                            {
+                                Eigen::MatrixXf sigma; sigma.resize(3,3);
+                                sigma = landmarks_[i].covariance;
+                                std::cout << "landmark " << i << "sigma " << sigma << std::endl;
 
-                            maha_distance = sem_tool_obj_.dist(actual_meas(0), expected_meas(0),
-                                                               actual_meas(1), expected_meas(1),
-                                                               actual_meas(2), expected_meas(2));
+                                Eigen::MatrixXf Q = H * sigma * H.transpose() + Q_;
 
-                            std::cout << "maha_distance " << maha_distance << std::endl;
+                                Eigen::VectorXf z_diff; z_diff.resize(3);
+                                z_diff = actual_meas - expected_meas;
+
+                                std::cout << "z_diff " << z_diff << std::endl;
+
+                                maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
+                                std::cout << "cov maha distance " << maha_distance << std::endl;
+                            }
+                            else
+                            {
+                                maha_distance = sem_tool_obj_.dist(actual_meas(0), expected_meas(0),
+                                                                   actual_meas(1), expected_meas(1),
+                                                                   actual_meas(2), expected_meas(2));
+                                std::cout << "euclidean distance " << maha_distance << std::endl;
+                            }
+
 
                             if(maha_distance < maha_distance_min)
                             {
@@ -184,6 +220,8 @@ public:
             else if(found_nearest_neighbour)
             {
                 found_nearest_neighbour = false;
+
+                std::cout << "maha_distance_min " << maha_distance_min << std::endl;
 
                 if(maha_distance_min > MAHA_DIST_THRESHOLD)
                     landmark_vec.push_back(this->map_a_new_lan(seg_obj_info[j],
@@ -237,7 +275,7 @@ public:
         new_landmark.local_pose << obj_pose_rob(0), obj_pose_rob(1), obj_pose_rob(2);
         new_landmark.pose       << obj_pose_world(0), obj_pose_world(1), obj_pose_world(2);
 
-        std::cout << "segmented obj num points " << seg_obj_info.num_points << std::endl;
+        std::cout << "landmark initial cov " << Q_ << std::endl;
         new_landmark.covariance         = Q_;
         new_landmark.normal_orientation = obj_normals_world;
         new_landmark.plane_type         = seg_obj_info.plane_type;

@@ -50,7 +50,7 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-    this->addFirstPoseAndLandmark();
+    //this->addFirstPoseAndLandmark();
     //this is test run
     //    if(!counter_)
     //    {
@@ -155,7 +155,6 @@ void semantic_graph_slam::open(ros::NodeHandle n)
 //                                          const darknet_ros_msgs::BoundingBoxesConstPtr &bbs_msg)
 //{
 //    std::cout << "odom msg " << odom_msg << std::endl;
-
 //}
 
 void semantic_graph_slam::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
@@ -355,7 +354,6 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
         Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
-        //std::cout << "information mat " << information << std::endl;
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -413,7 +411,6 @@ void semantic_graph_slam::flush_landmark_queue(std::vector<landmark> current_lan
 
         //add an edge between landmark and the current keyframe
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
-        std::cout << "landmark local pose " << current_lan_queue[i].local_pose.cast<double>() << std::endl;
         graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
         std::cout << "added an edge between the landmark and it keyframe " << std::endl;
     }

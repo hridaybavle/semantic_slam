@@ -144,7 +144,11 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
 
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
-    mps.setMinInliers (200);
+    if(use_yolo_)
+        mps.setMinInliers (500);
+    else
+        mps.setMinInliers (200);
+
     mps.setAngularThreshold (0.017453 * 2.0); // 2 degrees
     mps.setDistanceThreshold (0.02); // 2cm
     mps.setInputNormals (point_normal);
