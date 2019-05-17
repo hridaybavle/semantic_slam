@@ -1,6 +1,7 @@
 #general params
 camera_angle: 33.93
 update_key_using_det: true
+add_first_lan: false
 #plane segmentation
 num_point_seg: 100
 norm_point_thres: 1000

@@ -27,10 +27,12 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     //values from launch
     ros::param::param<double>("~camera_angle",cam_angled_,0);
     ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
+    ros::param::param<bool>("~add_first_lan", add_first_lan_, false);
 
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
     std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
     std::cout << "update keyframe every detection " << update_keyframes_using_detections_<< std::endl;
+    std::cout << "add first landmark " << add_first_lan_ << std::endl;
 
     pc_seg_obj_.reset(new point_cloud_segmentation());
     data_ass_obj_.reset(new data_association(n));
@@ -44,7 +46,8 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-    //this->addFirstPoseAndLandmark();
+    if(add_first_lan_)
+        this->addFirstPoseAndLandmark();
     //this is test run
     //    if(!counter_)
     //    {

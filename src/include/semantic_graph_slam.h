@@ -196,6 +196,7 @@ protected:
     Eigen::Isometry3d robot_pose_;
     double cam_angled_;
     float cam_angle_;
+    bool add_first_lan_;
 
 private:
 
