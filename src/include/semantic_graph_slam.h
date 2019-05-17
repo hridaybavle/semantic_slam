@@ -166,7 +166,6 @@ private:
 private:
     //detection related
     bool update_keyframes_using_detections_;
-    bool use_yolo_;
     bool object_detection_available_;
     std::vector<semantic_SLAM::ObjectInfo> object_info_;
     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
@@ -195,6 +194,7 @@ private:
 protected:
     //robot pose related
     Eigen::Isometry3d robot_pose_;
+    double cam_angled_;
     float cam_angle_;
 
 private:

@@ -37,7 +37,7 @@ private:
     bool first_object_;
     std::vector<landmark> landmarks_;
     Eigen::Matrix3f Q_;
-    float MAHA_DIST_THRESHOLD;
+    double MAHA_DIST_THRESHOLD;
     semantic_tools sem_tool_obj_;
     double land_noise_low_, land_noise_high_;
     bool use_maha_dist_;
@@ -49,28 +49,19 @@ private:
         landmarks_.clear();
         Q_.setZero();
 
-        ros::param::get("~maha_dist", MAHA_DIST_THRESHOLD);
-        if(MAHA_DIST_THRESHOLD == 0)
-            MAHA_DIST_THRESHOLD = 0.5;
-        std::cout << "Maha Distance " <<  MAHA_DIST_THRESHOLD << std::endl;
+        ros::param::param<double>("~maha_dist",MAHA_DIST_THRESHOLD,0.5);
+        ros::param::param<double>("~land_noise_low",land_noise_low_,0.5);
+        ros::param::param<double>("~land_noise_high",land_noise_high_,0.9);
+        ros::param::param<bool>("~use_maha_dist",use_maha_dist_,true);
 
-        ros::param::get("~land_noise_low", land_noise_low_);
-        if(land_noise_low_ == 0)
-            land_noise_low_ = 0.5;
         std::cout << "land_noise_low " <<  land_noise_low_ << std::endl;
-
-        ros::param::get("~land_noise_high", land_noise_high_);
-        if(land_noise_high_ == 0)
-            land_noise_high_ = 0.9;
         std::cout << "land_noise_high " <<  land_noise_high_ << std::endl;
-
-        ros::param::get("~use_maha_dist", use_maha_dist_);
         std::cout << "use_maha_dist " <<  use_maha_dist_ << std::endl;
 
         Q_(0,0) = land_noise_low_;
         Q_(1,1) = land_noise_low_;
         Q_(2,2) = land_noise_low_;
-        //MAHA_DIST_THRESHOLD = 0.5;
+
     }
 
 

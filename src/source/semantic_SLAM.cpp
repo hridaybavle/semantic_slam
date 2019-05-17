@@ -35,7 +35,7 @@ void semantic_slam_ros::init()
 {
 
     bool use_yolo = true;
-    plane_segmentation_obj_.reset(new plane_segmentation(use_yolo));
+    plane_segmentation_obj_.reset(new plane_segmentation());
 
     imu_data_available_ = false, object_detection_available_ = false, point_cloud_available_ = false;
     rvio_pose_available_ = false, imu_first_yaw_ = false;

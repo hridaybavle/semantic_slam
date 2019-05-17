@@ -8,6 +8,9 @@
 
 #include "sensor_msgs/PointCloud2.h"
 
+//ros
+#include "ros/ros.h"
+
 //PCL ROS
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
@@ -41,10 +44,14 @@ const int num_centroids_pose = 2;
 class plane_segmentation
 {
 public:
-    plane_segmentation(bool use_yolo);
+    plane_segmentation();
     ~plane_segmentation();
-    bool use_yolo_;
 
+private:
+    double num_points_seg_;
+    double normal_point_thres_;
+
+public:
     struct segmented_objects {
         std::string type;
         float prob;

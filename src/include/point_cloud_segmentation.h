@@ -1,7 +1,6 @@
 #ifndef POINT_CLOUD_SEGMENTATION
 #define POINT_CLOUD_SEGMENTATION
 
-
 #include "plane_segmentation.h"
 #include "tools.h"
 #include "detected_object.h"
@@ -14,8 +13,8 @@ public:
     std::unique_ptr<plane_segmentation> plane_seg_obj;
 
 public:
-    point_cloud_segmentation(bool use_yolo){
-        plane_seg_obj.reset(new plane_segmentation(use_yolo));
+    point_cloud_segmentation(){
+        plane_seg_obj.reset(new plane_segmentation());
         std::cout << "pc segmentation constructor " << std::endl;
     }
 
@@ -30,6 +29,7 @@ public:
                                                        pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal,
                                                        pcl::PointIndices::Ptr inliers,
                                                        Eigen::Matrix4f transformation_mat,
+                                                       Eigen::VectorXf robot_pose,
                                                        std::string object_type,
                                                        float prob)
     {
@@ -40,9 +40,9 @@ public:
 
         //ros::Time t1 = ros::Time::now();
         planar_surf_vec = plane_seg_obj->multiPlaneSegmentation(segmented_point_cloud,
-                                                               segmented_point_cloud_normal,
-                                                               inliers,
-                                                               transformation_mat);
+                                                                segmented_point_cloud_normal,
+                                                                inliers,
+                                                                transformation_mat);
 
         if(!planar_surf_vec.empty())
         {
@@ -56,6 +56,9 @@ public:
                 final_detected_point_cam_frame(2) = planar_surf_vec[j].final_pose_mat.at<float>(0,2);
 
                 final_detected_point_world_frame = transformation_mat * final_detected_point_cam_frame;
+
+                float final_object_height;
+                final_object_height = final_detected_point_world_frame(2) + robot_pose(2);
 
                 //pose_vec.push_back(final_pose_of_object_in_robot);
                 //do the same above procedure for the normal orientation
@@ -89,7 +92,6 @@ public:
                 //complete_obj_info.planar_points                 = planar_surf_vec[j].planar_points;
 
                 complete_obj_info_vec.push_back(complete_obj_info);
-
             }
         }
 
@@ -144,7 +146,7 @@ public:
                 //This calculates the normals of the segmented pointcloud
                 pcl::PointCloud<pcl::Normal>::Ptr segmented_point_cloud_normal(new pcl::PointCloud<pcl::Normal>);
                 segmented_point_cloud_normal = plane_seg_obj->computeNormalsFromPointCloud(segmented_objects_from_point_cloud[i].segmented_point_cloud,
-                                                                                          inliers);
+                                                                                           inliers);
 
                 if(segmented_point_cloud_normal->empty())
                     continue;
@@ -156,6 +158,7 @@ public:
                                                               segmented_point_cloud_normal,
                                                               inliers,
                                                               transformation_mat,
+                                                              robot_pose,
                                                               segmented_objects_from_point_cloud[i].type,
                                                               segmented_objects_from_point_cloud[i].prob);
 

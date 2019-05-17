@@ -21,24 +21,18 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     first_key_added_                   = false;
     counter_                           = false;
     update_keyframes_using_detections_ = false;
-    use_yolo_                          = true;
     max_keyframes_per_update_   = 10;
     odom_increments_            = 10;
 
     //values from launch
-    ros::param::get("~camera_angle", cam_angle_);
-    if(cam_angle_ < 0)
-        cam_angle_ = 0;
-    cam_angle_ = cam_angle_ * (M_PI/180);
+    ros::param::param<double>("~camera_angle",cam_angled_,0);
+    ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
+
+    cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
     std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
-
-    ros::param::get("~update_key_using_det", update_keyframes_using_detections_);
-    ros::param::get("~use_yolo", use_yolo_);
-
     std::cout << "update keyframe every detection " << update_keyframes_using_detections_<< std::endl;
-    std::cout << "use yolo " << use_yolo_ << std::endl;
 
-    pc_seg_obj_.reset(new point_cloud_segmentation(use_yolo_));
+    pc_seg_obj_.reset(new point_cloud_segmentation());
     data_ass_obj_.reset(new data_association(n));
     keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
     graph_slam_.reset(new hdl_graph_slam::GraphSLAM());

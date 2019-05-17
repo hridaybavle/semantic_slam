@@ -1,0 +1,16 @@
+#general params
+camera_angle: 0
+update_key_using_det: false
+#plane segmentation
+num_point_seg: 500
+norm_point_thres: 5000
+#data association related
+maha_dist: 1.21
+land_noise_low: 0.1 
+land_noise_high: 0.1
+use_maha_dist: true
+add_first_lan: false
+#odom information cal
+use_const_inf_matrix: true
+const_stddev_x: 0.00667
+const_stddev_q: 0.0001
