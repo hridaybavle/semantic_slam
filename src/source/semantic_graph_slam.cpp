@@ -21,6 +21,7 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     first_key_added_                   = false;
     counter_                           = false;
     update_keyframes_using_detections_ = false;
+    first_gt_pose_                     = false;
     max_keyframes_per_update_   = 10;
     odom_increments_            = 10;
 
@@ -28,6 +29,10 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     ros::param::param<double>("~camera_angle",cam_angled_,0);
     ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
     ros::param::param<bool>("~add_first_lan", add_first_lan_, false);
+    ros::param::param<double>("~first_lan_x", first_lan_x_, 1.8);
+    ros::param::param<double>("~first_lan_y", first_lan_y_, 0);
+    ros::param::param<double>("~first_lan_z", first_lan_z_, 0.3);
+
 
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
     std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
@@ -139,6 +144,7 @@ void semantic_graph_slam::open(ros::NodeHandle n)
     landmarks_pub_          = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
     detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmars",1);
     robot_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("robot_pose",1);
+    robot_transform_pub_    = n.advertise<geometry_msgs::TransformStamped>("robot_transform",1);
     keyframe_path_pub_      = n.advertise<nav_msgs::Path>("robot_path",1);
     optitrack_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_     = n.advertise<nav_msgs::Path>("optitrack_path",1);
@@ -252,6 +258,7 @@ void semantic_graph_slam::PointCloudCallback(const sensor_msgs::PointCloud2 &msg
 {
 
     this->setPointCloudData(msg);
+    pc_stamp_ = msg.header.stamp;
 }
 
 void semantic_graph_slam::setPointCloudData(sensor_msgs::PointCloud2 point_cloud)
@@ -446,10 +453,10 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     first_landmark.is_new_landmark = true;
     first_landmark.type = "Bucket";
     first_landmark.plane_type = "vertical";
-    first_landmark.pose << 1.8, 0, 0;
+    first_landmark.pose << first_lan_x_, first_lan_y_, first_lan_z_;
     first_landmark.local_pose = first_landmark.pose;
     first_landmark.normal_orientation << -0.4, 0.86, 0, 0;
-    first_landmark.covariance  << 0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01;
+    first_landmark.covariance  << 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1;
 
     first_lan_vec.push_back(first_landmark);
     data_ass_obj_->addFirstLandmark(first_landmark);
@@ -664,6 +671,16 @@ void semantic_graph_slam::publishRobotPose()
     geometry_msgs::PoseStamped robot_pose = hdl_graph_slam::matrix2posestamped(ros::Time::now(),
                                                                                robot_pose_.matrix().cast<float>(),
                                                                                "map");
+    geometry_msgs::TransformStamped robot_transform;
+    robot_transform.header.stamp = pc_stamp_;
+    robot_transform.header.frame_id = "map";
+    robot_transform.child_frame_id  = "cam";
+    robot_transform.transform.translation.x = robot_pose.pose.position.x;
+    robot_transform.transform.translation.y = robot_pose.pose.position.y;
+    robot_transform.transform.translation.z = robot_pose.pose.position.z;
+    robot_transform.transform.rotation      = robot_pose.pose.orientation;
+
+    robot_transform_pub_.publish(robot_transform);
     robot_pose_pub_.publish(robot_pose);
 
 }
@@ -689,18 +706,26 @@ void semantic_graph_slam::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 
 void semantic_graph_slam::viconPoseSubCallback(const acl_msgs::ViconState &msg)
 {
+    if(!first_gt_pose_)
+    {
+        gt_x_transform_ = -msg.pose.position.x;
+        gt_y_transform_ = -msg.pose.position.y;
+        gt_z_transform_ = -msg.pose.position.z;
+        first_gt_pose_ = true;
+    }
+
     geometry_msgs::PoseStamped vicon_pose;
     vicon_pose.header.stamp = msg.header.stamp;
     vicon_pose.header.frame_id = "map";
 
 
-    vicon_pose.pose.position.x = msg.pose.position.x + optitrack_x_transform;
-    vicon_pose.pose.position.y = msg.pose.position.y + optitrack_y_transform;
-    vicon_pose.pose.position.z = msg.pose.position.z + optitrack_z_transform;
+    vicon_pose.pose.position.x = msg.pose.position.x + gt_x_transform_;
+    vicon_pose.pose.position.y = msg.pose.position.y + gt_y_transform_;
+    vicon_pose.pose.position.z = msg.pose.position.z + gt_z_transform_;
     vicon_pose.pose.orientation = msg.pose.orientation;
 
-    vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   - sin(-0.074) * vicon_pose.pose.position.y;
-    vicon_pose.pose.position.y = sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) * vicon_pose.pose.position.y;
+    //vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   - sin(-0.074) * vicon_pose.pose.position.y;
+    //vicon_pose.pose.position.y = sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) * vicon_pose.pose.position.y;
 
     optitrack_pose_pub_.publish(vicon_pose);
     optitrack_pose_vec_.push_back(vicon_pose);

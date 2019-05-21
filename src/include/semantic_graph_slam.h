@@ -59,10 +59,6 @@
 //acl messages
 #include "acl_msgs/ViconState.h"
 
-const float optitrack_x_transform =  8.39;
-const float optitrack_y_transform = -0.26;
-const float optitrack_z_transform = -0.11;
-
 class semantic_graph_slam
 {
 
@@ -132,6 +128,7 @@ protected:
     ros::Publisher detected_lans_pub_;
     ros::Publisher keyframe_pose_pub_;
     ros::Publisher robot_pose_pub_;
+    ros::Publisher robot_transform_pub_;
     ros::Publisher keyframe_path_pub_;
     ros::Publisher optitrack_pose_pub_;
     ros::Publisher optitrack_path_pub_;
@@ -162,6 +159,7 @@ private:
     void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
     sensor_msgs::PointCloud2 point_cloud_msg_;
     bool point_cloud_available_;
+    ros::Time pc_stamp_;
 
 private:
     //detection related
@@ -191,12 +189,21 @@ private:
 
     void getAndSetLandmarkCov();
 
+private:
+    //vicon pose related
+    float gt_x_transform_;
+    float gt_y_transform_;
+    float gt_z_transform_;
+
+    bool first_gt_pose_;
+
 protected:
     //robot pose related
     Eigen::Isometry3d robot_pose_;
     double cam_angled_;
     float cam_angle_;
     bool add_first_lan_;
+    double first_lan_x_, first_lan_y_,first_lan_z_;
 
 private:
 
