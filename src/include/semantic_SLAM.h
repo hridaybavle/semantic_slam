@@ -8,7 +8,7 @@
 #include <binders.h>
 
 //particle filter lib
-#include "particle_filter.h"
+#include "particle_filter/particle_filter.h"
 
 //point cloud segmentation
 #include "plane_segmentation.h"

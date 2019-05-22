@@ -31,12 +31,14 @@ set(SEMANTIC_SLAM_INCLUDE_DIR
 FILE(GLOB_RECURSE SEMANTIC_SLAM_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/source/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/source/*.cpp
+		${CMAKE_CURRENT_SOURCE_DIR}/src/source/particle_filter/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/source/ps_graph_slam/*.cpp)
 
 FILE(GLOB_RECURSE SEMANTIC_SLAM_HEADER_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/*.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/g2o/*.hpp
+		${CMAKE_CURRENT_SOURCE_DIR}/src/include/particle_filter/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include/ps_graph_slam/*.hpp)
 
 

@@ -30,7 +30,7 @@
 #include <pcl/registration/sample_consensus_prerejective.h>
 
 //tools lib
-#include "particle_tools.h"
+#include "particle_filter/particle_tools.h"
 
 //boost threading
 #include <boost/thread/thread.hpp>
