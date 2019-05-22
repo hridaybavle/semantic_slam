@@ -43,7 +43,7 @@ FILE(GLOB_RECURSE SEMANTIC_SLAM_HEADER_FILES
 
 
 find_package(catkin REQUIRED
-    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_generation cv_bridge image_transport darknet_ros_msgs ndt_omp
+    COMPONENTS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_generation cv_bridge image_transport darknet_ros_msgs
     pcl_ros pcl_msgs pcl_conversions acl_msgs)
 
 find_package(PCL 1.7 REQUIRED
@@ -96,7 +96,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS ${SEMANTIC_SLAM_INCLUDE_DIR}
     LIBRARIES semantic_SLAM OpenCV PCL
-    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_runtime cv_bridge image_transport darknet_ros_msgs ndt_omp
+    CATKIN_DEPENDS roscpp std_msgs sensor_msgs image_transport tf_conversions tf message_runtime cv_bridge image_transport darknet_ros_msgs
     pcl_ros pcl_msgs pcl_conversions acl_msgs
     )
 

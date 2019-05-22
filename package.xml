@@ -3,7 +3,7 @@
 <name>semantic_SLAM</name>
 <version>1.0.0</version>
 <description>
-This package is a general Partcle-filter-SLAM library
+This package is a general semantic-SLAM library
 </description>
 <author email="hriday.bavle@upm.es">Hriday Bavle</author>
 <maintainer email="hriday.bavle@upm.es">Hriday Bavle</maintainer>
@@ -26,7 +26,6 @@ This package is a general Partcle-filter-SLAM library
   <depend>pcl_conversions</depend>
   <depend>darknet_ros_msgs</depend>
   <depend>acl_msgs</depend>
-  <depend>ndt_omp</depend>	
 
 </package>
 

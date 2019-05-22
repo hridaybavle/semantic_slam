@@ -14,3 +14,6 @@ use_maha_dist: false
 use_const_inf_matrix: true
 const_stddev_x: 0.00667
 const_stddev_q: 0.00001
+#graph slam related
+save_graph: false
+save_graph_path: /home/hriday/Desktop/semantic_graph.g2o

@@ -204,6 +204,10 @@ protected:
 
 private:
 
+    //graph related
+    bool save_graph_;
+    std::string save_graph_path_;
+
     // keyframe related params
     std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;
     std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_;
