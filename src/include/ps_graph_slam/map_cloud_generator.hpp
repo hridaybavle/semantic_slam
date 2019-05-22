@@ -4,7 +4,7 @@
 #include <vector>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include <hdl_graph_slam/keyframe.hpp>
+#include <ps_graph_slam/keyframe.hpp>
 
 namespace hdl_graph_slam {
 

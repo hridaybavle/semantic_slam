@@ -29,16 +29,16 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 //hdl graph slam headers
-#include <hdl_graph_slam/ros_utils.hpp>
-#include <hdl_graph_slam/ros_time_hash.hpp>
+#include <ps_graph_slam/ros_utils.hpp>
+#include <ps_graph_slam/ros_time_hash.hpp>
 
-#include <hdl_graph_slam/graph_slam.hpp>
-#include <hdl_graph_slam/keyframe.hpp>
-#include <hdl_graph_slam/keyframe_updater.hpp>
-#include <hdl_graph_slam/loop_detector.hpp>
-#include <hdl_graph_slam/information_matrix_calculator.hpp>
-#include <hdl_graph_slam/map_cloud_generator.hpp>
-#include <hdl_graph_slam/nmea_sentence_parser.hpp>
+#include <ps_graph_slam/graph_slam.hpp>
+#include <ps_graph_slam/keyframe.hpp>
+#include <ps_graph_slam/keyframe_updater.hpp>
+#include <ps_graph_slam/loop_detector.hpp>
+#include <ps_graph_slam/information_matrix_calculator.hpp>
+#include <ps_graph_slam/map_cloud_generator.hpp>
+#include <ps_graph_slam/nmea_sentence_parser.hpp>
 
 //landmarks
 #include "landmark.h"

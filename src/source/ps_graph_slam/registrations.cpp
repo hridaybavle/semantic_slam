@@ -1,4 +1,4 @@
-#include <hdl_graph_slam/registrations.hpp>
+#include <ps_graph_slam/registrations.hpp>
 
 #include <iostream>
 

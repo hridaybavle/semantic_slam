@@ -12,7 +12,7 @@
 
 #include "Eigen/Dense"
 #include <g2o/types/slam3d/vertex_pointxyz.h>
-#include "hdl_graph_slam/keyframe.hpp"
+#include "ps_graph_slam/keyframe.hpp"
 
 struct landmark {
 

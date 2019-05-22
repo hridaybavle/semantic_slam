@@ -1,9 +1,9 @@
 #ifndef LOOP_DETECTOR_HPP
 #define LOOP_DETECTOR_HPP
 
-#include <hdl_graph_slam/keyframe.hpp>
-#include <hdl_graph_slam/registrations.hpp>
-#include <hdl_graph_slam/graph_slam.hpp>
+#include <ps_graph_slam/keyframe.hpp>
+#include <ps_graph_slam/registrations.hpp>
+#include <ps_graph_slam/graph_slam.hpp>
 
 #include <g2o/types/slam3d/vertex_se3.h>
 

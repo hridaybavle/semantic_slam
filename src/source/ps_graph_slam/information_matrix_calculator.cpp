@@ -1,4 +1,4 @@
-#include <hdl_graph_slam/information_matrix_calculator.hpp>
+#include <ps_graph_slam/information_matrix_calculator.hpp>
 
 #include <pcl/search/kdtree.h>
 #include <pcl/common/transforms.h>

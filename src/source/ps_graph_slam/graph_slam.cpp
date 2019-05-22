@@ -1,4 +1,4 @@
-#include <hdl_graph_slam/graph_slam.hpp>
+#include <ps_graph_slam/graph_slam.hpp>
 
 #include <g2o/stuff/macros.h>
 #include <g2o/core/factory.h>

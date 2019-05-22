@@ -83,7 +83,6 @@ add_message_files(
     FILES
     ObjectInfo.msg
     DetectedObjects.msg
-    MappedPointCloud.msg
     )
 
 generate_messages(
