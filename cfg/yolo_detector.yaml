@@ -6,9 +6,9 @@ add_first_lan: false
 num_point_seg: 500
 norm_point_thres: 5000
 #data association related
-maha_dist: 1.21
-land_noise_low: 0.1 
-land_noise_high: 0.1
+maha_dist: 0.584
+land_noise_low: 0.4
+land_noise_high: 0.4
 use_maha_dist: true
 #odom information cal
 use_const_inf_matrix: true
