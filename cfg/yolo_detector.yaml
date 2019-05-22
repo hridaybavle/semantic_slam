@@ -2,6 +2,10 @@
 camera_angle: 0
 update_key_using_det: false
 add_first_lan: false
+#keyframe
+keyframe_delta_trans: 0.5
+keyframe_delta_angle: 0.5
+keyframe_delta_time: 1.0
 #plane segmentation
 num_point_seg: 500
 norm_point_thres: 5000

@@ -5,6 +5,10 @@ add_first_lan: true
 first_lan_x: 1.42
 first_lan_y: -0.028
 first_lan_z: 0.15
+#keyframe
+keyframe_delta_trans: 0.5
+keyframe_delta_angle: 0.5
+keyframe_delta_time: 1.0
 #plane segmentation
 num_point_seg: 100
 norm_point_thres: 1000

@@ -21,9 +21,13 @@ public:
         : is_first(true),
           prev_keypose(Eigen::Isometry3d::Identity())
     {
-        keyframe_delta_trans = pnh.param<double>("keyframe_delta_trans", 0.5);
-        keyframe_delta_angle = pnh.param<double>("keyframe_delta_angle", 0.5);
-        keyframe_delta_time  = pnh.param<double>("keyframe_delta_angle", 1.0);
+        ros::param::param<double>("~keyframe_delta_trans",keyframe_delta_trans,0.5);
+        ros::param::param<double>("~keyframe_delta_angle",keyframe_delta_angle,0.5);
+        ros::param::param<double>("~keyframe_delta_time",keyframe_delta_time,1);
+
+        std::cout << "keyframe_delta_trans " << keyframe_delta_trans << std::endl;
+        std::cout << "keyframe_delta_angle " << keyframe_delta_angle << std::endl;
+        std::cout << "keyframe_delta_time "  << keyframe_delta_time << std::endl;
 
         accum_distance = 0.0;
     }
