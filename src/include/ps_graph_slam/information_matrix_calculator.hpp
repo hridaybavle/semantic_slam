@@ -5,7 +5,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 class InformationMatrixCalculator {
 public:

@@ -13,7 +13,7 @@ namespace g2o {
 class VertexSE3;
 }
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 /**
  * @brief KeyFrame (pose node)

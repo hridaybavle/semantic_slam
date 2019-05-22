@@ -20,7 +20,7 @@ class VertexPlane;
 //  class EdgeSE3PriorXYZ;
 }
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 class GraphSLAM {
 public:

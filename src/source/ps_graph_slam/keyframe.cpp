@@ -5,7 +5,7 @@
 #include <pcl/io/pcd_io.h>
 #include <g2o/types/slam3d/vertex_se3.h>
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 KeyFrame::KeyFrame(const ros::Time& stamp,
                    const Eigen::Isometry3d& odom, const Eigen::Isometry3d &robot_pose,

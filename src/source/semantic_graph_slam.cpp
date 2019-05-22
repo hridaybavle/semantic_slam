@@ -41,9 +41,9 @@ void semantic_graph_slam::init(ros::NodeHandle n)
 
     pc_seg_obj_.reset(new point_cloud_segmentation());
     data_ass_obj_.reset(new data_association(n));
-    keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
-    graph_slam_.reset(new hdl_graph_slam::GraphSLAM());
-    inf_calclator_.reset(new hdl_graph_slam::InformationMatrixCalculator(n));
+    keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater(n));
+    graph_slam_.reset(new ps_graph_slam::GraphSLAM());
+    inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator(n));
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
     robot_pose_.setIdentity();
@@ -156,8 +156,8 @@ void semantic_graph_slam::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &o
 
 
     const ros::Time& stamp      = odom_msg->header.stamp;
-    Eigen::Isometry3d odom      = hdl_graph_slam::odom2isometry(odom_msg);
-    Eigen::MatrixXf odom_cov    = hdl_graph_slam::arrayToMatrix(odom_msg);
+    Eigen::Isometry3d odom      = ps_graph_slam::odom2isometry(odom_msg);
+    Eigen::MatrixXf odom_cov    = ps_graph_slam::arrayToMatrix(odom_msg);
 
     this->VIOCallback(stamp, odom, odom_cov);
 
@@ -168,8 +168,8 @@ void semantic_graph_slam::snapVIOCallback(const geometry_msgs::PoseStamped &pose
 {
 
     const ros::Time& stamp                  = pose_msg.header.stamp;
-    geometry_msgs::PoseStamped pose_enu     = hdl_graph_slam::poseNED2ENU(pose_msg);
-    Eigen::Isometry3d odom                  = hdl_graph_slam::pose2isometry(pose_enu);
+    geometry_msgs::PoseStamped pose_enu     = ps_graph_slam::poseNED2ENU(pose_msg);
+    Eigen::Isometry3d odom                  = ps_graph_slam::pose2isometry(pose_enu);
     Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //snap dragon pose doesnt have covariance
 
     this->VIOCallback(stamp, odom, odom_cov);
@@ -226,7 +226,7 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
         this->getDetectedObjectInfo(obj_info);
 
     double accum_d = keyframe_updater_->get_accum_distance();
-    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
+    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue_.push_back(keyframe);
@@ -359,12 +359,12 @@ bool semantic_graph_slam::flush_keyframe_queue()
 
 }
 
-std::vector<landmark> semantic_graph_slam::semantic_data_ass(const hdl_graph_slam::KeyFrame::Ptr curr_keyframe)
+std::vector<landmark> semantic_graph_slam::semantic_data_ass(const ps_graph_slam::KeyFrame::Ptr curr_keyframe)
 {
 
     std::vector<semantic_SLAM::ObjectInfo> object_info = curr_keyframe->obj_info;
     sensor_msgs::PointCloud2 point_cloud_msg = curr_keyframe->cloud_msg;
-    Eigen::VectorXf current_robot_pose = hdl_graph_slam::matrix2vector(curr_keyframe->robot_pose.matrix().cast<float>());
+    Eigen::VectorXf current_robot_pose = ps_graph_slam::matrix2vector(curr_keyframe->robot_pose.matrix().cast<float>());
     std::cout << "current robot pose " << current_robot_pose << std::endl;
 
 
@@ -458,7 +458,7 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     double accum_d = 0; sensor_msgs::PointCloud2 cloud_msg;
     std::vector<semantic_SLAM::ObjectInfo> obj_info;
 
-    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
+    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
     keyframe_queue_.push_back(keyframe);
 
     if(flush_keyframe_queue())
@@ -642,9 +642,9 @@ void semantic_graph_slam::publishKeyframePoses()
     geometry_msgs::PoseStamped key_pose_stamped;
     for(int i=0; i < keyframes_.size(); ++i)
     {
-        key_pose = hdl_graph_slam::matrix2pose(ros::Time::now(),
-                                               keyframes_[i]->node->estimate().matrix().cast<float>(),
-                                               "map");
+        key_pose = ps_graph_slam::matrix2pose(ros::Time::now(),
+                                              keyframes_[i]->node->estimate().matrix().cast<float>(),
+                                              "map");
 
         key_pose_stamped.header.stamp = current_time;
         key_pose_stamped.pose = key_pose;
@@ -659,9 +659,9 @@ void semantic_graph_slam::publishKeyframePoses()
 
 void semantic_graph_slam::publishRobotPose()
 {
-    geometry_msgs::PoseStamped robot_pose = hdl_graph_slam::matrix2posestamped(ros::Time::now(),
-                                                                               robot_pose_.matrix().cast<float>(),
-                                                                               "map");
+    geometry_msgs::PoseStamped robot_pose = ps_graph_slam::matrix2posestamped(ros::Time::now(),
+                                                                              robot_pose_.matrix().cast<float>(),
+                                                                              "map");
     geometry_msgs::TransformStamped robot_transform;
     robot_transform.header.stamp = pc_stamp_;
     robot_transform.header.frame_id = "map";
@@ -733,9 +733,9 @@ void semantic_graph_slam::publishCorresVIOPose()
 {
     ros::Time current_time = ros::Time::now();
 
-    geometry_msgs::PoseStamped corres_vio_pose = hdl_graph_slam::matrix2posestamped(current_time,
-                                                                                    vio_pose_.matrix().cast<float>(),
-                                                                                    "map");
+    geometry_msgs::PoseStamped corres_vio_pose = ps_graph_slam::matrix2posestamped(current_time,
+                                                                                   vio_pose_.matrix().cast<float>(),
+                                                                                   "map");
 
     corres_vio_pose_pub_.publish(corres_vio_pose);
 

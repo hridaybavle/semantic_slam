@@ -8,7 +8,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf_conversions/tf_eigen.h>
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 /**
  * @brief convert Eigen::Matrix to geometry_msgs::TransformStamped

@@ -28,7 +28,7 @@
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-//hdl graph slam headers
+//ps graph slam headers
 #include <ps_graph_slam/ros_utils.hpp>
 #include <ps_graph_slam/ros_time_hash.hpp>
 
@@ -78,7 +78,7 @@ public:
 private:
     bool counter_;
     landmark test_landmark_;
-    hdl_graph_slam::KeyFrame::Ptr test_keyframe_;
+    ps_graph_slam::KeyFrame::Ptr test_keyframe_;
     int odom_increments_;
 
     void add_odom_pose_increments();
@@ -179,7 +179,7 @@ private:
 
 private:
     //landmark related functions
-    std::vector<landmark> semantic_data_ass(const hdl_graph_slam::KeyFrame::Ptr curr_keyframe);
+    std::vector<landmark> semantic_data_ass(const ps_graph_slam::KeyFrame::Ptr curr_keyframe);
 
     void flush_landmark_queue(std::vector<landmark> current_lan_queue,
                               const auto current_keyframe);
@@ -205,18 +205,18 @@ protected:
 private:
 
     // keyframe related params
-    std::deque<hdl_graph_slam::KeyFrame::Ptr> new_keyframes_;
-    std::vector<hdl_graph_slam::KeyFrame::Ptr> keyframes_;
-    std::unordered_map<ros::Time, hdl_graph_slam::KeyFrame::Ptr, RosTimeHash> keyframe_hash_;
-    std::deque<hdl_graph_slam::KeyFrame::Ptr> keyframe_queue_;
+    std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;
+    std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_;
+    std::unordered_map<ros::Time, ps_graph_slam::KeyFrame::Ptr, RosTimeHash> keyframe_hash_;
+    std::deque<ps_graph_slam::KeyFrame::Ptr> keyframe_queue_;
 
     //landmark relared params
     std::vector<landmark> landmarks_vec_;
 
     std::mutex keyframe_queue_mutex;
 
-    std::unique_ptr<hdl_graph_slam::GraphSLAM> graph_slam_;
-    std::unique_ptr<hdl_graph_slam::KeyframeUpdater> keyframe_updater_;
-    std::unique_ptr<hdl_graph_slam::InformationMatrixCalculator> inf_calclator_;
+    std::unique_ptr<ps_graph_slam::GraphSLAM> graph_slam_;
+    std::unique_ptr<ps_graph_slam::KeyframeUpdater> keyframe_updater_;
+    std::unique_ptr<ps_graph_slam::InformationMatrixCalculator> inf_calclator_;
 
 };

@@ -3,7 +3,7 @@
 #include <pcl/search/kdtree.h>
 #include <pcl/common/transforms.h>
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
     //use_const_inf_matrix = nh.param<double>("use_const_inf_matrix", true);

@@ -33,7 +33,7 @@ namespace g2o {
 //        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
 }
 
-namespace hdl_graph_slam {
+namespace ps_graph_slam {
 
 /**
  * @brief constructor
