@@ -35,16 +35,13 @@
 #include <ps_graph_slam/graph_slam.hpp>
 #include <ps_graph_slam/keyframe.hpp>
 #include <ps_graph_slam/keyframe_updater.hpp>
-#include <ps_graph_slam/loop_detector.hpp>
 #include <ps_graph_slam/information_matrix_calculator.hpp>
-#include <ps_graph_slam/map_cloud_generator.hpp>
-#include <ps_graph_slam/nmea_sentence_parser.hpp>
 
 //landmarks
-#include "landmark.h"
+#include "ps_graph_slam/landmark.h"
 
 //data association
-#include "data_association.h"
+#include "ps_graph_slam/data_association.h"
 
 //plane segmentation
 //#include "plane_segmentation.h"
@@ -215,9 +212,6 @@ private:
 
     //landmark relared params
     std::vector<landmark> landmarks_vec_;
-
-    //loop detector
-    std::unique_ptr<hdl_graph_slam::LoopDetector> loop_detector_;
 
     std::mutex keyframe_queue_mutex;
 

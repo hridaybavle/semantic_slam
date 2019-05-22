@@ -14,7 +14,7 @@
 
 #include "tools.h"
 #include "detected_object.h"
-#include "landmark.h"
+#include "ps_graph_slam/landmark.h"
 
 class data_association {
 

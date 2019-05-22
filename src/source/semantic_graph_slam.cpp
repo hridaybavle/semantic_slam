@@ -44,7 +44,6 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     keyframe_updater_.reset(new hdl_graph_slam::KeyframeUpdater(n));
     graph_slam_.reset(new hdl_graph_slam::GraphSLAM());
     inf_calclator_.reset(new hdl_graph_slam::InformationMatrixCalculator(n));
-    loop_detector_.reset(new hdl_graph_slam::LoopDetector(n));
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
     robot_pose_.setIdentity();
@@ -69,14 +68,6 @@ void semantic_graph_slam::run()
     //add keyframe nodes to graph if keyframes available
     if(flush_keyframe_queue())
     {
-        //loop detection
-        //        std::vector<hdl_graph_slam::Loop::Ptr> loops = loop_detector_->detect(keyframes_, new_keyframes_, *graph_slam_);
-        //        for(const auto& loop : loops) {
-        //            Eigen::Isometry3d relpose(loop->relative_pose.cast<double>());
-        //            Eigen::MatrixXd information_matrix = inf_calclator_->calc_information_matrix(loop->key1->cloud, loop->key2->cloud, relpose);
-        //            graph_slam_->add_se3_edge(loop->key1->node, loop->key2->node, relpose, information_matrix);
-        //        }
-
         //add semantic data nodes to graph if available
         for(int i = 0; i < new_keyframes_.size(); ++i)
         {
@@ -235,7 +226,7 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
         this->getDetectedObjectInfo(obj_info);
 
     double accum_d = keyframe_updater_->get_accum_distance();
-    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud, cloud_msg, obj_info));
+    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue_.push_back(keyframe);
@@ -357,7 +348,7 @@ bool semantic_graph_slam::flush_keyframe_queue()
         const auto& prev_keyframe = i == 0 ? keyframes_.back() : keyframe_queue_[i - 1];
 
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
-        Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(prev_keyframe->cloud, keyframe->cloud, relative_pose); /*keyframe->odom_cov.inverse().cast<double>(); */
+        Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(); /*keyframe->odom_cov.inverse().cast<double>(); */
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
         std::cout << "added new odom measurement to the graph" << std::endl;
     }
@@ -464,10 +455,10 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     Eigen::Isometry3d odom;
     odom.setIdentity();
     Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6);
-    double accum_d = 0; pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>()); sensor_msgs::PointCloud2 cloud_msg;
+    double accum_d = 0; sensor_msgs::PointCloud2 cloud_msg;
     std::vector<semantic_SLAM::ObjectInfo> obj_info;
 
-    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud, cloud_msg, obj_info));
+    hdl_graph_slam::KeyFrame::Ptr keyframe(new hdl_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
     keyframe_queue_.push_back(keyframe);
 
     if(flush_keyframe_queue())

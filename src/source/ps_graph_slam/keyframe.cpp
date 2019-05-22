@@ -11,7 +11,6 @@ KeyFrame::KeyFrame(const ros::Time& stamp,
                    const Eigen::Isometry3d& odom, const Eigen::Isometry3d &robot_pose,
                    const Eigen::MatrixXf& odom_cov,
                    double accum_distance,
-                   const pcl::PointCloud<PointT>::ConstPtr& cloud,
                    const sensor_msgs::PointCloud2& cloud_msg,
                    std::vector<semantic_SLAM::ObjectInfo>& obj_info)
     : stamp(stamp),
@@ -19,7 +18,6 @@ KeyFrame::KeyFrame(const ros::Time& stamp,
       robot_pose(robot_pose),
       odom_cov(odom_cov),
       accum_distance(accum_distance),
-      cloud(cloud),
       cloud_msg(cloud_msg),
       obj_info(obj_info),
       node(nullptr)
@@ -51,23 +49,9 @@ void KeyFrame::dump(const std::string& directory) {
         ofs << "id " << node->id() << "\n";
     }
 
-    pcl::io::savePCDFileBinary(directory + "/cloud.pcd", *cloud);
+    //pcl::io::savePCDFileBinary(directory + "/cloud.pcd", *cloud);
 
 }
 
-KeyFrameSnapshot::KeyFrameSnapshot(const Eigen::Isometry3d& pose, const pcl::PointCloud<PointT>::ConstPtr& cloud)
-    : pose(pose),
-      cloud(cloud)
-{}
-
-KeyFrameSnapshot::KeyFrameSnapshot(const KeyFrame::Ptr& key)
-    : pose(key->node->estimate()),
-      cloud(key->cloud)
-{}
-
-
-KeyFrameSnapshot::~KeyFrameSnapshot() {
-
-}
 
 }

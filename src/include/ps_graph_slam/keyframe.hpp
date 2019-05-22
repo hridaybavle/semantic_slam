@@ -7,6 +7,7 @@
 #include <boost/optional.hpp>
 #include "semantic_SLAM/DetectedObjects.h"
 #include "sensor_msgs/PointCloud2.h"
+#include <g2o/types/slam3d/vertex_se3.h>
 
 namespace g2o {
 class VertexSE3;
@@ -28,7 +29,6 @@ public:
              const Eigen::Isometry3d& robot_pose,
              const Eigen::MatrixXf& odom_cov,
              double accum_distance,
-             const pcl::PointCloud<PointT>::ConstPtr& cloud,
              const sensor_msgs::PointCloud2& cloud_msg,
              std::vector<semantic_SLAM::ObjectInfo>& obj_info);
     ~KeyFrame();
@@ -41,7 +41,6 @@ public:
     Eigen::Isometry3d robot_pose;                    // corrected pose of the robot
     Eigen::MatrixXf odom_cov;                       // odometry covariance
     double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
-    pcl::PointCloud<PointT>::ConstPtr cloud;        // point cloud
     const sensor_msgs::PointCloud2 cloud_msg;       // point cloud ros msg
     boost::optional<Eigen::Vector4d> floor_coeffs;  // detected floor's coefficients
     boost::optional<Eigen::Vector3d> utm_coord;     // UTM coord obtained by GPS

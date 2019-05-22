@@ -6,7 +6,6 @@
 #include "detected_object.h"
 
 
-
 class point_cloud_segmentation {
 
 public:
