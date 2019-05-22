@@ -11,7 +11,7 @@
 #include "particle_filter/particle_filter.h"
 
 //point cloud segmentation
-#include "plane_segmentation.h"
+#include "planar_segmentation/plane_segmentation.h"
 
 //tools lib
 #include "tools.h"

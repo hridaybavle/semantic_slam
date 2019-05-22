@@ -1,4 +1,4 @@
-#include "semantic_graph_slam.h"
+#include "ps_graph_slam/semantic_graph_slam.h"
 
 
 int main(int argc, char **argv)

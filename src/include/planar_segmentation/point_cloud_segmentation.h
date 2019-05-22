@@ -1,10 +1,9 @@
 #ifndef POINT_CLOUD_SEGMENTATION
 #define POINT_CLOUD_SEGMENTATION
 
-#include "plane_segmentation.h"
+#include "planar_segmentation/plane_segmentation.h"
+#include "planar_segmentation/detected_object.h"
 #include "tools.h"
-#include "detected_object.h"
-
 
 class point_cloud_segmentation {
 

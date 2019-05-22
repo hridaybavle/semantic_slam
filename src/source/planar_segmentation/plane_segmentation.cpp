@@ -1,4 +1,4 @@
-﻿#include "plane_segmentation.h"
+﻿#include "planar_segmentation/plane_segmentation.h"
 
 plane_segmentation::plane_segmentation()
 {

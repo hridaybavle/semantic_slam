@@ -51,7 +51,7 @@
 #include "darknet_ros_msgs/BoundingBoxes.h"
 
 //segmented pointcloud acc to detection
-#include "point_cloud_segmentation.h"
+#include "planar_segmentation/point_cloud_segmentation.h"
 
 //acl messages
 #include "acl_msgs/ViconState.h"

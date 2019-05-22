@@ -1,4 +1,4 @@
-#include "semantic_graph_slam.h"
+#include "ps_graph_slam/semantic_graph_slam.h"
 
 semantic_graph_slam::semantic_graph_slam()
 //    : sync(SyncPolicy(10))
@@ -34,7 +34,6 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     ros::param::param<double>("~first_lan_z", first_lan_z_, 0.3);
     ros::param::param<bool>("~save_graph", save_graph_, false);
     ros::param::param<std::string>("~save_graph_path", save_graph_path_, "semantic_graph.g2o");
-
 
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
     std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;

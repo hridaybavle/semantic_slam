@@ -13,7 +13,7 @@
 #include "eigen3/Eigen/Eigen"
 
 #include "tools.h"
-#include "detected_object.h"
+#include "planar_segmentation/detected_object.h"
 #include "ps_graph_slam/landmark.h"
 
 class data_association {

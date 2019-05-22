@@ -1,4 +1,4 @@
-#include "semantic_SLAM.h"
+#include "particle_filter/semantic_pf_SLAM_ros.h"
 
 semantic_slam_ros::semantic_slam_ros()
     // : pclViewer (new pcl::visualization::PCLVisualizer ("Point cloud segmented"))
