@@ -56,16 +56,19 @@
 //acl messages
 #include "acl_msgs/ViconState.h"
 
-class semantic_graph_slam
+#include "ps_graph_slam/semantic_graph_slam.h"
+
+class semantic_graph_slam_ros
 {
 
 public:
-    semantic_graph_slam();
-    ~semantic_graph_slam();
+    semantic_graph_slam_ros();
+    ~semantic_graph_slam_ros();
 
 public:
     std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
     std::unique_ptr<data_association> data_ass_obj_;
+    std::unique_ptr<semantic_graph_slam> semantic_gslam_obj_;
 
 public:
     void run();
@@ -141,50 +144,15 @@ protected:
 
 private:
     //odom related
-    void VIOCallback(const ros::Time& stamp,
-                     Eigen::Isometry3d odom,
-                     Eigen::MatrixXf odom_cov);
-    bool first_key_added_;
-    Eigen::Isometry3d prev_odom_, vio_pose_;
     std::vector<geometry_msgs::PoseStamped> vio_pose_vec_;
-
-    void setVIOPose(Eigen::Isometry3d vio_pose);
 
 private:
     //point cloud related
-    void setPointCloudData(sensor_msgs::PointCloud2 point_cloud);
-    void getPointCloudData(sensor_msgs::PointCloud2& point_cloud);
-    sensor_msgs::PointCloud2 point_cloud_msg_;
-    bool point_cloud_available_;
     ros::Time pc_stamp_;
-
-private:
-    //detection related
-    bool update_keyframes_using_detections_;
-    bool object_detection_available_;
-    std::vector<semantic_SLAM::ObjectInfo> object_info_;
-    void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
-    void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
 
 private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
-
-private:
-    bool flush_keyframe_queue();
-    int max_keyframes_per_update_;
-
-    std::mutex trans_odom2map_mutex;
-    Eigen::Matrix4f trans_odom2map_;
-
-private:
-    //landmark related functions
-    std::vector<landmark> semantic_data_ass(const ps_graph_slam::KeyFrame::Ptr curr_keyframe);
-
-    void flush_landmark_queue(std::vector<landmark> current_lan_queue,
-                              const auto current_keyframe);
-
-    void getAndSetLandmarkCov();
 
 private:
     //vicon pose related
@@ -193,34 +161,4 @@ private:
     float gt_z_transform_;
 
     bool first_gt_pose_;
-
-protected:
-    //robot pose related
-    Eigen::Isometry3d robot_pose_;
-    double cam_angled_;
-    float cam_angle_;
-    bool add_first_lan_;
-    double first_lan_x_, first_lan_y_,first_lan_z_;
-
-private:
-
-    //graph related
-    bool save_graph_;
-    std::string save_graph_path_;
-
-    // keyframe related params
-    std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;
-    std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_;
-    std::unordered_map<ros::Time, ps_graph_slam::KeyFrame::Ptr, RosTimeHash> keyframe_hash_;
-    std::deque<ps_graph_slam::KeyFrame::Ptr> keyframe_queue_;
-
-    //landmark relared params
-    std::vector<landmark> landmarks_vec_;
-
-    std::mutex keyframe_queue_mutex;
-
-    std::unique_ptr<ps_graph_slam::GraphSLAM> graph_slam_;
-    std::unique_ptr<ps_graph_slam::KeyframeUpdater> keyframe_updater_;
-    std::unique_ptr<ps_graph_slam::InformationMatrixCalculator> inf_calclator_;
-
 };

@@ -7,13 +7,13 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "semantic_graph_slam");
     ros::NodeHandle n;
 
-    semantic_graph_slam mySemanticGraphSLAM;
+    semantic_graph_slam_ros mySemanticGraphSLAM;
     mySemanticGraphSLAM.open(n);
 
     ros::Rate r(30);
 
 
- //   while(!mySemanticSLAM.pclViewer->wasStopped())
+    //   while(!mySemanticSLAM.pclViewer->wasStopped())
     {
 
         while(ros::ok())
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 
         mySemanticGraphSLAM.saveGraph();
 
-     //   mySemanticSLAM.pclViewer->spinOnce(100);
+        //   mySemanticSLAM.pclViewer->spinOnce(100);
     }
     return 0;
 }
