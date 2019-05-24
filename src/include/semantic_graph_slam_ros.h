@@ -107,6 +107,7 @@ protected:
 protected:
     ros::Subscriber rvio_odom_pose_sub_;
     ros::Subscriber snap_odom_pose_sub_;
+    ros::Subscriber jackal_odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
     ros::Subscriber simple_detected_object_sub_;
@@ -116,6 +117,7 @@ protected:
 protected:
     void rovioVIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg);
+    void jackalOdomCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
     void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
     void detectedObjectSimpleCallback(const semantic_SLAM::DetectedObjects& msg);
@@ -138,7 +140,7 @@ protected:
 protected:
     void publishRobotPose();
     void publishLandmarks();
-    void publishDetectedLandmarks(Eigen::VectorXf robot_pose, std::vector<detected_object> det_obj_info);
+    void publishDetectedLandmarks();
     void publishKeyframePoses();
     void publishCorresVIOPose();
 
@@ -153,6 +155,14 @@ private:
 private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
+
+private:
+    //jackla pose related
+    float jack_x_transform_;
+    float jack_y_transform_;
+    float jack_z_transform_;
+    float jack_yaw_transform_;
+    bool first_jack_pose_;
 
 private:
     //vicon pose related

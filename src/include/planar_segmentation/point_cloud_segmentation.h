@@ -84,9 +84,9 @@ public:
                 complete_obj_info.pose(1)                       = final_detected_point_cam_frame(1);
                 complete_obj_info.pose(2)                       = final_detected_point_cam_frame(2);
                 complete_obj_info.normal_orientation            = normal_orientation_cam_frame;
-                complete_obj_info.world_pose << final_detected_point_world_frame(0),
-                        final_detected_point_world_frame(1),
-                        final_detected_point_world_frame(2);
+                complete_obj_info.world_pose << final_detected_point_world_frame(0) + robot_pose(0),
+                        final_detected_point_world_frame(1) + robot_pose(1),
+                        final_detected_point_world_frame(2) + robot_pose(2);
                 //complete_obj_info.planar_points                 = planar_surf_vec[j].planar_points;
 
                 complete_obj_info_vec.push_back(complete_obj_info);

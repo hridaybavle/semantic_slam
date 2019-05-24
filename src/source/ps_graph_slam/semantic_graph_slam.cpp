@@ -20,6 +20,7 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     first_key_added_                   = false;
     update_keyframes_using_detections_ = false;
     max_keyframes_per_update_   = 10;
+    seg_obj_vec_.clear();
 
     pc_seg_obj_.reset(new point_cloud_segmentation());
     data_ass_obj_.reset(new data_association(n));
@@ -212,6 +213,7 @@ std::vector<landmark> semantic_graph_slam::semantic_data_ass(const ps_graph_slam
 
     std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
     //this->publishDetectedLandmarks(current_robot_pose, seg_obj_vec);
+    this->setDetectedObjectsPose(seg_obj_vec);
 
     return current_landmarks_vec;
 
@@ -370,6 +372,16 @@ void semantic_graph_slam::getKeyframes(std::vector<ps_graph_slam::KeyFrame::Ptr>
 void semantic_graph_slam::getRobotPose(Eigen::Isometry3d& robot_pose)
 {
     robot_pose = robot_pose_;
+}
+
+void semantic_graph_slam::setDetectedObjectsPose(std::vector<detected_object> seg_obj_vec)
+{
+    seg_obj_vec_ = seg_obj_vec;
+}
+
+void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &seg_obj_vec)
+{
+    seg_obj_vec = seg_obj_vec_;
 }
 
 void semantic_graph_slam::saveGraph()

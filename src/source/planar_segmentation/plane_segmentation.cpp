@@ -145,6 +145,8 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
     normals_of_the_horizontal_plane_in_world(2) = 1;
 
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
+    std::cout << "normals_of_the_horizontal_plane_in_cam " << normals_of_the_horizontal_plane_in_cam << std::endl;
+
 
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
     mps.setMinInliers (num_points_seg_);
@@ -195,7 +197,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                                                          normals_extracted);
 
             //height of the object should never be above the camera
-            //if(centroid[1] > 0.0)
+            if(centroid[2] < 6.0)
             {
                 //checking if the extract plane is a horizontal plane or vertical
                 if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&

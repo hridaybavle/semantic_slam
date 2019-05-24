@@ -20,6 +20,9 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
 
     counter_        = false;
     first_gt_pose_  = false;
+    first_jack_pose_= false;
+
+    jack_yaw_transform_ = -1.57;
 
     //this is test run
     //    if(!counter_)
@@ -38,6 +41,7 @@ void semantic_graph_slam_ros::run()
     {
         this->publishLandmarks();
         this->publishKeyframePoses();
+        this->publishDetectedLandmarks();
     }
 
     this->publishCorresVIOPose();
@@ -62,6 +66,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     //subscribers
     rvio_odom_pose_sub_         = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam_ros::rovioVIOCallback, this);
     snap_odom_pose_sub_         = n.subscribe("/SQ04/snap_vislam/vislam/pose", 1, &semantic_graph_slam_ros::snapVIOCallback, this);
+    jackal_odom_pose_sub_       = n.subscribe("/JA01/odometry/filtered",1, &semantic_graph_slam_ros::jackalOdomCallback, this);
     cloud_sub_                  = n.subscribe("/depth_registered/points",1,&semantic_graph_slam_ros::PointCloudCallback, this);
     detected_object_sub_        = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam_ros::detectedObjectDarknetCallback, this);
     simple_detected_object_sub_ = n.subscribe("/image_processed/bounding_boxes",1, &semantic_graph_slam_ros::detectedObjectSimpleCallback, this);
@@ -114,6 +119,31 @@ void semantic_graph_slam_ros::snapVIOCallback(const geometry_msgs::PoseStamped &
     semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
 
     return;
+}
+
+void semantic_graph_slam_ros::jackalOdomCallback(const nav_msgs::OdometryConstPtr &odom_msg)
+{
+
+    const ros::Time& stamp                 = odom_msg->header.stamp;
+    nav_msgs::OdometryPtr odom_msg_convert = ps_graph_slam::RotPoseZ(odom_msg, jack_yaw_transform_);
+    if(!first_jack_pose_)
+    {
+        jack_x_transform_ = odom_msg_convert->pose.pose.position.x;
+        jack_y_transform_ = odom_msg_convert->pose.pose.position.y;
+        jack_z_transform_ = odom_msg_convert->pose.pose.position.z;
+
+
+        first_jack_pose_ = true;
+    }
+
+    nav_msgs::OdometryPtr odom_msg_orig    = ps_graph_slam::navMsgsToOrigin(odom_msg_convert, jack_x_transform_, jack_y_transform_, jack_z_transform_);
+    Eigen::Isometry3d odom                 = ps_graph_slam::odom2isometry(odom_msg_orig);
+    Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //jackal pose covariance is bad
+
+    semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
+
+    return;
+
 }
 
 void semantic_graph_slam_ros::PointCloudCallback(const sensor_msgs::PointCloud2 &msg)
@@ -258,8 +288,10 @@ void semantic_graph_slam_ros::publishLandmarks()
     landmarks_pub_.publish(marker_arrays);
 }
 
-void semantic_graph_slam_ros::publishDetectedLandmarks(Eigen::VectorXf robot_pose, std::vector<detected_object> det_obj_info)
+void semantic_graph_slam_ros::publishDetectedLandmarks()
 {
+    std::vector<detected_object> det_obj_info;
+    semantic_gslam_obj_->getDetectedObjectsPose(det_obj_info);
 
     visualization_msgs::MarkerArray marker_arrays;
     int marker_id = 0;
@@ -273,9 +305,9 @@ void semantic_graph_slam_ros::publishDetectedLandmarks(Eigen::VectorXf robot_pos
         marker.id = marker_id;
         marker.action = visualization_msgs::Marker::ADD;
         marker.type = visualization_msgs::Marker::CUBE;
-        marker.pose.position.x = det_obj_info[i].world_pose(0) + robot_pose(0);
-        marker.pose.position.y = det_obj_info[i].world_pose(1) + robot_pose(1);
-        marker.pose.position.z = det_obj_info[i].world_pose(2) + robot_pose(2);
+        marker.pose.position.x = det_obj_info[i].world_pose(0);
+        marker.pose.position.y = det_obj_info[i].world_pose(1);
+        marker.pose.position.z = det_obj_info[i].world_pose(2);
         marker.pose.orientation.x = 0.0;
         marker.pose.orientation.y = 0.0;
         marker.pose.orientation.z = 0.0;
@@ -304,8 +336,6 @@ void semantic_graph_slam_ros::publishDetectedLandmarks(Eigen::VectorXf robot_pos
     }
 
     detected_lans_pub_.publish(marker_arrays);
-
-
 }
 
 
@@ -535,4 +565,3 @@ void semantic_graph_slam_ros::saveGraph()
 //    std::cout << "optimized graph " << std::endl;
 
 //}
-

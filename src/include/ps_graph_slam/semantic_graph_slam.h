@@ -70,9 +70,13 @@ private:
 
     void getAndSetLandmarkCov();
     void addFirstPoseAndLandmark();
+
+
+    std::vector<detected_object> seg_obj_vec_;
+    void setDetectedObjectsPose(std::vector<detected_object> seg_obj_vec);
 public:
     void getMappedLandmarks(std::vector<landmark>& l_vec);
-
+    void getDetectedObjectsPose(std::vector<detected_object>& seg_obj_vec);
 
 public:
     void getKeyframes(std::vector<ps_graph_slam::KeyFrame::Ptr>& keyframes);

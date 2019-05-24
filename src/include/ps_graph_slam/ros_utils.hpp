@@ -162,7 +162,7 @@ static geometry_msgs::PoseStamped poseNED2ENU(const geometry_msgs::PoseStamped& 
 
     Eigen::Vector3f trans_enu = trans_mat * trans_ned;
 
-    geometry_msgs::PoseStamped pose_converted ;
+    geometry_msgs::PoseStamped pose_converted;
     pose_converted.pose.position.x    = trans_enu(0);
     pose_converted.pose.position.y    = trans_enu(1);
     pose_converted.pose.position.z    = trans_enu(2);
@@ -172,6 +172,60 @@ static geometry_msgs::PoseStamped poseNED2ENU(const geometry_msgs::PoseStamped& 
     pose_converted.pose.orientation.w = quat_enu.w();
 
     return pose_converted;
+}
+
+static nav_msgs::OdometryPtr RotPoseZ(const nav_msgs::OdometryConstPtr& odom_msg,
+                                      float first_yaw)
+{
+    //converting quaternions to euler angles
+    tf::Quaternion quat(odom_msg->pose.pose.orientation.x, odom_msg->pose.pose.orientation.y, odom_msg->pose.pose.orientation.z, odom_msg->pose.pose.orientation.w);
+    tf::Matrix3x3  m(quat);
+
+    double yaw, pitch, roll;
+    m.getEulerYPR(yaw, pitch, roll);
+
+    Eigen::Vector3f angle;
+    angle << roll, pitch, (yaw - first_yaw);
+
+    Eigen::Matrix3f trans_mat;
+    trans_mat << cos(1.57), -sin(1.57), 0,
+            sin(1.57), cos(1.57), 0,
+            0, 0, 1;
+
+    Eigen::Vector3f angle_enu = trans_mat * angle;
+    tf::Quaternion quat_enu = tf::createQuaternionFromRPY(angle_enu(0),angle_enu(1),angle_enu(2));
+
+    //converting the translations
+    Eigen::Vector3f trans;
+    trans << odom_msg->pose.pose.position.x,
+            odom_msg->pose.pose.position.y,
+            odom_msg->pose.pose.position.z;
+
+    Eigen::Vector3f trans_enu = trans_mat * trans;
+
+    nav_msgs::OdometryPtr odom_conv_msg (new nav_msgs::Odometry());
+    odom_conv_msg->pose.pose.position.x = trans_enu(0);
+    odom_conv_msg->pose.pose.position.y = trans_enu(1);
+    odom_conv_msg->pose.pose.position.z = trans_enu(2);
+    odom_conv_msg->pose.pose.orientation.x = quat_enu.x();
+    odom_conv_msg->pose.pose.orientation.y = quat_enu.y();
+    odom_conv_msg->pose.pose.orientation.z = quat_enu.z();
+    odom_conv_msg->pose.pose.orientation.w = quat_enu.w();
+
+    return odom_conv_msg;
+}
+
+static nav_msgs::OdometryPtr navMsgsToOrigin(const nav_msgs::OdometryConstPtr& odom_msg,
+                                             float transform_x, float transform_y, float transform_z)
+{
+    nav_msgs::OdometryPtr odom_to_origin_msg (new nav_msgs::Odometry());
+    odom_to_origin_msg->pose.pose.position.x    = odom_msg->pose.pose.position.x - transform_x;
+    odom_to_origin_msg->pose.pose.position.y    = odom_msg->pose.pose.position.y - transform_y;
+    odom_to_origin_msg->pose.pose.position.z    = odom_msg->pose.pose.position.z - transform_z;
+    odom_to_origin_msg->pose.pose.orientation   = odom_msg->pose.pose.orientation;
+
+    return odom_to_origin_msg;
+
 }
 
 static Eigen::MatrixXf arrayToMatrix(const nav_msgs::OdometryConstPtr& odom_msg) {
