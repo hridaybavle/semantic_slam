@@ -12,8 +12,9 @@ semantic_graph_slam::~semantic_graph_slam()
     std::cout << "semantic graph slam destructor " << std::endl;
 }
 
-void semantic_graph_slam::init(ros::NodeHandle n)
+void semantic_graph_slam::init(bool verbose)
 {
+    verbose_ = verbose;
     //default values
     object_detection_available_        = false;
     point_cloud_available_             = false;
@@ -22,16 +23,17 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     max_keyframes_per_update_   = 10;
     seg_obj_vec_.clear();
 
-    pc_seg_obj_.reset(new point_cloud_segmentation());
-    data_ass_obj_.reset(new data_association(n));
-    keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater(n));
-    graph_slam_.reset(new ps_graph_slam::GraphSLAM());
-    inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator(n));
+    pc_seg_obj_.reset(new point_cloud_segmentation(verbose_));
+    data_ass_obj_.reset(new data_association(verbose_));
+    graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
+    keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
+    inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
     robot_pose_.setIdentity();
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
+
 
     ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
     ros::param::param<double>("~camera_angle",cam_angled_,0);
@@ -39,15 +41,12 @@ void semantic_graph_slam::init(ros::NodeHandle n)
     ros::param::param<double>("~first_lan_x", first_lan_x_, 1.8);
     ros::param::param<double>("~first_lan_y", first_lan_y_, 0);
     ros::param::param<double>("~first_lan_z", first_lan_z_, 0.3);
-    ros::param::param<bool>("~save_graph", save_graph_, false);
-    ros::param::param<std::string>("~save_graph_path", save_graph_path_, "semantic_graph.g2o");
+
 
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
-    std::cout << "camera angle in radians " <<  cam_angle_ << std::endl;
-    std::cout << "update keyframe every detection " << update_keyframes_using_detections_<< std::endl;
-    std::cout << "add first landmark " << add_first_lan_ << std::endl;
-    std::cout << "should save graph " << save_graph_ << std::endl;
-    std::cout << "saving graph path " << save_graph_path_ << std::endl;
+    std::cout << "camera angle in radians: " <<  cam_angle_ << std::endl;
+    std::cout << "update keyframe every detection: " << update_keyframes_using_detections_<< std::endl;
+    std::cout << "add first landmark: " << add_first_lan_ << std::endl;
 
     if(add_first_lan_)
         this->addFirstPoseAndLandmark();
@@ -80,7 +79,8 @@ bool semantic_graph_slam::run()
         //optimizing the graph
         if(graph_slam_->optimize())
         {
-            std::cout << "optimizing the graph " << std::endl;
+            if(verbose_)
+                std::cout << "optimizing the graph " << std::endl;
             //get and set the landmark covariances
             this->getAndSetLandmarkCov();
 
@@ -118,7 +118,8 @@ bool semantic_graph_slam::empty_keyframe_queue()
         Eigen::Isometry3d odom = keyframe->odom;
         keyframe->node = graph_slam_->add_se3_node(odom);
         keyframe_hash_[keyframe->stamp] = keyframe;
-        std::cout << "added new keyframe to the graph" << std::endl;
+        if(verbose_)
+            std::cout << "added new keyframe to the graph" << std::endl;
 
         if(i==0 && keyframes_.empty()) {
             continue;
@@ -130,7 +131,8 @@ bool semantic_graph_slam::empty_keyframe_queue()
         Eigen::Isometry3d relative_pose = prev_keyframe->odom.inverse() * keyframe->odom;
         Eigen::MatrixXd information = inf_calclator_->calc_information_matrix(); /*keyframe->odom_cov.inverse().cast<double>(); */
         graph_slam_->add_se3_edge(prev_keyframe->node, keyframe->node, relative_pose, information);
-        std::cout << "added new odom measurement to the graph" << std::endl;
+        if(verbose_)
+            std::cout << "added new odom measurement to the graph" << std::endl;
     }
 
     keyframe_queue_.erase(keyframe_queue_.begin(), keyframe_queue_.begin() + num_processed + 1);
@@ -154,13 +156,15 @@ void semantic_graph_slam::empty_landmark_queue(std::vector<landmark> current_lan
             current_lan_queue[i].node = graph_slam_->add_point_xyz_node(current_lan_queue[i].pose.cast<double>());
             current_lan_queue[i].is_new_landmark = false;
             data_ass_obj_->assignLandmarkNode(current_lan_queue[i].id, current_lan_queue[i].node);
-            std::cout << "added the landmark position node " << std::endl;
+            if(verbose_)
+                std::cout << "added the landmark position node " << std::endl;
         }
 
         //add an edge between landmark and the current keyframe
         Eigen::Matrix3f information = current_lan_queue[i].covariance.inverse();
         graph_slam_->add_se3_point_xyz_edge(current_keyframe->node, current_lan_queue[i].node, current_lan_queue[i].local_pose.cast<double>(), information.cast<double>());
-        std::cout << "added an edge between the landmark and it keyframe " << std::endl;
+        if(verbose_)
+            std::cout << "added an edge between the landmark and it keyframe " << std::endl;
     }
 
 }
@@ -197,21 +201,24 @@ std::vector<landmark> semantic_graph_slam::semantic_data_ass(const ps_graph_slam
     std::vector<semantic_SLAM::ObjectInfo> object_info = curr_keyframe->obj_info;
     sensor_msgs::PointCloud2 point_cloud_msg = curr_keyframe->cloud_msg;
     Eigen::VectorXf current_robot_pose = ps_graph_slam::matrix2vector(curr_keyframe->robot_pose.matrix().cast<float>());
-    std::cout << "current robot pose " << current_robot_pose << std::endl;
+    if(verbose_)
+        std::cout << "current robot pose " << current_robot_pose << std::endl;
 
 
     std::vector<detected_object> seg_obj_vec = pc_seg_obj_->segmentallPointCloudData(current_robot_pose,
                                                                                      cam_angle_,
                                                                                      object_info,
                                                                                      point_cloud_msg);
-    std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
+    if(verbose_)
+        std::cout << "seg_obj_vec size " << seg_obj_vec.size() << std::endl;
 
 
     std::vector<landmark> current_landmarks_vec = data_ass_obj_->find_matches(seg_obj_vec,
                                                                               current_robot_pose,
                                                                               cam_angle_);
 
-    std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
+    if(verbose_)
+        std::cout << "current_landmarks_vec size " << current_landmarks_vec.size() << std::endl;
     //this->publishDetectedLandmarks(current_robot_pose, seg_obj_vec);
     this->setDetectedObjectsPose(seg_obj_vec);
 
@@ -273,7 +280,8 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue_.push_back(keyframe);
-    std::cout << "added keyframe in queue" << std::endl;
+    if(verbose_)
+        std::cout << "added keyframe in queue" << std::endl;
 
     this->setVIOPose(odom);
     prev_odom_ = odom;
@@ -317,7 +325,9 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
         new_keyframes_.clear();
     }
 
-    std::cout << "add the first landmark and keyframe pose " << std::endl;
+    if(verbose_)
+        std::cout << "add the first landmark and keyframe pose " << std::endl;
+
     return;
 }
 
@@ -384,11 +394,9 @@ void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &s
     seg_obj_vec = seg_obj_vec_;
 }
 
-void semantic_graph_slam::saveGraph()
+void semantic_graph_slam::saveGraph(std::string save_graph_path)
 {
-    if(save_graph_)
-    {
-        graph_slam_->save(save_graph_path_);
-        std::cout << "save the graph at " << save_graph_path_ << std::endl;
-    }
+
+    graph_slam_->save(save_graph_path);
+    std::cout << "saved the graph at " << save_graph_path << std::endl;
 }

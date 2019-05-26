@@ -17,7 +17,7 @@ public:
    * @brief constructor
    * @param pnh
    */
-    KeyframeUpdater(ros::NodeHandle& pnh)
+    KeyframeUpdater()
         : is_first(true),
           prev_keypose(Eigen::Isometry3d::Identity())
     {

@@ -1,4 +1,5 @@
 #general params
+verbose: false
 camera_angle: 33.93
 update_key_using_det: true
 add_first_lan: false
@@ -10,10 +11,12 @@ keyframe_delta_time: 1.0
 num_point_seg: 100
 norm_point_thres: 6000
 #data association related
-maha_dist: 1.5
+maha_dist_thres: 1.5
+use_maha_dist: false
+use_eq_dist: true
+eq_dist_thres: 1.5
 land_noise_low: 0.1 
 land_noise_high: 0.1
-use_maha_dist: false
 #odom information cal
 use_const_inf_matrix: true
 const_stddev_x: 0.00667

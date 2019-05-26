@@ -44,10 +44,11 @@ const int num_centroids_pose = 2;
 class plane_segmentation
 {
 public:
-    plane_segmentation();
+    plane_segmentation(bool verbose);
     ~plane_segmentation();
 
 private:
+    bool verbose_;
     double num_points_seg_;
     double normal_point_thres_;
 

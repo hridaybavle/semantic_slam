@@ -11,7 +11,7 @@ class InformationMatrixCalculator {
 public:
     using PointT = pcl::PointXYZI;
 
-    InformationMatrixCalculator(ros::NodeHandle& nh);
+    InformationMatrixCalculator();
     ~InformationMatrixCalculator();
 
     Eigen::MatrixXd calc_information_matrix() const;

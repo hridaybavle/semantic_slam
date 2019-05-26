@@ -9,10 +9,12 @@ class point_cloud_segmentation {
 
 public:
     std::unique_ptr<plane_segmentation> plane_seg_obj;
+    bool verbose_;
 
 public:
-    point_cloud_segmentation(){
-        plane_seg_obj.reset(new plane_segmentation());
+    point_cloud_segmentation(bool verbose){
+        verbose_ = verbose;
+        plane_seg_obj.reset(new plane_segmentation(verbose_));
         std::cout << "pc segmentation constructor " << std::endl;
     }
 

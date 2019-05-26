@@ -24,7 +24,7 @@ namespace ps_graph_slam {
 
 class GraphSLAM {
 public:
-    GraphSLAM();
+    GraphSLAM(bool verbose);
     ~GraphSLAM();
 
     /**
@@ -128,6 +128,7 @@ public:
 
 public:
     std::shared_ptr<g2o::SparseOptimizer> graph;  // g2o graph
+    bool verbose_;
     //    g2o::VertexPlane* floor_plane_node;           // ground floor plane node
 };
 

@@ -77,6 +77,13 @@ public:
     void addFirstPoseAndLandmark();
     void saveGraph();
 
+private:
+    bool save_graph_;
+    std::string save_graph_path_;
+
+private:
+    bool verbose_;
+
     //test stuff
 private:
     bool counter_;
@@ -157,7 +164,7 @@ private:
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
 
 private:
-    //jackla pose related
+    //jackal pose related
     float jack_x_transform_;
     float jack_y_transform_;
     float jack_z_transform_;
@@ -171,4 +178,5 @@ private:
     float gt_z_transform_;
 
     bool first_gt_pose_;
+
 };

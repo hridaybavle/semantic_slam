@@ -3,26 +3,33 @@
 semantic_graph_slam_ros::semantic_graph_slam_ros()
 //    : sync(SyncPolicy(10))
 {
-    std::cout << "semantic graph slam ros constructor " << std::endl;
+    std::cout << "Intialializing semantic graph slam ros node " << std::endl;
 
 }
 
 semantic_graph_slam_ros::~semantic_graph_slam_ros()
 {
-    std::cout << "semantic graph slam ros destructor " << std::endl;
+    std::cout << "Destructing semantic graph slam ros node " << std::endl;
 
 }
 
 void semantic_graph_slam_ros::init(ros::NodeHandle n)
 {
-    semantic_gslam_obj_.reset(new semantic_graph_slam());
-    semantic_gslam_obj_->init(n);
-
     counter_        = false;
     first_gt_pose_  = false;
     first_jack_pose_= false;
+    verbose_        = false;
 
     jack_yaw_transform_ = -1.57;
+
+    ros::param::param<bool>("~save_graph", save_graph_, false);
+    ros::param::param<std::string>("~save_graph_path", save_graph_path_, "semantic_graph.g2o");
+
+    std::cout << "should save graph: " << save_graph_ << std::endl;
+    std::cout << "saving graph path: " << save_graph_path_ << std::endl;
+
+    semantic_gslam_obj_.reset(new semantic_graph_slam());
+    semantic_gslam_obj_->init(verbose_);
 
     //this is test run
     //    if(!counter_)
@@ -479,7 +486,8 @@ void semantic_graph_slam_ros::publishCorresVIOPose()
 
 void semantic_graph_slam_ros::saveGraph()
 {
-    semantic_gslam_obj_->saveGraph();
+    if(save_graph_)
+        semantic_gslam_obj_->saveGraph(save_graph_path_);
 }
 
 

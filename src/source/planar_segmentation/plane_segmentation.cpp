@@ -1,20 +1,21 @@
 ﻿#include "planar_segmentation/plane_segmentation.h"
 
-plane_segmentation::plane_segmentation()
+plane_segmentation::plane_segmentation(bool verbose)
 {
-    std::cout << "initialized plane segmentation " << std::endl;
+    std::cout << "Initialized plane segmentation " << std::endl;
 
+    verbose_ = verbose;
     ros::param::param<double>("~num_point_seg", num_points_seg_, 500);
     ros::param::param<double>("~norm_point_thres", normal_point_thres_, 5000);
 
-    std::cout << "num points for segmentation " << num_points_seg_ << std::endl;
-    std::cout << "normal points threshold " << normal_point_thres_ << std::endl;
+    std::cout << "Min num points for segmentation " << num_points_seg_ << std::endl;
+    std::cout << "Min normal points threshold " << normal_point_thres_ << std::endl;
 
 }
 
 plane_segmentation::~plane_segmentation()
 {
-    std::cout << "destructing plane segmentation " << std::endl;
+    std::cout << "Destructing plane segmentation " << std::endl;
 
 }
 
@@ -145,7 +146,8 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
     normals_of_the_horizontal_plane_in_world(2) = 1;
 
     normals_of_the_horizontal_plane_in_cam = transformation_mat.transpose().eval() * normals_of_the_horizontal_plane_in_world;
-    std::cout << "normals_of_the_horizontal_plane_in_cam " << normals_of_the_horizontal_plane_in_cam << std::endl;
+    if(verbose_)
+        std::cout << "normals_of_the_horizontal_plane_in_cam " << normals_of_the_horizontal_plane_in_cam << std::endl;
 
 
     pcl::OrganizedMultiPlaneSegmentation< pcl::PointXYZRGB, pcl::Normal, pcl::Label > mps;
@@ -179,10 +181,9 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
 
         if(boundary_cloud->points.size() > 100)
         {
-            printf ("Centroids from multiplane: (%f, %f, %f)\n  Coefficients from multiplane: (%f, %f, %f, %f)\n",
-                    centroid[0], centroid[1], centroid[2],
-                    model[0], model[1], model[2], model[3]);
-            //std::cout << "inliers " <<   boundary_cloud.points.size() << std::endl;
+            if(verbose_)
+                std::cout << "Centroids from multiplane: " << centroid[0] << "," << centroid[1] << "," << centroid[2]
+                          << std::endl << "Coefficients from multiplane: "  << model[0] << "," << model[1] << "," <<  model[2] << "," <<  model[3] << std::endl;
 
             cv::Mat final_pose_centroid;
             final_pose_centroid = cv::Mat::zeros(1, 8, CV_32F);
@@ -457,7 +458,6 @@ std::vector<cv::Mat> plane_segmentation::getFinalPoseWithNormals(std::vector<pcl
 
         double x=0,y=0,z=0;
 
-        std::cout << "final convex hull size " << final_points_convex_hull->size() << std::endl;
         for(int j = 0; j < final_points_convex_hull->size(); ++j)
         {
             cv::Mat final_pose_centroid;

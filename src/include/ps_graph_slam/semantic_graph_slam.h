@@ -27,7 +27,10 @@ public:
 
 public:
     bool run();
-    void init(ros::NodeHandle n);
+    void init(bool verbose);
+
+private:
+    bool verbose_;
 
 private:
     std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
@@ -101,10 +104,8 @@ public:
 
     //graph related
 public:
-    void saveGraph();
+    void saveGraph(std::string save_graph_path);
 private:
-    bool save_graph_;
-    std::string save_graph_path_;
 
     // keyframe related params
     std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;

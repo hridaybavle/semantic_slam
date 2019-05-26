@@ -19,12 +19,11 @@
 class data_association {
 
 public:
-    data_association(ros::NodeHandle n)
+    data_association(bool verbose)
     {
         std::cout << "data association constructor " << std::endl;
-
-
-        init(n);
+        verbose_ = verbose;
+        init();
 
     }
     ~data_association()
@@ -34,29 +33,36 @@ public:
 
 
 private:
+    bool verbose_;
     bool first_object_;
     std::vector<landmark> landmarks_;
     Eigen::Matrix3f Q_;
-    double MAHA_DIST_THRESHOLD;
+    double maha_dist_thres_, eq_dist_thres_;
     semantic_tools sem_tool_obj_;
     double land_noise_low_, land_noise_high_;
-    bool use_maha_dist_;
+    bool use_maha_dist_, use_eq_dist_;
+    bool eq_dist_;
 
-    void init(ros::NodeHandle n)
+    void init()
     {
         first_object_   = true;
         use_maha_dist_  = true;
         landmarks_.clear();
         Q_.setZero();
 
-        ros::param::param<double>("~maha_dist",MAHA_DIST_THRESHOLD,0.5);
+        ros::param::param<double>("~maha_dist_thres",maha_dist_thres_,0.5);
+        ros::param::param<double>("~eq_dist_thres", eq_dist_thres_, 1.21);
         ros::param::param<double>("~land_noise_low",land_noise_low_,0.5);
         ros::param::param<double>("~land_noise_high",land_noise_high_,0.9);
         ros::param::param<bool>("~use_maha_dist",use_maha_dist_,true);
+        ros::param::param<bool>("~use_eq_dist", use_eq_dist_, false);
 
-        std::cout << "land_noise_low " <<  land_noise_low_ << std::endl;
-        std::cout << "land_noise_high " <<  land_noise_high_ << std::endl;
-        std::cout << "use_maha_dist " <<  use_maha_dist_ << std::endl;
+        std::cout << "land_noise_low: " <<  land_noise_low_ << std::endl;
+        std::cout << "land_noise_high: " <<  land_noise_high_ << std::endl;
+        std::cout << "use_maha_dist: " <<  use_maha_dist_ << std::endl;
+        std::cout << "use_eq_dist: " <<  use_eq_dist_ << std::endl;
+        std::cout << "maha dist thres: " << maha_dist_thres_ << std::endl;
+        std::cout << "eq dist thres: " << eq_dist_thres_ << std::endl;
 
         Q_(0,0) = land_noise_low_;
         Q_(1,1) = land_noise_low_;
@@ -91,7 +97,8 @@ public:
             landmark_vec = this->associate_lanmarks(seg_obj_info, robot_pose, cam_angle);
         }
 
-        std::cout << "landmarks size " << landmarks_.size() << std::endl;
+        if(verbose_)
+            std::cout << "landmarks size " << landmarks_.size() << std::endl;
 
         return landmark_vec;
 
@@ -102,8 +109,8 @@ public:
                                              float cam_angle)
     {
         bool found_nearest_neighbour = false;
-        float maha_distance=0;
-        float maha_distance_min = std::numeric_limits<float>::max();
+        float distance=0;
+        float distance_min = std::numeric_limits<float>::max();
 
         std::vector<landmark> landmark_vec;
 
@@ -112,7 +119,6 @@ public:
         {
             int neareast_landmarks_id;
 
-            std::cout << "seg_obj_info " << j << " points:" <<seg_obj_info[j].num_points << std::endl;
             //            if(seg_obj_info[j].num_points < 300)
             //            {
             //                Q_(0,0) = land_noise_high_;
@@ -161,38 +167,45 @@ public:
                             Eigen::VectorXf actual_meas; actual_meas.resize(3);
                             actual_meas = obj_pose_world;
 
-                            std::cout << "actual meas " << actual_meas << std::endl;
-                            std::cout << "expected meas " << expected_meas << std::endl;
+                            if(verbose_)
+                            {
+                                std::cout << "actual meas: " << actual_meas << std::endl;
+                                std::cout << "expected meas: " << expected_meas << std::endl;
+                            }
 
                             //sigma recovered from graph slam optimization
                             if(use_maha_dist_)
                             {
                                 Eigen::MatrixXf sigma; sigma.resize(3,3);
                                 sigma = landmarks_[i].covariance;
-                                std::cout << "landmark " << i << "sigma " << sigma << std::endl;
+                                if(verbose_)
+                                    std::cout << "landmark: " << i << "sigma: " << sigma << std::endl;
 
                                 Eigen::MatrixXf Q = H * sigma * H.transpose() + Q_;
 
                                 Eigen::VectorXf z_diff; z_diff.resize(3);
                                 z_diff = actual_meas - expected_meas;
 
-                                std::cout << "z_diff " << z_diff << std::endl;
+                                if(verbose_)
+                                    std::cout << "z_diff: " << z_diff << std::endl;
 
-                                maha_distance = z_diff.transpose() * Q.inverse() * z_diff;
-                                std::cout << "cov maha distance " << maha_distance << std::endl;
+                                distance = z_diff.transpose() * Q.inverse() * z_diff;
+                                if(verbose_)
+                                    std::cout << "cov maha distance: " << distance << std::endl;
                             }
-                            else
+                            else if(use_eq_dist_)
                             {
-                                maha_distance = sem_tool_obj_.dist(actual_meas(0), expected_meas(0),
-                                                                   actual_meas(1), expected_meas(1),
-                                                                   actual_meas(2), expected_meas(2));
-                                std::cout << "euclidean distance " << maha_distance << std::endl;
+                                distance = sem_tool_obj_.dist(actual_meas(0), expected_meas(0),
+                                                              actual_meas(1), expected_meas(1),
+                                                              actual_meas(2), expected_meas(2));
+                                if(verbose_)
+                                    std::cout << "euclidean distance: " << distance << std::endl;
                             }
 
 
-                            if(maha_distance < maha_distance_min)
+                            if(distance < distance_min)
                             {
-                                maha_distance_min     = maha_distance;
+                                distance_min     = distance;
                                 neareast_landmarks_id = i;
                             }
                         }
@@ -212,23 +225,36 @@ public:
             {
                 found_nearest_neighbour = false;
 
-                std::cout << "maha_distance_min " << maha_distance_min << std::endl;
+                if(verbose_)
+                    std::cout << "distance_min: " << distance_min << std::endl;
 
-                if(maha_distance_min > MAHA_DIST_THRESHOLD)
-                    landmark_vec.push_back(this->map_a_new_lan(seg_obj_info[j],
-                                                               robot_pose,
-                                                               cam_angle));
-                else
+                if(use_maha_dist_)
                 {
-
-                    landmark_vec.push_back(this->inserst_a_mapped_lan(seg_obj_info[j],
-                                                                      robot_pose,
-                                                                      cam_angle,
-                                                                      landmarks_[neareast_landmarks_id]));
+                    if(distance_min > maha_dist_thres_)
+                        landmark_vec.push_back(this->map_a_new_lan(seg_obj_info[j],
+                                                                   robot_pose,
+                                                                   cam_angle));
+                    else
+                        landmark_vec.push_back(this->inserst_a_mapped_lan(seg_obj_info[j],
+                                                                          robot_pose,
+                                                                          cam_angle,
+                                                                          landmarks_[neareast_landmarks_id]));
                 }
+                else if(use_eq_dist_)
+                {
+                    if(distance_min > eq_dist_thres_)
+                        landmark_vec.push_back(this->map_a_new_lan(seg_obj_info[j],
+                                                                   robot_pose,
+                                                                   cam_angle));
+                    else
+                        landmark_vec.push_back(this->inserst_a_mapped_lan(seg_obj_info[j],
+                                                                          robot_pose,
+                                                                          cam_angle,
+                                                                          landmarks_[neareast_landmarks_id]));
+                }
+
             }
         }
-
 
         return landmark_vec;
 
@@ -265,16 +291,14 @@ public:
         new_landmark.id              = landmarks_.size();
         new_landmark.local_pose << obj_pose_rob(0), obj_pose_rob(1), obj_pose_rob(2);
         new_landmark.pose       << obj_pose_world(0), obj_pose_world(1), obj_pose_world(2);
-
-        std::cout << "landmark initial cov " << Q_ << std::endl;
         new_landmark.covariance         = Q_;
         new_landmark.normal_orientation = obj_normals_world;
         new_landmark.plane_type         = seg_obj_info.plane_type;
         new_landmark.type               = seg_obj_info.type;
         landmarks_.push_back(new_landmark);
 
-        std::cout << "landmark normal orientation " << new_landmark.normal_orientation << std::endl;
-        std::cout << "\033[1;31m new landmark pose \033[0m\n" << new_landmark.pose << std::endl;
+        if(verbose_)
+            std::cout << "\033[1;31m new landmark pose \033[0m\n" << new_landmark.pose << std::endl;
 
         return new_landmark;
     }
@@ -316,8 +340,9 @@ public:
         landmark.type               = seg_obj_info.type;
         landmark.node               = l.node;
 
-        std::cout << "\033[1;34m matched landmark \033[0m " << landmark.pose << " "
-                  << "\033[1;34m with mapped landmark \033[0m "  << l.pose << std::endl;
+        if(verbose_)
+            std::cout << "\033[1;34m matched landmark \033[0m " << landmark.pose << " "
+                      << "\033[1;34m with mapped landmark \033[0m "  << l.pose << std::endl;
 
         return landmark;
     }

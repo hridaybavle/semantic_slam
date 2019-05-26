@@ -28,9 +28,9 @@
 G2O_USE_OPTIMIZATION_LIBRARY(csparse)
 
 namespace g2o {
-//G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
-//        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
-//        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
+    //G2O_REGISTER_TYPE(EDGE_SE3_PLANE, EdgeSE3Plane)
+    //        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXY, EdgeSE3PriorXY)
+    //        G2O_REGISTER_TYPE(EDGE_SE3_PRIORXYZ, EdgeSE3PriorXYZ)
 }
 
 namespace ps_graph_slam {
@@ -38,8 +38,9 @@ namespace ps_graph_slam {
 /**
  * @brief constructor
  */
-GraphSLAM::GraphSLAM() {
+GraphSLAM::GraphSLAM(bool verbose) {
 
+    verbose_ = verbose;
     graph.reset(new g2o::SparseOptimizer());
 
     std::cout << "construct solver... " << std::endl;
@@ -200,14 +201,18 @@ g2o::EdgePointXYZ* GraphSLAM::add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* 
 //}
 
 bool GraphSLAM::optimize() {
+
     if(graph->edges().size() < 10) {
         return false;
     }
 
-    //std::cout << std::endl;
-    //std::cout << "--- pose graph optimization ---" << std::endl;
-    //std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
-    //std::cout << "optimizing... " << std::flush;
+    if(verbose_)
+    {
+        std::cout << std::endl;
+        std::cout << "--- pose graph optimization ---" << std::endl;
+        std::cout << "nodes: " << graph->vertices().size() << "   edges: " << graph->edges().size() << std::endl;
+        std::cout << "optimizing... " << std::flush;
+    }
 
     //    graph->setComputeBatchStatistics(true);
     //    graph->computeActiveErrors();
@@ -222,10 +227,13 @@ bool GraphSLAM::optimize() {
 
     auto t2 = ros::Time::now();
 
-    //std::cout << "done" << std::endl;
-    //std::cout << "iterations: " << iterations << std::endl;
-    //std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
-    //std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+    if(verbose_)
+    {
+        std::cout << "done" << std::endl;
+        std::cout << "iterations: " << iterations << std::endl;
+        std::cout << "chi2: (before)" << chi2 << " -> (after)" << graph->chi2() << std::endl;
+        std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
+    }
 
     return true;
 }
@@ -236,12 +244,14 @@ bool GraphSLAM::computeLandmarkMarginals(g2o::SparseBlockMatrix<Eigen::MatrixXd>
 
     if(graph->computeMarginals(spinv, vert_pairs_vec))
     {
-        std::cout << "computed marginals " << std::endl;
+        if(verbose_)
+            std::cout << "computed marginals " << std::endl;
         return true;
     }
     else
     {
-        std::cout << "not computing marginals " << std::endl;
+        if(verbose_)
+            std::cout << "not computing marginals " << std::endl;
         return false;
     }
 

@@ -5,17 +5,17 @@
 
 namespace ps_graph_slam {
 
-InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
+InformationMatrixCalculator::InformationMatrixCalculator() {
     //use_const_inf_matrix = nh.param<double>("use_const_inf_matrix", true);
     //const_stddev_x = nh.param<double>("const_stddev_x", 0.0667);
     //const_stddev_q = nh.param<double>("const_stddev_q", 0.0001);
 
-    var_gain_a = nh.param<double>("var_gain_a", 20.0);
-    min_stddev_x = nh.param<double>("min_stddev_x", 0.1);
-    max_stddev_x = nh.param<double>("max_stddev_x", 5.0);
-    min_stddev_q = nh.param<double>("min_stddev_q", 0.05);
-    max_stddev_q = nh.param<double>("max_stddev_q", 0.2);
-    fitness_score_thresh = nh.param<double>("fitness_score_thresh", 0.5);
+    //    var_gain_a = nh.param<double>("var_gain_a", 20.0);
+    //    min_stddev_x = nh.param<double>("min_stddev_x", 0.1);
+    //    max_stddev_x = nh.param<double>("max_stddev_x", 5.0);
+    //    min_stddev_q = nh.param<double>("min_stddev_q", 0.05);
+    //    max_stddev_q = nh.param<double>("max_stddev_q", 0.2);
+    //    fitness_score_thresh = nh.param<double>("fitness_score_thresh", 0.5);
 
 
     ros::param::get("~use_const_inf_matrix", use_const_inf_matrix);
@@ -28,9 +28,9 @@ InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
     if(const_stddev_q == 0)
         const_stddev_q = 0.0667;
 
-    std::cout << "use_const_inf_matrix " << use_const_inf_matrix << std::endl;
-    std::cout << "const_stddev_x " << const_stddev_x << std::endl;
-    std::cout << "const_stddev_q " << const_stddev_q << std::endl;
+    std::cout << "use_const_inf_matrix: " << use_const_inf_matrix << std::endl;
+    std::cout << "const_stddev_x: " << const_stddev_x << std::endl;
+    std::cout << "const_stddev_q: " << const_stddev_q << std::endl;
 }
 
 InformationMatrixCalculator::~InformationMatrixCalculator() {
