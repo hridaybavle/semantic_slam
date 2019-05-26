@@ -197,7 +197,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                                                          normals_extracted);
 
             //height of the object should never be above the camera
-            if(centroid[2] < 6.0)
+            //if(centroid[2] < 6.0)
             {
                 //checking if the extract plane is a horizontal plane or vertical
                 if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&

@@ -280,6 +280,14 @@ void semantic_graph_slam_ros::publishLandmarks()
             marker.color.g = 0.0;
             marker.color.b = 1.0;
         }
+        else if(l_vec[i].type == "car")
+        {
+
+            marker.color.a = 1.0; // Don't forget to set the alpha!
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+        }
 
         marker_arrays.markers.push_back(marker);
         marker_id++;
