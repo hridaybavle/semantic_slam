@@ -62,10 +62,9 @@ The poses of the keyframe being added to the g2o graph.
 The mapped semantic planar surfaces.
 
 - **detected_landmarks**([visualization_msgs/MarkerArray](http://docs.ros.org/melodic/api/visualization_msgs/html/msg/MarkerArray.html))  
-The detected landmakrs in the current frame. 
+The detected landmarks in the current frame. 
 
-
-
+The configurations of the algorithms can be found inside the cfg folder in order to be changed accordingly.
 
 
 
