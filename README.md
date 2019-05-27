@@ -22,7 +22,7 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 
 **To try a simple example with blue bucket detector create a ros workspace and clone the following packages:**
 
-- download the rosbag from the link - 
+- download the rosbag from the link - (TODO)
 - mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
 - git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone https://bitbucket.org/hridaybavle/bucket_detector.git
 - cd .. && catkin_make -DCMAKE_BUILD_TYPE=Relase
