@@ -266,10 +266,10 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
 
     sensor_msgs::PointCloud2 cloud_msg;
     this->getPointCloudData(cloud_msg);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    std::vector<int> indices;
-    pcl::fromROSMsg(cloud_msg, *cloud);
-    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+    //    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+    //    std::vector<int> indices;
+    //    pcl::fromROSMsg(cloud_msg, *cloud);
+    //    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
 
     std::vector<semantic_SLAM::ObjectInfo> obj_info; obj_info.clear();
     if(object_detection_available_)

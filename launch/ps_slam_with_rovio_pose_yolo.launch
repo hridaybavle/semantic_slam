@@ -1,0 +1,41 @@
+<!--launch file -->
+<launch>
+	
+	<arg name="bagfile" default="ENTER_PATH_TO_BAG_FILE"/> 
+
+	<!-- Play the bagfile -->
+  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
+
+ <!-- rectify color image-->
+  <node name="image_proc" pkg="image_proc" type="image_proc" ns="camera/color"/>
+
+  <!-- This nodelet is for rectifying the depth image-->
+  <node pkg="nodelet" type="nodelet" name="depth_rectifier_manager" args="manager" output="screen"/>
+   
+    <node pkg="nodelet" type="nodelet" name="rectify_mono" args="load image_proc/rectify depth_rectifier_manager" output="screen" >
+       <remap from="image_mono" to="/camera/aligned_depth_to_color/image_raw"/> 
+       <remap from="image_rect" to="/camera/aligned_depth_to_color/image_rect"/>
+    </node>
+		
+    <!--This nodelet is for converting the depth image to pointcloud data-->
+  	<node pkg="nodelet" type="nodelet" name="depth_manager" args="manager" output="screen"/>
+ 		<node pkg="nodelet" type="nodelet" name="point_cloud_xyzrgb" args="load depth_image_proc/point_cloud_xyzrgb depth_manager" output="screen">
+			<remap from="rgb/camera_info"             to="/camera/color/camera_info"/> 
+  		<remap from="rgb/image_rect_color"        to="/camera/color/image_rect_color"/> 
+			<remap from="depth_registered/image_rect" to="/camera/aligned_depth_to_color/image_rect"/>
+  	</node>
+		
+ <!--launching the rovio node-->
+  <node pkg="rovio" type="rovio_node" name="rovio" output="screen">
+  	<param name="filter_config"  	value="/home/hriday/workspace/ros/semantic_slam_workspace/src/config/rovio_realsense.info"/>
+  	<param name="camera0_config" 	value="/home/hriday/workspace/ros/semantic_slam_workspace/src/config/realsense_d435i.yaml"/>
+  	<remap from="imu0"  					to="/imu/data"/>
+  	<remap from="cam0/image_raw"  to="/camera/color/image_rect"/>
+  </node> 
+
+ <!--launching the semantic slam node -->	
+	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
+ 		<rosparam file="$(find semantic_SLAM)/cfg/yolo_detector.yaml" command="load"/>			
+	</node>
+  
+</launch>

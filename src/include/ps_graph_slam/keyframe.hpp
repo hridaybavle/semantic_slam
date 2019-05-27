@@ -21,7 +21,7 @@ namespace ps_graph_slam {
 struct KeyFrame {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    using PointT = pcl::PointXYZI;
+    using PointT = pcl::PointXYZRGB;
     using Ptr = std::shared_ptr<KeyFrame>;
 
     KeyFrame(const ros::Time& stamp,
