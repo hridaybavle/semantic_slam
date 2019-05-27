@@ -14,7 +14,13 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 
 ### How do I get set up? 
 
-To try a simple example with blue bucket detector create a ros workspace and clone the following packages:
+**First install g2o following these instructions (assuming ROS kinetic distribution):**
+
+- sudo apt-get install ros-kinetic-libg2o
+- sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
+- sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
+
+**To try a simple example with blue bucket detector create a ros workspace and clone the following packages:**
 
 - download the rosbag from the link - 
 - mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
