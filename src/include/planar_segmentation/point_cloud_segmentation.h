@@ -123,7 +123,7 @@ public:
         for (int i = 0; i < object_info.size(); ++i)
         {
             if(object_info[i].type == "chair" || object_info[i].type == "tvmonitor" || object_info[i].type == "book"
-                    || object_info[i].type == "keyboard" || object_info[i].type == "laptop" || object_info[i].type == "Bucket"
+                    || object_info[i].type == "keyboard" || object_info[i].type == "laptop" || object_info[i].type == "bucket"
                     || object_info[i].type == "car")
             {
                 plane_segmentation::segmented_objects single_segmented_object_from_point_cloud;

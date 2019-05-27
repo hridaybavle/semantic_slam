@@ -83,7 +83,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     //publishers
     keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
     landmarks_pub_          = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
-    detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmars",1);
+    detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmarks",1);
     robot_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("robot_pose",1);
     robot_transform_pub_    = n.advertise<geometry_msgs::TransformStamped>("robot_transform",1);
     keyframe_path_pub_      = n.advertise<nav_msgs::Path>("robot_path",1);
