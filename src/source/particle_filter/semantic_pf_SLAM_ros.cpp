@@ -432,7 +432,7 @@ void semantic_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 
 //}
 
-void semantic_slam_ros::viconPoseSubCallback(const acl_msgs::ViconState &msg)
+void semantic_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconState &msg)
 {
     geometry_msgs::PoseStamped vicon_pose;
     vicon_pose.header.stamp = msg.header.stamp;

@@ -24,8 +24,6 @@ This package is a general semantic-SLAM library
   <depend>pcl_ros</depend>
   <depend>pcl_msgs</depend>
   <depend>pcl_conversions</depend>
-  <depend>darknet_ros_msgs</depend>
-  <depend>acl_msgs</depend>
 
 </package>
 

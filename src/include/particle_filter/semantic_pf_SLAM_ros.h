@@ -42,7 +42,6 @@
 //darknet object detector
 #include "semantic_SLAM/DetectedObjects.h"
 #include "semantic_SLAM/ObjectInfo.h"
-#include "semantic_SLAM/MappedPointCloud.h"
 #include "darknet_ros_msgs/BoundingBox.h"
 #include "darknet_ros_msgs/BoundingBoxes.h"
 
@@ -55,7 +54,7 @@
 #include <opencv2/calib3d.hpp>
 
 //acl_msgs for vicon data
-#include "acl_msgs/ViconState.h"
+#include "semantic_SLAM/ViconState.h"
 
 const float real_sense_pitch_angle =0*(M_PI/180);
 const int state_size_ = 6;
@@ -122,7 +121,7 @@ protected:
     void optitrackPoseForPlottingPathCallback(const geometry_msgs::PoseStamped& msg);
 
     ros::Subscriber vicon_pose_sub_;
-    void viconPoseSubCallback(const acl_msgs::ViconState& msg);
+    void viconPoseSubCallback(const semantic_SLAM::ViconState& msg);
 
     ros::Publisher particle_poses_pub_;
     void publishParticlePoses();

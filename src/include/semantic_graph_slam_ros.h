@@ -47,14 +47,14 @@
 //#include "plane_segmentation.h"
 
 //darknet bounding boxes
-#include "darknet_ros_msgs/BoundingBox.h"
-#include "darknet_ros_msgs/BoundingBoxes.h"
+#include "semantic_SLAM//BoundingBox.h"
+#include "semantic_SLAM/BoundingBoxes.h"
 
 //segmented pointcloud acc to detection
 #include "planar_segmentation/point_cloud_segmentation.h"
 
 //acl messages
-#include "acl_msgs/ViconState.h"
+#include "semantic_SLAM/ViconState.h"
 
 #include "ps_graph_slam/semantic_graph_slam.h"
 
@@ -126,10 +126,10 @@ protected:
     void snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg);
     void jackalOdomCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
-    void detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes& msg);
+    void detectedObjectDarknetCallback(const semantic_SLAM::BoundingBoxes& msg);
     void detectedObjectSimpleCallback(const semantic_SLAM::DetectedObjects& msg);
     void optitrackPoseCallback(const nav_msgs::Odometry& msg);
-    void viconPoseSubCallback(const acl_msgs::ViconState& msg);
+    void viconPoseSubCallback(const semantic_SLAM::ViconState& msg);
 
     //publishers
 protected:

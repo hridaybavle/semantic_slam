@@ -160,7 +160,7 @@ void semantic_graph_slam_ros::PointCloudCallback(const sensor_msgs::PointCloud2 
 }
 
 
-void semantic_graph_slam_ros::detectedObjectDarknetCallback(const darknet_ros_msgs::BoundingBoxes &msg)
+void semantic_graph_slam_ros::detectedObjectDarknetCallback(const semantic_SLAM::BoundingBoxes &msg)
 {
     std::vector<semantic_SLAM::ObjectInfo>  object_info;
     object_info.resize(msg.bounding_boxes.size());
@@ -429,7 +429,7 @@ void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &ms
 
 }
 
-void semantic_graph_slam_ros::viconPoseSubCallback(const acl_msgs::ViconState &msg)
+void semantic_graph_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconState &msg)
 {
     if(!first_gt_pose_)
     {
