@@ -12,7 +12,7 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 
 
 
-### How do I get set up? ###
+### How do I get set up? 
 
 To try a simple example with blue bucket detector create a ros workspace and clone the following packages:
 
@@ -26,7 +26,7 @@ To try a simple example with blue bucket detector create a ros workspace and clo
 - roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 - rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
 
-### Subsribed Topics ### 
+### Subsribed Topics 
 
 - **/SQ04/snap_vislam/vislam/pose** ([geometry_msgs/PoseStamped](http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html))  
 The default snapdragon VIO pose published in NED in frame. This message can be remapped remapped to any other VO pose message publishing in NED frame. ([See frame conventions](https://en.wikipedia.org/wiki/Axes_conventions))
@@ -45,3 +45,32 @@ The detection bounding boxes published by yolo if using the yolo detector ros pa
 
 - **/image_processed/bounding_boxes**([ShapeColor_ObjectDetection/DetectedObjects](https://hridaybavle@bitbucket.org/hridaybavle/bucket_detector.git)
 The detection bounding boxes if using the bucket detector.
+
+
+### Published Topics
+
+- **robot_pose**([geometry_msgs/PoseStamped](http://docs.ros.org/melodic/api/nav_msgs/html/msg/Odometry.html)) 
+The pose of the robot estimated by the algo.
+
+- **robot_path**([nav_msgs/Path](http://docs.ros.org/melodic/api/nav_msgs/html/msg/Path.html))  
+The path of the robot psoe for visualization.
+
+- **keyframe_poses**([geometry_msgs/PoseArray](http://docs.ros.org/melodic/api/geometry_msgs/html/msg/PoseArray.html))  
+The poses of the keyframe being added to the g2o graph.
+
+- **mapped_landmarks**([visualization_msgs/MarkerArray](http://docs.ros.org/melodic/api/visualization_msgs/html/msg/MarkerArray.html))  
+The mapped semantic planar surfaces.
+
+- **detected_landmarks**([visualization_msgs/MarkerArray](http://docs.ros.org/melodic/api/visualization_msgs/html/msg/MarkerArray.html))  
+The detected landmakrs in the current frame. 
+
+
+
+
+
+
+
+
+
+
+
