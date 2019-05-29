@@ -12,7 +12,7 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 
 
 
-### How do I get set up? 
+### How do I set it up? 
 
 **First install g2o following these instructions (assuming ROS kinetic distribution):**
 
