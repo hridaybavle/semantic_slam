@@ -29,7 +29,7 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 -  gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 - *insert the rosbag location in the launcher*
 - source devel/setup.bash
-- roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_drone_data.launch.launch 
+- roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 - rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
 
 ### Subsribed Topics 
