@@ -279,7 +279,7 @@ void semantic_graph_slam_ros::publishLandmarks()
             marker.color.g = 0.0;
             marker.color.b = 1.0;
         }
-        else if(l_vec[i].type == "Bucket")
+        else if(l_vec[i].type == "bucket")
         {
 
             marker.color.a = 1.0; // Don't forget to set the alpha!

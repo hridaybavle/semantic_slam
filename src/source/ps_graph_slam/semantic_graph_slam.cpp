@@ -42,7 +42,6 @@ void semantic_graph_slam::init(bool verbose)
     ros::param::param<double>("~first_lan_y", first_lan_y_, 0);
     ros::param::param<double>("~first_lan_z", first_lan_z_, 0.3);
 
-
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
     std::cout << "camera angle in radians: " <<  cam_angle_ << std::endl;
     std::cout << "update keyframe every detection: " << update_keyframes_using_detections_<< std::endl;
