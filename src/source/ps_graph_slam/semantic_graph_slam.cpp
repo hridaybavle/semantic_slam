@@ -34,7 +34,6 @@ void semantic_graph_slam::init(bool verbose)
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
-
     ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
     ros::param::param<double>("~camera_angle",cam_angled_,0);
     ros::param::param<bool>("~add_first_lan", add_first_lan_, false);
@@ -116,7 +115,7 @@ bool semantic_graph_slam::empty_keyframe_queue()
 
         Eigen::Isometry3d odom = keyframe->odom;
         keyframe->node = graph_slam_->add_se3_node(odom);
-        keyframe_hash_[keyframe->stamp] = keyframe;
+        //keyframe_hash_[keyframe->stamp] = keyframe;
         if(verbose_)
             std::cout << "added new keyframe to the graph" << std::endl;
 
@@ -295,7 +294,8 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     std::vector<landmark> first_lan_vec;
     landmark first_landmark;
     first_landmark.is_new_landmark = true;
-    first_landmark.type = "Bucket";
+    first_landmark.id   = 0;
+    first_landmark.type = "bucket";
     first_landmark.plane_type = "vertical";
     first_landmark.pose << first_lan_x_, first_lan_y_, first_lan_z_;
     first_landmark.local_pose = first_landmark.pose;
