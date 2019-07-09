@@ -24,9 +24,18 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
 
     ros::param::param<bool>("~save_graph", save_graph_, false);
     ros::param::param<std::string>("~save_graph_path", save_graph_path_, "semantic_graph.g2o");
+    ros::param::param<bool>("~use_snap_pose", use_snap_pose_, true);
+    ros::param::param<bool>("~use_orb_slam_odom", use_orb_slam_odom_, false);
+    ros::param::param<bool>("~use_rovio_odom", use_rovio_odom_, true);
+    ros::param::param<bool>("~use_rtab_map_odom", use_rtab_map_odom_, false);
+
 
     std::cout << "should save graph: " << save_graph_ << std::endl;
     std::cout << "saving graph path: " << save_graph_path_ << std::endl;
+    std::cout << "using snap pose: " << use_snap_pose_ << std::endl;
+    std::cout << "using orb slam odom " << use_orb_slam_odom_ << std::endl;
+    std::cout << "using rovio odom "  << use_rovio_odom_ << std::endl;
+    std::cout << "using rtab map odom " << use_rtab_map_odom_ << std::endl;
 
     semantic_gslam_obj_.reset(new semantic_graph_slam());
     semantic_gslam_obj_->init(verbose_);
@@ -104,10 +113,23 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
 void semantic_graph_slam_ros::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
 
-
     const ros::Time& stamp      = odom_msg->header.stamp;
-    Eigen::Isometry3d odom      = ps_graph_slam::odom2isometry(odom_msg);
-    Eigen::MatrixXf odom_cov    = ps_graph_slam::arrayToMatrix(odom_msg);
+    Eigen::Isometry3d odom;
+    Eigen::MatrixXf odom_cov;
+
+    if(use_rovio_odom_)
+    {
+        odom      = ps_graph_slam::odom2isometry(odom_msg);
+        odom_cov  = ps_graph_slam::arrayToMatrix(odom_msg);
+    }
+    else if(use_rtab_map_odom_)
+    {
+        nav_msgs::OdometryPtr odom_msg_conv;
+        odom_msg_conv = ps_graph_slam::PoseCam2Robot(odom_msg);
+        odom          = ps_graph_slam::odom2isometry(odom_msg);
+        odom_cov      = ps_graph_slam::arrayToMatrix(odom_msg);
+
+    }
 
     //this->VIOCallback(stamp, odom, odom_cov);
     semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
@@ -119,11 +141,24 @@ void semantic_graph_slam_ros::snapVIOCallback(const geometry_msgs::PoseStamped &
 {
 
     const ros::Time& stamp                  = pose_msg.header.stamp;
-    geometry_msgs::PoseStamped pose_enu     = ps_graph_slam::poseNED2ENU(pose_msg);
-    Eigen::Isometry3d odom                  = ps_graph_slam::pose2isometry(pose_enu);
-    Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //snap dragon pose doesnt have covariance
+    Eigen::Isometry3d odom;
+    Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //manually adding pose cov
+
+    if(use_snap_pose_)
+    {
+        geometry_msgs::PoseStamped pose_enu     = ps_graph_slam::poseNED2ENU(pose_msg);
+        odom                                    = ps_graph_slam::pose2isometry(pose_enu);
+
+    }
+    else if(use_orb_slam_odom_)
+    {
+        odom  = ps_graph_slam::pose2isometry(pose_msg);
+
+    }
 
     semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
+
+
 
     return;
 }

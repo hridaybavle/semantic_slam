@@ -1,31 +1,28 @@
 <!--launch file -->
 <launch>
-
-	<arg name="bagfile" default="/media/hriday/0F2F8B1E48317A85/home/Documents/PhD/Rosbags/Semantic_SLAM/ROVIO_SEMANTIC/ACL/real_flights/manual_flights/snap_tests/Saturday-18-5-19/5_rounds_fast_height_1.5_good.bag"/> 
-
-	<!-- Play the bagfile -->
-  <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
-
+	
  <!-- rectify color image-->
-  <node name="image_proc" pkg="image_proc" type="image_proc" ns="camera/color"/>
+  <node name="image_proc" pkg="image_proc" type="image_proc" ns="camera/rgb">
+	  <remap from="/camera/rgb/image_raw"             to="/camera/rgb/image_color"/> 			
+	</node>
 
   <!-- This nodelet is for rectifying the depth image-->
   <node pkg="nodelet" type="nodelet" name="depth_rectifier_manager" args="manager" output="screen"/>
    
     <node pkg="nodelet" type="nodelet" name="rectify_mono" args="load image_proc/rectify depth_rectifier_manager" output="screen" >
-       <remap from="image_mono" to="/camera/aligned_depth_to_color/image_raw"/> 
-       <remap from="image_rect" to="/camera/aligned_depth_to_color/image_rect"/>
+       <remap from="image_mono" to="/camera/depth/image"/> 
+       <remap from="image_rect" to="/camera/depth/image_rect"/>
     </node>
 		
     <!--This nodelet is for converting the depth image to pointcloud data-->
   	<node pkg="nodelet" type="nodelet" name="depth_manager" args="manager" output="screen"/>
  		<node pkg="nodelet" type="nodelet" name="point_cloud_xyzrgb" args="load depth_image_proc/point_cloud_xyzrgb depth_manager" output="screen">
-			<remap from="rgb/camera_info"             to="/camera/color/camera_info"/> 
-  		<remap from="rgb/image_rect_color"        to="/camera/color/image_rect_color"/> 
-			<remap from="depth_registered/image_rect" to="/camera/aligned_depth_to_color/image_rect"/>
+			<remap from="rgb/camera_info"             to="/camera/rgb/camera_info"/> 
+  		<remap from="rgb/image_rect_color"        to="/camera/rgb/image_rect_color"/> 
+			<remap from="depth_registered/image_rect" to="/camera/depth/image_rect"/>
   	</node>
 		
-  <!--shape color object detector -->
+  <!--shape color object detector 
 	<arg name="front_camera_image_topic_name" 										default="/camera/color/image_raw" />
   <arg name="object_recognized_front_camera_topic_name" 				default="/image_processed/object_recognized_front_camera" />
 	<arg name="config_file"																				default="$(find ShapeColor_ObjectDetection)/cfg/objectDetector_configFile.xml"/>
@@ -34,11 +31,12 @@
 				<param name="front_camera_image_topic_name"											value="$(arg front_camera_image_topic_name)" 									type="string"/>
 				<param name="object_recognized_front_camera_topic_name" 				value="$(arg object_recognized_front_camera_topic_name)" 			type="string"/>
 				<param name="config_file"																				value="$(arg config_file)"																		type="string"/>
-		</node>
-
+		</node> -->
+	
   <!--launching the semantic slam node -->	
 	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
-	 <rosparam file="$(find semantic_SLAM)/cfg/bucket_detector.yaml" command="load"/>			
+	 <rosparam file="$(find semantic_SLAM)/cfg/yolo_detector_rgbd_tum.yaml" command="load"/>
+	 <remap from="/rovio/odometry"             to="/rtabmap/odom"/> 			
 	</node>
   
 </launch>

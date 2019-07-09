@@ -45,7 +45,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Image
 Visualization Manager:
   Class: ""
   Displays:
@@ -236,18 +236,6 @@ Visualization Manager:
       Use rainbow: true
       Value: true
     - Class: rviz/Image
-      Enabled: true
-      Image Topic: /image_processed/object_recognized_front_camera
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: true
-    - Class: rviz/Image
       Enabled: false
       Image Topic: /image_processed/object_recognized_front_camera
       Max Value: 1
@@ -259,6 +247,18 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: false
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /darknet_ros/detection_image
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -267,8 +267,8 @@ Visualization Manager:
       Head Diameter: 0.100000001
       Head Length: 0.100000001
       Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
+      Line Style: Billboards
+      Line Width: 0.0500000007
       Name: Path
       Offset:
         X: 0
@@ -287,7 +287,7 @@ Visualization Manager:
       Marker Topic: /mapped_landmarks
       Name: MarkerArray
       Namespaces:
-        {}
+        my_namespace: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -348,7 +348,7 @@ Visualization Manager:
       Marker Topic: /detected_landmarks
       Name: MarkerArray
       Namespaces:
-        {}
+        my_namespace: true
       Queue Size: 100
       Value: true
     - Class: voxblox_rviz_plugin/VoxbloxMesh
@@ -379,25 +379,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 27.8821716
+      Distance: 10.0915508
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.0165453
-        Y: -5.23437071
-        Z: 1.25052929
+        X: -0.511742115
+        Y: -0.934567273
+        Z: -1.33380902
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.879797459
+      Pitch: 1.44479775
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.01243711
+      Yaw: 3.17743921
     Saved: ~
 Window Geometry:
   Displays:

@@ -133,6 +133,54 @@ static Eigen::Isometry3d pose2isometry(const geometry_msgs::PoseStamped& pose_ms
     return isometry;
 }
 
+static nav_msgs::OdometryPtr PoseCam2Robot(const nav_msgs::Odometry::ConstPtr odom_msg){
+
+    //rotation of -90
+    Eigen::Matrix3f rot_x_robot, rot_z_robot, transformation_mat;
+    rot_x_robot << 1, 0, 0,
+            0, cos(-1.5708), -sin(-1.5708),
+            0, sin(-1.5708), cos(-1.5708);
+
+    rot_z_robot << cos(-1.5708), -sin(-1.5708), 0,
+            sin(-1.5708), cos(-1.5708), 0,
+            0,0,1;
+
+    transformation_mat = rot_z_robot * rot_x_robot;
+
+    //converting quaternions to euler angles
+    tf::Quaternion quat_cam(odom_msg->pose.pose.orientation.x, odom_msg->pose.pose.orientation.y, odom_msg->pose.pose.orientation.z, odom_msg->pose.pose.orientation.w);
+    tf::Matrix3x3  m(quat_cam);
+
+    double yaw, pitch, roll;
+    m.getEulerYPR(yaw, pitch, roll);
+
+    Eigen::Vector3f angle_cam, angle_robot;
+    angle_cam << roll, pitch, yaw;
+
+    angle_robot = transformation_mat * angle_cam;
+
+    tf::Quaternion quat_robot = tf::createQuaternionFromRPY(angle_robot(0),angle_robot(1),angle_robot(2));
+
+    //converting the translations
+    Eigen::Vector3f trans_cam, trans_robot;
+    trans_cam << odom_msg->pose.pose.position.x,
+            odom_msg->pose.pose.position.y,
+            odom_msg->pose.pose.position.z;
+
+    trans_robot = transformation_mat * trans_cam;
+
+    nav_msgs::OdometryPtr odom_converted (new nav_msgs::Odometry());
+    odom_converted->pose.pose.position.x = trans_robot(0);
+    odom_converted->pose.pose.position.y = trans_robot(1);
+    odom_converted->pose.pose.position.z = trans_robot(2);
+    odom_converted->pose.pose.orientation.x = quat_robot.x();
+    odom_converted->pose.pose.orientation.y = quat_robot.y();
+    odom_converted->pose.pose.orientation.z = quat_robot.z();
+    odom_converted->pose.pose.orientation.w = quat_robot.w();
+
+    return odom_converted;
+}
+
 static geometry_msgs::PoseStamped poseNED2ENU(const geometry_msgs::PoseStamped& pose_msg) {
 
 

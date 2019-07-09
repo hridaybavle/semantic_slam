@@ -1,11 +1,11 @@
 #general params
 verbose: true
-camera_angle: 33.93
+camera_angle: 0.0
 update_key_using_det: true
-add_first_lan: true 
-first_lan_x: 1.42
-first_lan_y: -0.028
-first_lan_z: 0.15
+add_first_lan: false
+using_kitti: false
+use_rovio_odom: false
+use_rtab_map_odom: true
 #keyframe
 keyframe_delta_trans: 0.5
 keyframe_delta_angle: 0.5
@@ -14,12 +14,12 @@ keyframe_delta_time: 1.0
 num_point_seg: 100
 norm_point_thres: 1000
 #data association related
-maha_dist_thres: 1.5
-use_maha_dist: false
-use_eq_dist: true
+maha_dist_thres: 0.5
+use_maha_dist: true
+use_eq_dist: false
 eq_dist_thres: 1.5
-land_noise_low: 0.4 
-land_noise_high: 0.4
+land_noise_low: 0.1 
+land_noise_high: 0.1
 #odom information cal
 use_const_inf_matrix: true
 const_stddev_x: 0.00667
@@ -27,4 +27,3 @@ const_stddev_q: 0.00001
 #graph slam related
 save_graph: false
 save_graph_path: /home/hriday/Desktop/semantic_graph.g2o
-

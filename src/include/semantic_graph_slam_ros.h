@@ -78,6 +78,10 @@ public:
     void saveGraph();
 
 private:
+    bool use_rovio_odom_;
+    bool use_rtab_map_odom_;
+    bool use_snap_pose_;
+    bool use_orb_slam_odom_;
     bool save_graph_;
     std::string save_graph_path_;
 

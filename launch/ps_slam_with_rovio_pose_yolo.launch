@@ -1,7 +1,7 @@
 <!--launch file -->
 <launch>
 	
-	<arg name="bagfile" default="ENTER_PATH_TO_BAG_FILE"/> 
+	<arg name="bagfile" default="/media/hriday/0F2F8B1E48317A85/home/Documents/PhD/Rosbags/Semantic_SLAM/ROVIO_SEMANTIC/nave/with_optitrack/nave_4rounds_25_deg_with_yaw_with_optitrack.bag"/> 
 
 	<!-- Play the bagfile -->
   <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />
