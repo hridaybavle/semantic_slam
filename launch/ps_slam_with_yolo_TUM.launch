@@ -3,7 +3,7 @@
 	
  <!-- rectify color image-->
   <node name="image_proc" pkg="image_proc" type="image_proc" ns="camera/rgb">
-	  <remap from="/camera/rgb/image_raw"             to="/camera/rgb/image_color"/> 			
+	  <remap from="/camera/rgb/image_raw"         to="/camera/rgb/image_color"/> 			
 	</node>
 
   <!-- This nodelet is for rectifying the depth image-->

@@ -1,25 +1,25 @@
 #general params
 verbose: true
 camera_angle: 0.0
-update_key_using_det: true
+update_key_using_det: false
 add_first_lan: false
 using_kitti: false
 use_rovio_odom: false
 use_rtab_map_odom: true
 #keyframe
-keyframe_delta_trans: 0.5
-keyframe_delta_angle: 0.5
-keyframe_delta_time: 1.0
+keyframe_delta_trans: 0.2
+keyframe_delta_angle: 0.2
+keyframe_delta_time: 0.5
 #plane segmentation
-num_point_seg: 100
+num_point_seg: 200
 norm_point_thres: 1000
 #data association related
-maha_dist_thres: 0.5
-use_maha_dist: true
-use_eq_dist: false
-eq_dist_thres: 1.5
-land_noise_low: 0.1 
-land_noise_high: 0.1
+maha_dist_thres: 0.584
+use_maha_dist: false
+use_eq_dist: true
+eq_dist_thres: 0.8
+land_noise_low: 0.6 
+land_noise_high: 0.6
 #odom information cal
 use_const_inf_matrix: true
 const_stddev_x: 0.00667

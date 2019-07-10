@@ -20,8 +20,11 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     first_jack_pose_= false;
     verbose_        = false;
 
+    vio_pose_array_.poses.clear();
+    gt_pose_array_.poses.clear();
     jack_yaw_transform_ = -1.57;
 
+    ros::param::param<bool>("~verbose", verbose_, false);
     ros::param::param<bool>("~save_graph", save_graph_, false);
     ros::param::param<std::string>("~save_graph_path", save_graph_path_, "semantic_graph.g2o");
     ros::param::param<bool>("~use_snap_pose", use_snap_pose_, true);
@@ -62,6 +65,8 @@ void semantic_graph_slam_ros::run()
 
     this->publishCorresVIOPose();
     this->publishRobotPose();
+    if(use_rtab_map_odom_)
+        this->transformListener();
     return;
 
 }
@@ -90,16 +95,19 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     vicon_pose_sub_             = n.subscribe("/SQ04/vicon",1, &semantic_graph_slam_ros::viconPoseSubCallback, this);
 
     //publishers
-    keyframe_pose_pub_      = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
-    landmarks_pub_          = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
-    detected_lans_pub_      = n.advertise<visualization_msgs::MarkerArray>("detected_landmarks",1);
-    robot_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("robot_pose",1);
-    robot_transform_pub_    = n.advertise<geometry_msgs::TransformStamped>("robot_transform",1);
-    keyframe_path_pub_      = n.advertise<nav_msgs::Path>("robot_path",1);
-    optitrack_pose_pub_     = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
-    optitrack_path_pub_     = n.advertise<nav_msgs::Path>("optitrack_path",1);
-    corres_vio_pose_pub_    = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
-    corres_vio_path_        = n.advertise<nav_msgs::Path>("corres_vo_path",1);
+    keyframe_pose_pub_          = n.advertise<geometry_msgs::PoseArray>("keyframe_poses",1);
+    landmarks_pub_              = n.advertise<visualization_msgs::MarkerArray>("mapped_landmarks", 1);
+    detected_lans_pub_          = n.advertise<visualization_msgs::MarkerArray>("detected_landmarks",1);
+    robot_pose_pub_             = n.advertise<geometry_msgs::PoseStamped>("robot_pose",1);
+    robot_transform_pub_        = n.advertise<geometry_msgs::TransformStamped>("robot_transform",1);
+    keyframe_path_pub_          = n.advertise<nav_msgs::Path>("robot_path",1);
+    optitrack_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
+    optitrack_path_pub_         = n.advertise<nav_msgs::Path>("optitrack_path",1);
+    optitrack_keyframes_pub_    = n.advertise<geometry_msgs::PoseArray>("optitrack_keyframes",1);
+    corres_vio_pose_pub_        = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
+    corres_vio_path_            = n.advertise<nav_msgs::Path>("corres_vo_path",1);
+    corres_vio_keyframes_pub_   = n.advertise<geometry_msgs::PoseArray>("corres_vo_keyframes",1);
+
 
 }
 
@@ -419,8 +427,37 @@ void semantic_graph_slam_ros::publishKeyframePoses()
         final_path.poses.push_back(key_pose_stamped);
     }
 
+    this->publishVIOkeyframes(current_time);
+    this->publishgtKeyframes(current_time);
+
     keyframe_pose_pub_.publish(pose_array);
     keyframe_path_pub_.publish(final_path);
+}
+
+void semantic_graph_slam_ros::publishVIOkeyframes(ros::Time current_time)
+{
+    vio_pose_array_.header.stamp = current_time;
+    vio_pose_array_.header.frame_id = "map";
+    Eigen::Isometry3d vio_pose;
+    semantic_gslam_obj_->getVIOPose(vio_pose);
+
+    geometry_msgs::Pose corres_vio_pose_msg = ps_graph_slam::matrix2pose(current_time,
+                                                                         vio_pose.matrix().cast<float>(),
+                                                                         "map");
+    vio_pose_array_.poses.push_back(corres_vio_pose_msg);
+    corres_vio_keyframes_pub_.publish(vio_pose_array_);
+}
+
+void semantic_graph_slam_ros::publishgtKeyframes(ros::Time current_time)
+{
+    gt_pose_array_.header.stamp     = current_time;
+    gt_pose_array_.header.frame_id  = "map";
+
+    geometry_msgs::Pose gt_pose;
+    this->getgtPose(gt_pose);
+
+    gt_pose_array_.poses.push_back(gt_pose);
+    optitrack_keyframes_pub_.publish(gt_pose_array_);
 }
 
 void semantic_graph_slam_ros::publishRobotPose()
@@ -454,6 +491,7 @@ void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &ms
 
     optitrack_pose.pose = msg.pose.pose;
     optitrack_pose_pub_.publish(optitrack_pose);
+    this->setgtPose(optitrack_pose);
 
     optitrack_pose_vec_.push_back(optitrack_pose);
     nav_msgs::Path optitrack_path;
@@ -483,7 +521,7 @@ void semantic_graph_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconSta
     vicon_pose.pose.position.y = msg.pose.position.y + gt_y_transform_;
     vicon_pose.pose.position.z = msg.pose.position.z + gt_z_transform_;
     vicon_pose.pose.orientation = msg.pose.orientation;
-
+    this->setgtPose(vicon_pose);
     //vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   - sin(-0.074) * vicon_pose.pose.position.y;
     //vicon_pose.pose.position.y = sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) * vicon_pose.pose.position.y;
 
@@ -492,6 +530,41 @@ void semantic_graph_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconSta
 
     nav_msgs::Path vicon_path;
     vicon_path.header.stamp = msg.header.stamp;
+    vicon_path.header.frame_id = "map";
+    vicon_path.poses = optitrack_pose_vec_;
+    optitrack_path_pub_.publish(vicon_path);
+
+}
+
+void semantic_graph_slam_ros::transformListener()
+{
+    tf::StampedTransform transform;
+    try{
+        gt_pose_listener_.lookupTransform("/world", "/openni_camera", ros::Time(0), transform);
+    }
+    catch (tf::TransformException &ex){
+        ROS_ERROR("%s",ex.what());
+        //ros::Duration(1.0).sleep();
+    }
+
+    geometry_msgs::PoseStamped vicon_pose;
+    vicon_pose.header.stamp = ros::Time::now();
+    vicon_pose.header.frame_id = "map";
+
+    vicon_pose.pose.position.x = transform.getOrigin().x();
+    vicon_pose.pose.position.y = transform.getOrigin().y();
+    vicon_pose.pose.position.z = transform.getOrigin().z();
+    vicon_pose.pose.orientation.x = transform.getRotation().x();
+    vicon_pose.pose.orientation.y = transform.getRotation().y();
+    vicon_pose.pose.orientation.z = transform.getRotation().z();
+    vicon_pose.pose.orientation.w = transform.getRotation().w();
+
+    optitrack_pose_pub_.publish(vicon_pose);
+    this->setgtPose(vicon_pose);
+    optitrack_pose_vec_.push_back(vicon_pose);
+
+    nav_msgs::Path vicon_path;
+    vicon_path.header.stamp = ros::Time::now();
     vicon_path.header.frame_id = "map";
     vicon_path.poses = optitrack_pose_vec_;
     optitrack_path_pub_.publish(vicon_path);
@@ -525,6 +598,17 @@ void semantic_graph_slam_ros::saveGraph()
         semantic_gslam_obj_->saveGraph(save_graph_path_);
 }
 
+void semantic_graph_slam_ros::setgtPose(geometry_msgs::PoseStamped gt_pose)
+{
+   gt_pose_ = gt_pose.pose;
+   return;
+}
+
+void semantic_graph_slam_ros::getgtPose(geometry_msgs::Pose &gt_pose)
+{
+    gt_pose = gt_pose_;
+    return;
+}
 
 //void semantic_graph_slam_ros::add_odom_pose_increments()
 //{

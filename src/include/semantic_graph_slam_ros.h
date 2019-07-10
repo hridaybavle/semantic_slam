@@ -23,6 +23,7 @@
 #include "nav_msgs/Path.h"
 #include "sensor_msgs/Image.h"
 #include <cv_bridge/cv_bridge.h>
+#include "tf/transform_listener.h"
 //ros time synchronizer
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -145,19 +146,30 @@ protected:
     ros::Publisher keyframe_path_pub_;
     ros::Publisher optitrack_pose_pub_;
     ros::Publisher optitrack_path_pub_;
+    ros::Publisher optitrack_keyframes_pub_;
     ros::Publisher corres_vio_pose_pub_;
     ros::Publisher corres_vio_path_;
+    ros::Publisher corres_vio_keyframes_pub_;
 
 protected:
     void publishRobotPose();
+    void publishVIOkeyframes(ros::Time current_time);
+    void publishgtKeyframes(ros::Time current_time);
+    void publishgtKeyframes();
     void publishLandmarks();
     void publishDetectedLandmarks();
     void publishKeyframePoses();
     void publishCorresVIOPose();
 
+//transform listener
+protected:
+    tf::TransformListener gt_pose_listener_;
+    void transformListener();
+
 private:
     //odom related
     std::vector<geometry_msgs::PoseStamped> vio_pose_vec_;
+    geometry_msgs::PoseArray vio_pose_array_;
 
 private:
     //point cloud related
@@ -166,6 +178,12 @@ private:
 private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
+
+    geometry_msgs::PoseArray gt_pose_array_;
+    geometry_msgs::Pose gt_pose_;
+    void setgtPose(geometry_msgs::PoseStamped gt_pose);
+    void getgtPose(geometry_msgs::Pose &gt_pose);
+
 
 private:
     //jackal pose related

@@ -202,7 +202,7 @@ g2o::EdgePointXYZ* GraphSLAM::add_point_xyz_point_xyz_edge(g2o::VertexPointXYZ* 
 
 bool GraphSLAM::optimize() {
 
-    if(graph->edges().size() < 10) {
+    if(graph->edges().size() < 2) {
         return false;
     }
 
