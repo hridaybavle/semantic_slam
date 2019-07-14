@@ -42,6 +42,7 @@ private:
     double land_noise_low_, land_noise_high_;
     bool use_maha_dist_, use_eq_dist_;
     bool eq_dist_;
+    bool use_rtab_map_odom_;
 
     void init()
     {
@@ -56,6 +57,8 @@ private:
         ros::param::param<double>("~land_noise_high",land_noise_high_,0.9);
         ros::param::param<bool>("~use_maha_dist",use_maha_dist_,true);
         ros::param::param<bool>("~use_eq_dist", use_eq_dist_, false);
+        ros::param::param<bool>("~use_rtab_map_odom", use_rtab_map_odom_, false);
+
 
         std::cout << "land_noise_low: " <<  land_noise_low_ << std::endl;
         std::cout << "land_noise_high: " <<  land_noise_high_ << std::endl;
@@ -366,7 +369,11 @@ public:
 
         //adding the robots pose
         transformed_pose(0) += robot_pose(0);
-        transformed_pose(1) += robot_pose(1);
+        if(!use_rtab_map_odom_)
+            transformed_pose(1) += robot_pose(1);
+        else
+            transformed_pose(1) += robot_pose(1) - 0.04;
+
         transformed_pose(2) += robot_pose(2);
 
         return transformed_pose;

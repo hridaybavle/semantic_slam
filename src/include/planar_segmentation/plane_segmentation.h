@@ -51,6 +51,7 @@ private:
     bool verbose_;
     double num_points_seg_;
     double normal_point_thres_;
+    double planar_area_;
 
 public:
     struct segmented_objects {

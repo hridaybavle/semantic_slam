@@ -1,0 +1,42 @@
+<!--launch file -->
+<launch>
+	
+ <!-- rectify color image-->
+  <node name="image_proc" pkg="image_proc" type="image_proc" ns="camera/rgb">
+	  <remap from="/camera/rgb/image_raw"         to="/camera/rgb/image_color"/> 			
+	</node>
+
+  <!-- This nodelet is for rectifying the depth image-->
+  <node pkg="nodelet" type="nodelet" name="depth_rectifier_manager" args="manager" output="screen"/>
+   
+    <node pkg="nodelet" type="nodelet" name="rectify_mono" args="load image_proc/rectify depth_rectifier_manager" output="screen" >
+       <remap from="image_mono" to="/camera/depth/image"/> 
+       <remap from="image_rect" to="/camera/depth/image_rect"/>
+    </node>
+		
+    <!--This nodelet is for converting the depth image to pointcloud data-->
+  	<node pkg="nodelet" type="nodelet" name="depth_manager" args="manager" output="screen"/>
+ 		<node pkg="nodelet" type="nodelet" name="point_cloud_xyzrgb" args="load depth_image_proc/point_cloud_xyzrgb depth_manager" output="screen">
+			<remap from="rgb/camera_info"             to="/camera/rgb/camera_info"/> 
+  		<remap from="rgb/image_rect_color"        to="/camera/rgb/image_rect_color"/> 
+			<remap from="depth_registered/image_rect" to="/camera/depth/image_rect"/>
+  	</node>
+		
+  <!--shape color object detector 
+	<arg name="front_camera_image_topic_name" 										default="/camera/color/image_raw" />
+  <arg name="object_recognized_front_camera_topic_name" 				default="/image_processed/object_recognized_front_camera" />
+	<arg name="config_file"																				default="$(find ShapeColor_ObjectDetection)/cfg/objectDetector_configFile.xml"/>
+    
+		<node name="ShapeColor_ObjectDetection" pkg="ShapeColor_ObjectDetection" type="ObjectDetection_Node" output="screen" respawn="true">
+				<param name="front_camera_image_topic_name"											value="$(arg front_camera_image_topic_name)" 									type="string"/>
+				<param name="object_recognized_front_camera_topic_name" 				value="$(arg object_recognized_front_camera_topic_name)" 			type="string"/>
+				<param name="config_file"																				value="$(arg config_file)"																		type="string"/>
+		</node> -->
+	
+  <!--launching the semantic slam node -->	
+	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
+	 <rosparam file="$(find semantic_SLAM)/cfg/yolo_detector_rgbd_tum_f2.yaml" command="load"/>
+	 <remap from="/rovio/odometry"             to="/rtabmap/odom"/> 			
+	</node>
+  
+</launch>

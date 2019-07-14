@@ -58,6 +58,8 @@ void semantic_graph_slam_ros::run()
 
     if(semantic_gslam_obj_->run())
     {
+        if(use_rtab_map_odom_)
+            this->transformListener();
         this->publishLandmarks();
         this->publishKeyframePoses();
         this->publishDetectedLandmarks();
@@ -65,8 +67,6 @@ void semantic_graph_slam_ros::run()
 
     this->publishCorresVIOPose();
     this->publishRobotPose();
-    if(use_rtab_map_odom_)
-        this->transformListener();
     return;
 
 }
@@ -429,6 +429,7 @@ void semantic_graph_slam_ros::publishKeyframePoses()
 
     this->publishVIOkeyframes(current_time);
     this->publishgtKeyframes(current_time);
+    this->computeATE(pose_array);
 
     keyframe_pose_pub_.publish(pose_array);
     keyframe_path_pub_.publish(final_path);
@@ -600,14 +601,57 @@ void semantic_graph_slam_ros::saveGraph()
 
 void semantic_graph_slam_ros::setgtPose(geometry_msgs::PoseStamped gt_pose)
 {
-   gt_pose_ = gt_pose.pose;
-   return;
+    gt_pose_ = gt_pose.pose;
+    return;
 }
 
 void semantic_graph_slam_ros::getgtPose(geometry_msgs::Pose &gt_pose)
 {
     gt_pose = gt_pose_;
     return;
+}
+
+void semantic_graph_slam_ros::computeATE(geometry_msgs::PoseArray robot_pose_array)
+{
+    std::vector<Eigen::Matrix3f> robot_pose_diff_mat_vec, vio_pose_diff_mat_vec;
+    for(int i = 0; i < robot_pose_array.poses.size(); ++i)
+    {
+        Eigen::Matrix3f robot_pose_diff_mat, vio_pose_diff_mat;
+        Eigen::Matrix3f robot_pose_mat, gt_pose_mat, vio_pose_mat;
+        robot_pose_diff_mat.setIdentity(), robot_pose_mat.setIdentity(), gt_pose_mat.setIdentity(), vio_pose_mat.setIdentity();
+
+        gt_pose_mat(0,0) = gt_pose_array_.poses[i].position.x;
+        gt_pose_mat(1,1) = gt_pose_array_.poses[i].position.y;
+        gt_pose_mat(2,2) = gt_pose_array_.poses[i].position.z;
+
+        robot_pose_mat(0,0) = robot_pose_array.poses[i].position.x;
+        robot_pose_mat(1,1) = robot_pose_array.poses[i].position.y;
+        robot_pose_mat(2,2) = robot_pose_array.poses[i].position.z;
+
+        vio_pose_mat(0,0) = vio_pose_array_.poses[i].position.x;
+        vio_pose_mat(1,1) = vio_pose_array_.poses[i].position.y;
+        vio_pose_mat(2,2) = vio_pose_array_.poses[i].position.z;
+
+        robot_pose_diff_mat = gt_pose_mat - robot_pose_mat;
+        vio_pose_diff_mat   = gt_pose_mat - vio_pose_mat;
+        //        std::cout << "robot_pose_mat: " << robot_pose_mat << std::endl;
+        //        std::cout << "gt_pose_mat: "  << gt_pose_mat << std::endl;
+        //        std::cout << "pose_diff_mat: " << pose_diff_mat << std::endl;
+
+        robot_pose_diff_mat_vec.push_back(robot_pose_diff_mat);
+        vio_pose_diff_mat_vec.push_back(vio_pose_diff_mat);
+    }
+
+    float robot_rmse_error=0, vio_rmse_error=0;
+    for(int i =0; i < robot_pose_diff_mat_vec.size(); ++i)
+    {
+        robot_rmse_error +=  sqrt(pow(robot_pose_diff_mat_vec[i](0,0),2) + pow(robot_pose_diff_mat_vec[i](1,1),2) + pow(robot_pose_diff_mat_vec[i](2,2),2));
+                                                                               vio_rmse_error +=  sqrt(pow(vio_pose_diff_mat_vec[i](0,0),2) + pow(vio_pose_diff_mat_vec[i](1,1),2) + pow(vio_pose_diff_mat_vec[i](2,2),2));
+    }
+
+    std::cout << "semantic rmse error " << robot_rmse_error / robot_pose_diff_mat_vec.size() << std::endl;
+    std::cout << "vio rmse error " << vio_rmse_error / vio_pose_diff_mat_vec.size() << std::endl;
+
 }
 
 //void semantic_graph_slam_ros::add_odom_pose_increments()

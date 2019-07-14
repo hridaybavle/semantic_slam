@@ -11,6 +11,10 @@
 #include <Eigen/Dense>
 #include <pcl/io/pcd_io.h>
 
+//opencv
+#include "opencv2/core.hpp"
+#include "opencv2/opencv.hpp"
+
 //ros dependencies
 #include "ros/ros.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -200,5 +204,9 @@ private:
     float gt_z_transform_;
 
     bool first_gt_pose_;
+
+ private:
+   void computeATE(geometry_msgs::PoseArray robot_pose_array);
+
 
 };

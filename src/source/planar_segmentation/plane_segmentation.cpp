@@ -7,9 +7,12 @@ plane_segmentation::plane_segmentation(bool verbose)
     verbose_ = verbose;
     ros::param::param<double>("~num_point_seg", num_points_seg_, 500);
     ros::param::param<double>("~norm_point_thres", normal_point_thres_, 5000);
+    ros::param::param<double>("~planar_area", planar_area_, 0.1);
 
     std::cout << "Min num points for segmentation " << num_points_seg_ << std::endl;
     std::cout << "Min normal points threshold " << normal_point_thres_ << std::endl;
+    std::cout << "planar area " << planar_area_ << std::endl;
+
 
 }
 
@@ -197,8 +200,13 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
             float dot_product =  this->computeDotProduct(normals_of_the_horizontal_plane_in_cam,
                                                          normals_extracted);
 
+            float area = pcl::calculatePolygonArea(*boundary_cloud);
+            if(verbose_)
+                std::cout << "polygon area is: " << area << std::endl;
+
             //height of the object should never be above the camera
             //if(centroid[2] < 6.0)
+            if(area >= planar_area_)
             {
                 //checking if the extract plane is a horizontal plane or vertical
                 if(     fabs(model[0]) - fabs(normals_of_the_horizontal_plane_in_cam(0)) < 0.3 &&
