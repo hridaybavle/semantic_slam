@@ -20,8 +20,13 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     first_jack_pose_= false;
     verbose_        = false;
 
+    robot_pose_array_.poses.clear();
     vio_pose_array_.poses.clear();
-    gt_pose_array_.poses.clear();
+
+    robot_pose_vec_.clear();
+    vio_key_pose_vec_.clear();
+    vio_pose_vec_.clear();
+
     jack_yaw_transform_ = -1.57;
 
     ros::param::param<bool>("~verbose", verbose_, false);
@@ -31,6 +36,7 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     ros::param::param<bool>("~use_orb_slam_odom", use_orb_slam_odom_, false);
     ros::param::param<bool>("~use_rovio_odom", use_rovio_odom_, true);
     ros::param::param<bool>("~use_rtab_map_odom", use_rtab_map_odom_, false);
+    ros::param::param<bool>("~compute_txt_for_ate", compute_txt_for_ate_, false);
 
 
     std::cout << "should save graph: " << save_graph_ << std::endl;
@@ -39,6 +45,7 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     std::cout << "using orb slam odom " << use_orb_slam_odom_ << std::endl;
     std::cout << "using rovio odom "  << use_rovio_odom_ << std::endl;
     std::cout << "using rtab map odom " << use_rtab_map_odom_ << std::endl;
+    std::cout << "computing txt for ate " << compute_txt_for_ate_ << std::endl;
 
     semantic_gslam_obj_.reset(new semantic_graph_slam());
     semantic_gslam_obj_->init(verbose_);
@@ -103,10 +110,8 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     keyframe_path_pub_          = n.advertise<nav_msgs::Path>("robot_path",1);
     optitrack_pose_pub_         = n.advertise<geometry_msgs::PoseStamped>("optitrack_pose",1);
     optitrack_path_pub_         = n.advertise<nav_msgs::Path>("optitrack_path",1);
-    optitrack_keyframes_pub_    = n.advertise<geometry_msgs::PoseArray>("optitrack_keyframes",1);
     corres_vio_pose_pub_        = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
     corres_vio_path_            = n.advertise<nav_msgs::Path>("corres_vo_path",1);
-    corres_vio_keyframes_pub_   = n.advertise<geometry_msgs::PoseArray>("corres_vo_keyframes",1);
 
 
 }
@@ -121,7 +126,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
 void semantic_graph_slam_ros::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
 
-    const ros::Time& stamp      = odom_msg->header.stamp;
+    const ros::Time& stamp  = odom_msg->header.stamp;
     Eigen::Isometry3d odom;
     Eigen::MatrixXf odom_cov;
 
@@ -414,51 +419,32 @@ void semantic_graph_slam_ros::publishKeyframePoses()
     semantic_gslam_obj_->getKeyframes(keyframes);
     geometry_msgs::Pose key_pose;
     geometry_msgs::PoseStamped key_pose_stamped;
+    geometry_msgs::PoseStamped vio_key_pose_stamped;
+
+    vio_key_pose_vec_.clear();
+    robot_pose_vec_.clear();
     for(int i=0; i < keyframes.size(); ++i)
     {
         key_pose = ps_graph_slam::matrix2pose(ros::Time::now(),
                                               keyframes[i]->node->estimate().matrix().cast<float>(),
                                               "map");
 
-        key_pose_stamped.header.stamp = current_time;
+        key_pose_stamped.header.stamp = keyframes[i]->stamp;
         key_pose_stamped.pose = key_pose;
 
         pose_array.poses.push_back(key_pose);
         final_path.poses.push_back(key_pose_stamped);
-    }
+        robot_pose_vec_.push_back(key_pose_stamped);
 
-    this->publishVIOkeyframes(current_time);
-    this->publishgtKeyframes(current_time);
-    this->computeATE(pose_array);
+        vio_key_pose_stamped = ps_graph_slam::matrix2posestamped(keyframes[i]->stamp,
+                                                                 keyframes[i]->odom.matrix().cast<float>(),
+                                                                 "map");
+        vio_key_pose_vec_.push_back(vio_key_pose_stamped);
+
+    }
 
     keyframe_pose_pub_.publish(pose_array);
     keyframe_path_pub_.publish(final_path);
-}
-
-void semantic_graph_slam_ros::publishVIOkeyframes(ros::Time current_time)
-{
-    vio_pose_array_.header.stamp = current_time;
-    vio_pose_array_.header.frame_id = "map";
-    Eigen::Isometry3d vio_pose;
-    semantic_gslam_obj_->getVIOPose(vio_pose);
-
-    geometry_msgs::Pose corres_vio_pose_msg = ps_graph_slam::matrix2pose(current_time,
-                                                                         vio_pose.matrix().cast<float>(),
-                                                                         "map");
-    vio_pose_array_.poses.push_back(corres_vio_pose_msg);
-    corres_vio_keyframes_pub_.publish(vio_pose_array_);
-}
-
-void semantic_graph_slam_ros::publishgtKeyframes(ros::Time current_time)
-{
-    gt_pose_array_.header.stamp     = current_time;
-    gt_pose_array_.header.frame_id  = "map";
-
-    geometry_msgs::Pose gt_pose;
-    this->getgtPose(gt_pose);
-
-    gt_pose_array_.poses.push_back(gt_pose);
-    optitrack_keyframes_pub_.publish(gt_pose_array_);
 }
 
 void semantic_graph_slam_ros::publishRobotPose()
@@ -486,13 +472,12 @@ void semantic_graph_slam_ros::publishRobotPose()
 void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 {
     geometry_msgs::PoseStamped optitrack_pose;
-    optitrack_pose.header.stamp = ros::Time::now();
+    optitrack_pose.header.stamp = msg.header.stamp;
     optitrack_pose.header.frame_id = "map";
 
 
     optitrack_pose.pose = msg.pose.pose;
     optitrack_pose_pub_.publish(optitrack_pose);
-    this->setgtPose(optitrack_pose);
 
     optitrack_pose_vec_.push_back(optitrack_pose);
     nav_msgs::Path optitrack_path;
@@ -522,7 +507,7 @@ void semantic_graph_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconSta
     vicon_pose.pose.position.y = msg.pose.position.y + gt_y_transform_;
     vicon_pose.pose.position.z = msg.pose.position.z + gt_z_transform_;
     vicon_pose.pose.orientation = msg.pose.orientation;
-    this->setgtPose(vicon_pose);
+
     //vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   - sin(-0.074) * vicon_pose.pose.position.y;
     //vicon_pose.pose.position.y = sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) * vicon_pose.pose.position.y;
 
@@ -549,7 +534,7 @@ void semantic_graph_slam_ros::transformListener()
     }
 
     geometry_msgs::PoseStamped vicon_pose;
-    vicon_pose.header.stamp = ros::Time::now();
+    vicon_pose.header.stamp = transform.stamp_;
     vicon_pose.header.frame_id = "map";
 
     vicon_pose.pose.position.x = transform.getOrigin().x();
@@ -561,7 +546,6 @@ void semantic_graph_slam_ros::transformListener()
     vicon_pose.pose.orientation.w = transform.getRotation().w();
 
     optitrack_pose_pub_.publish(vicon_pose);
-    this->setgtPose(vicon_pose);
     optitrack_pose_vec_.push_back(vicon_pose);
 
     nav_msgs::Path vicon_path;
@@ -599,59 +583,59 @@ void semantic_graph_slam_ros::saveGraph()
         semantic_gslam_obj_->saveGraph(save_graph_path_);
 }
 
-void semantic_graph_slam_ros::setgtPose(geometry_msgs::PoseStamped gt_pose)
+void semantic_graph_slam_ros::computeATE()
 {
-    gt_pose_ = gt_pose.pose;
-    return;
-}
-
-void semantic_graph_slam_ros::getgtPose(geometry_msgs::Pose &gt_pose)
-{
-    gt_pose = gt_pose_;
-    return;
-}
-
-void semantic_graph_slam_ros::computeATE(geometry_msgs::PoseArray robot_pose_array)
-{
-    std::vector<Eigen::Matrix3f> robot_pose_diff_mat_vec, vio_pose_diff_mat_vec;
-    for(int i = 0; i < robot_pose_array.poses.size(); ++i)
+    if(compute_txt_for_ate_)
     {
-        Eigen::Matrix3f robot_pose_diff_mat, vio_pose_diff_mat;
-        Eigen::Matrix3f robot_pose_mat, gt_pose_mat, vio_pose_mat;
-        robot_pose_diff_mat.setIdentity(), robot_pose_mat.setIdentity(), gt_pose_mat.setIdentity(), vio_pose_mat.setIdentity();
 
-        gt_pose_mat(0,0) = gt_pose_array_.poses[i].position.x;
-        gt_pose_mat(1,1) = gt_pose_array_.poses[i].position.y;
-        gt_pose_mat(2,2) = gt_pose_array_.poses[i].position.z;
+        //writing the txt for robot
+        std::ofstream robot_data;
+        robot_data.open ("/home/hriday/Desktop/robot_pose.txt", std::ios::out | std::ios::ate | std::ios::app) ;
+        robot_data << "#timestamp ,tx,ty,tz,qx,qy,qz,qw" << std::endl;
+        robot_data.close();
 
-        robot_pose_mat(0,0) = robot_pose_array.poses[i].position.x;
-        robot_pose_mat(1,1) = robot_pose_array.poses[i].position.y;
-        robot_pose_mat(2,2) = robot_pose_array.poses[i].position.z;
+        for(int i = 0; i < robot_pose_vec_.size(); ++i)
+        {
+            robot_data.open ("/home/hriday/Desktop/robot_pose.txt", std::ios::out | std::ios::ate | std::ios::app);
+            robot_data << robot_pose_vec_[i].header.stamp << " " << robot_pose_vec_[i].pose.position.x << " " <<  robot_pose_vec_[i].pose.position.y << " " <<  robot_pose_vec_[i].pose.position.z
+                       << " " <<  robot_pose_vec_[i].pose.orientation.x << " " << robot_pose_vec_[i].pose.orientation.y << " " << robot_pose_vec_[i].pose.orientation.z << " " <<
+                          robot_pose_vec_[i].pose.orientation.w << std::endl;
+            robot_data.close();
+        }
 
-        vio_pose_mat(0,0) = vio_pose_array_.poses[i].position.x;
-        vio_pose_mat(1,1) = vio_pose_array_.poses[i].position.y;
-        vio_pose_mat(2,2) = vio_pose_array_.poses[i].position.z;
+        //writing the text for vio data
+        std::ofstream vio_data;
+        vio_data.open ("/home/hriday/Desktop/vio_pose.txt", std::ios::out | std::ios::ate | std::ios::app) ;
+        vio_data << "#timestamp ,tx,ty,tz,qx,qy,qz,qw" << std::endl;
+        vio_data.close();
 
-        robot_pose_diff_mat = gt_pose_mat - robot_pose_mat;
-        vio_pose_diff_mat   = gt_pose_mat - vio_pose_mat;
-        //        std::cout << "robot_pose_mat: " << robot_pose_mat << std::endl;
-        //        std::cout << "gt_pose_mat: "  << gt_pose_mat << std::endl;
-        //        std::cout << "pose_diff_mat: " << pose_diff_mat << std::endl;
+        for(int i = 0; i < vio_key_pose_vec_.size(); ++i)
+        {
+            vio_data.open ("/home/hriday/Desktop/vio_pose.txt", std::ios::out | std::ios::ate | std::ios::app);
+            vio_data << vio_key_pose_vec_[i].header.stamp << " " << vio_key_pose_vec_[i].pose.position.x << " " <<  vio_key_pose_vec_[i].pose.position.y << " " <<  vio_key_pose_vec_[i].pose.position.z
+                     << " " <<  vio_key_pose_vec_[i].pose.orientation.x << " " << vio_key_pose_vec_[i].pose.orientation.y << " " << vio_key_pose_vec_[i].pose.orientation.z << " " <<
+                        vio_key_pose_vec_[i].pose.orientation.w << std::endl;
+            vio_data.close();
+        }
 
-        robot_pose_diff_mat_vec.push_back(robot_pose_diff_mat);
-        vio_pose_diff_mat_vec.push_back(vio_pose_diff_mat);
+
+
+        //writing the text for gt data
+        std::ofstream gt_data;
+        gt_data.open ("/home/hriday/Desktop/gt_pose.txt", std::ios::out | std::ios::ate | std::ios::app) ;
+        gt_data << "#timestamp ,tx,ty,tz,qx,qy,qz,qw" << std::endl;
+        gt_data.close();
+
+        for(int i = 0; i < optitrack_pose_vec_.size(); ++i)
+        {
+            gt_data.open ("/home/hriday/Desktop/gt_pose.txt", std::ios::out | std::ios::ate | std::ios::app);
+            gt_data << optitrack_pose_vec_[i].header.stamp << " " << optitrack_pose_vec_[i].pose.position.x << " " <<  optitrack_pose_vec_[i].pose.position.y << " " <<  optitrack_pose_vec_[i].pose.position.z
+                    << " " <<  optitrack_pose_vec_[i].pose.orientation.x << " " << optitrack_pose_vec_[i].pose.orientation.y << " " << optitrack_pose_vec_[i].pose.orientation.z << " " <<
+                       optitrack_pose_vec_[i].pose.orientation.w << std::endl;
+            gt_data.close();
+        }
+
     }
-
-    float robot_rmse_error=0, vio_rmse_error=0;
-    for(int i =0; i < robot_pose_diff_mat_vec.size(); ++i)
-    {
-        robot_rmse_error +=  sqrt(pow(robot_pose_diff_mat_vec[i](0,0),2) + pow(robot_pose_diff_mat_vec[i](1,1),2) + pow(robot_pose_diff_mat_vec[i](2,2),2));
-                                                                               vio_rmse_error +=  sqrt(pow(vio_pose_diff_mat_vec[i](0,0),2) + pow(vio_pose_diff_mat_vec[i](1,1),2) + pow(vio_pose_diff_mat_vec[i](2,2),2));
-    }
-
-    std::cout << "semantic rmse error " << robot_rmse_error / robot_pose_diff_mat_vec.size() << std::endl;
-    std::cout << "vio rmse error " << vio_rmse_error / vio_pose_diff_mat_vec.size() << std::endl;
-
 }
 
 //void semantic_graph_slam_ros::add_odom_pose_increments()

@@ -25,6 +25,7 @@ int main(int argc, char **argv)
             r.sleep();
         }
 
+        mySemanticGraphSLAM.computeATE();
         mySemanticGraphSLAM.saveGraph();
 
         //   mySemanticSLAM.pclViewer->spinOnce(100);

@@ -85,6 +85,7 @@ public:
 private:
     bool use_rovio_odom_;
     bool use_rtab_map_odom_;
+    bool compute_txt_for_ate_;
     bool use_snap_pose_;
     bool use_orb_slam_odom_;
     bool save_graph_;
@@ -170,8 +171,14 @@ protected:
     tf::TransformListener gt_pose_listener_;
     void transformListener();
 
+//robot pose related
+private:
+    std::vector<geometry_msgs::PoseStamped> robot_pose_vec_;
+    geometry_msgs::PoseArray robot_pose_array_;
+
 private:
     //odom related
+    std::vector<geometry_msgs::PoseStamped> vio_key_pose_vec_;
     std::vector<geometry_msgs::PoseStamped> vio_pose_vec_;
     geometry_msgs::PoseArray vio_pose_array_;
 
@@ -182,11 +189,6 @@ private:
 private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
-
-    geometry_msgs::PoseArray gt_pose_array_;
-    geometry_msgs::Pose gt_pose_;
-    void setgtPose(geometry_msgs::PoseStamped gt_pose);
-    void getgtPose(geometry_msgs::Pose &gt_pose);
 
 
 private:
@@ -205,8 +207,8 @@ private:
 
     bool first_gt_pose_;
 
- private:
-   void computeATE(geometry_msgs::PoseArray robot_pose_array);
+ public:
+   void computeATE();
 
 
 };

@@ -240,7 +240,7 @@ std::vector<plane_segmentation::segmented_planes> plane_segmentation::multiPlane
                     planes_vec.push_back(planar_surf);
                     final_pose_centroids_vec.push_back(final_pose_centroid);
                 }
-                else if (dot_product < 0.3)
+                else if (dot_product < 0.5)
                 {
                     //std::cout << "Its a vertical plane " << std::endl;
                     //one if its a vertical plane
