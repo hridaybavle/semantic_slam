@@ -124,6 +124,7 @@ protected:
 protected:
     ros::Subscriber rvio_odom_pose_sub_;
     ros::Subscriber snap_odom_pose_sub_;
+    ros::Subscriber orb_slam_pose_sub_;
     ros::Subscriber jackal_odom_pose_sub_;
     ros::Subscriber cloud_sub_;
     ros::Subscriber detected_object_sub_;
@@ -134,6 +135,7 @@ protected:
 protected:
     void rovioVIOCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg);
+    void orbslamPoseCallback(const geometry_msgs::PoseStamped &pose_msg);
     void jackalOdomCallback(const nav_msgs::OdometryConstPtr &odom_msg);
     void PointCloudCallback(const sensor_msgs::PointCloud2 &msg);
     void detectedObjectDarknetCallback(const semantic_SLAM::BoundingBoxes& msg);
@@ -190,6 +192,9 @@ private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
 
+//orb slam pose related
+private:
+    std::vector<geometry_msgs::PoseStamped> orb_slam_pose_vec_;
 
 private:
     //jackal pose related

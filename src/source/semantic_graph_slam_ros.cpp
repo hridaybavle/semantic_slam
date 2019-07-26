@@ -26,6 +26,7 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     robot_pose_vec_.clear();
     vio_key_pose_vec_.clear();
     vio_pose_vec_.clear();
+    orb_slam_pose_vec_.clear();
 
     jack_yaw_transform_ = -1.57;
 
@@ -94,6 +95,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     //subscribers
     rvio_odom_pose_sub_         = n.subscribe("/rovio/odometry", 1, &semantic_graph_slam_ros::rovioVIOCallback, this);
     snap_odom_pose_sub_         = n.subscribe("/SQ04/snap_vislam/vislam/pose", 1, &semantic_graph_slam_ros::snapVIOCallback, this);
+    orb_slam_pose_sub_          = n.subscribe("orb_slam/pose", 1, &semantic_graph_slam_ros::orbslamPoseCallback, this);
     jackal_odom_pose_sub_       = n.subscribe("/JA01/odometry/filtered",1, &semantic_graph_slam_ros::jackalOdomCallback, this);
     cloud_sub_                  = n.subscribe("/depth_registered/points",1,&semantic_graph_slam_ros::PointCloudCallback, this);
     detected_object_sub_        = n.subscribe("/darknet_ros/bounding_boxes",1, &semantic_graph_slam_ros::detectedObjectDarknetCallback, this);
@@ -125,8 +127,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
 
 void semantic_graph_slam_ros::rovioVIOCallback(const nav_msgs::Odometry::ConstPtr &odom_msg)
 {
-
-    const ros::Time& stamp  = odom_msg->header.stamp;
+    const ros::Time& stamp = odom_msg->header.stamp;
     Eigen::Isometry3d odom;
     Eigen::MatrixXf odom_cov;
 
@@ -141,7 +142,6 @@ void semantic_graph_slam_ros::rovioVIOCallback(const nav_msgs::Odometry::ConstPt
         odom_msg_conv = ps_graph_slam::PoseCam2Robot(odom_msg);
         odom          = ps_graph_slam::odom2isometry(odom_msg);
         odom_cov      = ps_graph_slam::arrayToMatrix(odom_msg);
-
     }
 
     //this->VIOCallback(stamp, odom, odom_cov);
@@ -153,7 +153,7 @@ void semantic_graph_slam_ros::rovioVIOCallback(const nav_msgs::Odometry::ConstPt
 void semantic_graph_slam_ros::snapVIOCallback(const geometry_msgs::PoseStamped &pose_msg)
 {
 
-    const ros::Time& stamp                  = pose_msg.header.stamp;
+    const ros::Time& stamp                  = ros::Time::now();
     Eigen::Isometry3d odom;
     Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6); //manually adding pose cov
 
@@ -172,6 +172,13 @@ void semantic_graph_slam_ros::snapVIOCallback(const geometry_msgs::PoseStamped &
     semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
 
 
+
+    return;
+}
+
+void semantic_graph_slam_ros::orbslamPoseCallback(const geometry_msgs::PoseStamped &pose_msg)
+{
+    orb_slam_pose_vec_.push_back(pose_msg);
 
     return;
 }
@@ -472,7 +479,7 @@ void semantic_graph_slam_ros::publishRobotPose()
 void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 {
     geometry_msgs::PoseStamped optitrack_pose;
-    optitrack_pose.header.stamp = msg.header.stamp;
+    optitrack_pose.header.stamp = ros::Time::now();
     optitrack_pose.header.frame_id = "map";
 
 
@@ -499,7 +506,7 @@ void semantic_graph_slam_ros::viconPoseSubCallback(const semantic_SLAM::ViconSta
     }
 
     geometry_msgs::PoseStamped vicon_pose;
-    vicon_pose.header.stamp = msg.header.stamp;
+    vicon_pose.header.stamp = ros::Time::now();
     vicon_pose.header.frame_id = "map";
 
 
@@ -633,6 +640,21 @@ void semantic_graph_slam_ros::computeATE()
                     << " " <<  optitrack_pose_vec_[i].pose.orientation.x << " " << optitrack_pose_vec_[i].pose.orientation.y << " " << optitrack_pose_vec_[i].pose.orientation.z << " " <<
                        optitrack_pose_vec_[i].pose.orientation.w << std::endl;
             gt_data.close();
+        }
+
+        //writing orb slam data for comparision
+        std::ofstream orb_slam_data;
+        orb_slam_data.open ("/home/hriday/Desktop/orb_slam_pose.txt", std::ios::out | std::ios::ate | std::ios::app) ;
+        orb_slam_data << "#timestamp ,tx,ty,tz,qx,qy,qz,qw" << std::endl;
+        orb_slam_data.close();
+
+        for(int i = 0; i < orb_slam_pose_vec_.size(); ++i)
+        {
+            orb_slam_data.open ("/home/hriday/Desktop/orb_slam_pose.txt", std::ios::out | std::ios::ate | std::ios::app);
+            orb_slam_data << orb_slam_pose_vec_[i].header.stamp << " " << orb_slam_pose_vec_[i].pose.position.x << " " <<  orb_slam_pose_vec_[i].pose.position.y << " " <<  orb_slam_pose_vec_[i].pose.position.z
+                    << " " <<  orb_slam_pose_vec_[i].pose.orientation.x << " " << orb_slam_pose_vec_[i].pose.orientation.y << " " << orb_slam_pose_vec_[i].pose.orientation.z << " " <<
+                       orb_slam_pose_vec_[i].pose.orientation.w << std::endl;
+            orb_slam_data.close();
         }
 
     }

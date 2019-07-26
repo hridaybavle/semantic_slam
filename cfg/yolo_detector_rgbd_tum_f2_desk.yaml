@@ -1,5 +1,5 @@
 #general params
-verbose: true
+verbose: false
 camera_angle: 0.0
 update_key_using_det: false
 add_first_lan: false
@@ -13,18 +13,18 @@ keyframe_delta_time: 0.5
 #plane segmentation
 num_point_seg: 100
 norm_point_thres: 5000
-planar_area: 0.12
+planar_area: 0.20
 #data association related
-maha_dist_thres: 0.115
+maha_dist_thres: 0.35
 use_maha_dist: true
 use_eq_dist: false
 eq_dist_thres: 0.8
-land_noise_low: 0.5 
-land_noise_high: 0.5
+land_noise_low: 0.3 
+land_noise_high: 0.3
 #odom information cal
 use_const_inf_matrix: true
-const_stddev_x: 0.000667
-const_stddev_q: 0.00001
+const_stddev_x: 0.00667
+const_stddev_q: 0.0001
 #graph slam related
 save_graph: false
 save_graph_path: /home/hriday/Desktop/semantic_graph.g2o
