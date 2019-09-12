@@ -1,6 +1,6 @@
 # README #
 
-                                                               ![](semantic.gif)
+  ![](semantic.gif)
 
 This package is for running the semantic SLAM algorithm using planar extracted planar surfaces and the received detections (under development). Currently the package can use the following objects to create a semantic map:
 
