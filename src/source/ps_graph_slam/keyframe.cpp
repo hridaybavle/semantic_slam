@@ -41,10 +41,6 @@ void KeyFrame::dump(const std::string& directory) {
 
     ofs << "accum_distance " << accum_distance << "\n";
 
-    if(floor_coeffs) {
-        ofs << "floor_coeffs " << floor_coeffs->transpose() << "\n";
-    }
-
     if(node) {
         ofs << "id " << node->id() << "\n";
     }

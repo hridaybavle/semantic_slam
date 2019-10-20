@@ -75,6 +75,7 @@ void semantic_graph_slam_ros::run()
 
     this->publishCorresVIOPose();
     this->publishRobotPose();
+
     return;
 
 }

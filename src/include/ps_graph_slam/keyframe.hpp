@@ -42,8 +42,6 @@ public:
     Eigen::MatrixXf odom_cov;                       // odometry covariance
     double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
     const sensor_msgs::PointCloud2 cloud_msg;       // point cloud ros msg
-    boost::optional<Eigen::Vector4d> floor_coeffs;  // detected floor's coefficients
-    boost::optional<Eigen::Vector3d> utm_coord;     // UTM coord obtained by GPS
     std::vector<semantic_SLAM::ObjectInfo> obj_info;// the detected bb
 
     g2o::VertexSE3* node;                           // node instance

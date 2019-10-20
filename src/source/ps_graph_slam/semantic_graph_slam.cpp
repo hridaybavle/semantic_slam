@@ -28,6 +28,7 @@ void semantic_graph_slam::init(bool verbose)
     graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
     keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
     inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
+    semantic_mapping_obj_.reset(new mapping());
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
     robot_pose_.setIdentity();
@@ -391,6 +392,12 @@ void semantic_graph_slam::setDetectedObjectsPose(std::vector<detected_object> se
 void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &seg_obj_vec)
 {
     seg_obj_vec = seg_obj_vec_;
+}
+
+void semantic_graph_slam::get3DMap()
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+    cloud = semantic_mapping_obj_->generateMap(keyframes_);
 }
 
 void semantic_graph_slam::saveGraph(std::string save_graph_path)
