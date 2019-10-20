@@ -11,7 +11,7 @@ KeyFrame::KeyFrame(const ros::Time& stamp,
                    const Eigen::Isometry3d& odom, const Eigen::Isometry3d &robot_pose,
                    const Eigen::MatrixXf& odom_cov,
                    double accum_distance,
-                   const sensor_msgs::PointCloud2& cloud_msg,
+                   const sensor_msgs::PointCloud2& cloud_msg, const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud,
                    std::vector<semantic_SLAM::ObjectInfo>& obj_info)
     : stamp(stamp),
       odom(odom),
@@ -19,6 +19,7 @@ KeyFrame::KeyFrame(const ros::Time& stamp,
       odom_cov(odom_cov),
       accum_distance(accum_distance),
       cloud_msg(cloud_msg),
+      cloud(cloud),
       obj_info(obj_info),
       node(nullptr)
 {}

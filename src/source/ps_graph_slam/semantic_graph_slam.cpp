@@ -265,17 +265,22 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
 
     sensor_msgs::PointCloud2 cloud_msg;
     this->getPointCloudData(cloud_msg);
-    //    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-    //    std::vector<int> indices;
-    //    pcl::fromROSMsg(cloud_msg, *cloud);
-    //    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
+    std::vector<int> indices;
+    pcl::fromROSMsg(cloud_msg, *cloud);
+    pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+    //donwsampling the point cloud
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud (cloud);
+    sor.setLeafSize (0.1f, 0.1f, 0.1f);
+    sor.filter (*cloud);
 
     std::vector<semantic_SLAM::ObjectInfo> obj_info; obj_info.clear();
     if(object_detection_available_)
         this->getDetectedObjectInfo(obj_info);
 
     double accum_d = keyframe_updater_->get_accum_distance();
-    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
+    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(stamp, odom, robot_pose_, odom_cov, accum_d, cloud_msg, cloud, obj_info));
 
     std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
     keyframe_queue_.push_back(keyframe);
@@ -310,9 +315,10 @@ void semantic_graph_slam::addFirstPoseAndLandmark()
     odom.setIdentity();
     Eigen::MatrixXf odom_cov; odom_cov.setIdentity(6,6);
     double accum_d = 0; sensor_msgs::PointCloud2 cloud_msg;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
     std::vector<semantic_SLAM::ObjectInfo> obj_info;
 
-    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud_msg, obj_info));
+    ps_graph_slam::KeyFrame::Ptr keyframe(new ps_graph_slam::KeyFrame(ros::Time::now(), odom, robot_pose_, odom_cov, accum_d, cloud_msg, cloud, obj_info));
     keyframe_queue_.push_back(keyframe);
 
     if(empty_keyframe_queue())

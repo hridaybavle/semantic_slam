@@ -30,6 +30,7 @@ public:
              const Eigen::MatrixXf& odom_cov,
              double accum_distance,
              const sensor_msgs::PointCloud2& cloud_msg,
+             const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud,
              std::vector<semantic_SLAM::ObjectInfo>& obj_info);
     ~KeyFrame();
 
@@ -42,7 +43,8 @@ public:
     Eigen::MatrixXf odom_cov;                       // odometry covariance
     double accum_distance;                          // accumulated distance from the first node (by scan_matching_odometry)
     const sensor_msgs::PointCloud2 cloud_msg;       // point cloud ros msg
-    std::vector<semantic_SLAM::ObjectInfo> obj_info;// the detected bb
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;  // pcl point cloud
+    std::vector<semantic_SLAM::ObjectInfo> obj_info;// the detected b
 
     g2o::VertexSE3* node;                           // node instance
 };

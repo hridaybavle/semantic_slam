@@ -37,22 +37,17 @@ public:
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
 
+
         for(int i=0; i< keyframes.size(); ++i)
         {
             Eigen::Matrix4f pose = keyframes[i]->node->estimate().matrix().cast<float>();
 
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-            std::vector<int> indices;
-            pcl::fromROSMsg(keyframes[i]->cloud_msg, *cloud);
-            pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
-
-            for(const auto& src_pt : cloud->points)
+            for(const auto& src_pt : keyframes[i]->cloud->points)
             {
                 pcl::PointXYZRGB dst_pt;
                 dst_pt.getVector4fMap() = pose * src_pt.getVector4fMap();
                 out_cloud->push_back(dst_pt);
             }
-
        }
 
         out_cloud->width = out_cloud->size();
