@@ -1,5 +1,7 @@
 # README #
 
+  ![](semantic.gif)
+
 This package is for running the semantic SLAM algorithm using planar extracted planar surfaces and the received detections (under development). Currently the package can use the following objects to create a semantic map:
 
 - chair
@@ -25,7 +27,7 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 - download the rosbag: git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git
 - mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
 - git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone https://bitbucket.org/hridaybavle/bucket_detector.git
-- cd .. && catkin_make -DCMAKE_BUILD_TYPE=Relase
+- cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
 -  gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 - *insert the rosbag location in the launcher*
 - source devel/setup.bash
