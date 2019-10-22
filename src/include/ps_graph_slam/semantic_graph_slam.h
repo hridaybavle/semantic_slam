@@ -37,11 +37,13 @@ private:
 private:
     std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
     std::unique_ptr<data_association> data_ass_obj_;
-    std::unique_ptr<mapping> semantic_mapping_obj_;
+    mapping* semantic_mapping_obj_;
+    std::thread* semantic_mapping_th_;
+
 
 public:
     //mapping related params
-    void get3DMap();
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr get3DMap();
 
 
 private:

@@ -63,6 +63,7 @@
 
 #include "ps_graph_slam/semantic_graph_slam.h"
 
+
 class semantic_graph_slam_ros
 {
 
@@ -157,6 +158,7 @@ protected:
     ros::Publisher corres_vio_pose_pub_;
     ros::Publisher corres_vio_path_;
     ros::Publisher corres_vio_keyframes_pub_;
+    ros::Publisher map_points_pub_;
 
 protected:
     void publishRobotPose();
@@ -167,13 +169,14 @@ protected:
     void publishDetectedLandmarks();
     void publishKeyframePoses();
     void publishCorresVIOPose();
+    void publish3DPointMap();
 
-//transform listener
+    //transform listener
 protected:
     tf::TransformListener gt_pose_listener_;
     void transformListener();
 
-//robot pose related
+    //robot pose related
 private:
     std::vector<geometry_msgs::PoseStamped> robot_pose_vec_;
     geometry_msgs::PoseArray robot_pose_array_;
@@ -192,7 +195,7 @@ private:
     //optitrack related
     std::vector<geometry_msgs::PoseStamped> optitrack_pose_vec_;
 
-//orb slam pose related
+    //orb slam pose related
 private:
     std::vector<geometry_msgs::PoseStamped> orb_slam_pose_vec_;
 
@@ -212,8 +215,8 @@ private:
 
     bool first_gt_pose_;
 
- public:
-   void computeATE();
+public:
+    void computeATE();
 
 
 };

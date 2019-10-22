@@ -71,6 +71,7 @@ void semantic_graph_slam_ros::run()
         this->publishLandmarks();
         this->publishKeyframePoses();
         this->publishDetectedLandmarks();
+        this->publish3DPointMap();
     }
 
     this->publishCorresVIOPose();
@@ -115,7 +116,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n)
     optitrack_path_pub_         = n.advertise<nav_msgs::Path>("optitrack_path",1);
     corres_vio_pose_pub_        = n.advertise<geometry_msgs::PoseStamped>("corres_vo_pose",1);
     corres_vio_path_            = n.advertise<nav_msgs::Path>("corres_vo_path",1);
-
+    map_points_pub_             = n.advertise<sensor_msgs::PointCloud2>("map_points",1);
 
 }
 
@@ -171,8 +172,6 @@ void semantic_graph_slam_ros::snapVIOCallback(const geometry_msgs::PoseStamped &
     }
 
     semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
-
-
 
     return;
 }
@@ -585,6 +584,25 @@ void semantic_graph_slam_ros::publishCorresVIOPose()
     corres_vio_path_.publish(vio_path);
 }
 
+void semantic_graph_slam_ros::publish3DPointMap()
+{
+    if(!map_points_pub_.getNumSubscribers())
+        return;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map (new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_map = semantic_gslam_obj_->get3DMap();
+
+    if(cloud_map->empty())
+        return;
+
+    sensor_msgs::PointCloud2 cloud_map_msg;
+    pcl::toROSMsg(*cloud_map, cloud_map_msg);
+    cloud_map_msg.header.frame_id = "map";
+    cloud_map_msg.header.stamp = ros::Time::now();
+
+    map_points_pub_.publish(cloud_map_msg);
+}
+
 void semantic_graph_slam_ros::saveGraph()
 {
     if(save_graph_)
@@ -653,8 +671,8 @@ void semantic_graph_slam_ros::computeATE()
         {
             orb_slam_data.open ("/home/hriday/Desktop/orb_slam_pose.txt", std::ios::out | std::ios::ate | std::ios::app);
             orb_slam_data << orb_slam_pose_vec_[i].header.stamp << " " << orb_slam_pose_vec_[i].pose.position.x << " " <<  orb_slam_pose_vec_[i].pose.position.y << " " <<  orb_slam_pose_vec_[i].pose.position.z
-                    << " " <<  orb_slam_pose_vec_[i].pose.orientation.x << " " << orb_slam_pose_vec_[i].pose.orientation.y << " " << orb_slam_pose_vec_[i].pose.orientation.z << " " <<
-                       orb_slam_pose_vec_[i].pose.orientation.w << std::endl;
+                          << " " <<  orb_slam_pose_vec_[i].pose.orientation.x << " " << orb_slam_pose_vec_[i].pose.orientation.y << " " << orb_slam_pose_vec_[i].pose.orientation.z << " " <<
+                             orb_slam_pose_vec_[i].pose.orientation.w << std::endl;
             orb_slam_data.close();
         }
 

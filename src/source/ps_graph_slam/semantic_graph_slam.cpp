@@ -23,17 +23,6 @@ void semantic_graph_slam::init(bool verbose)
     max_keyframes_per_update_   = 10;
     seg_obj_vec_.clear();
 
-    pc_seg_obj_.reset(new point_cloud_segmentation(verbose_));
-    data_ass_obj_.reset(new data_association(verbose_));
-    graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
-    keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
-    inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
-    semantic_mapping_obj_.reset(new mapping());
-    trans_odom2map_.setIdentity();
-    landmarks_vec_.clear();
-    robot_pose_.setIdentity();
-    vio_pose_.setIdentity();
-    prev_odom_.setIdentity();
 
     ros::param::param<bool>("~update_key_using_det",update_keyframes_using_detections_,false);
     ros::param::param<double>("~camera_angle",cam_angled_,0);
@@ -41,8 +30,23 @@ void semantic_graph_slam::init(bool verbose)
     ros::param::param<double>("~first_lan_x", first_lan_x_, 1.8);
     ros::param::param<double>("~first_lan_y", first_lan_y_, 0);
     ros::param::param<double>("~first_lan_z", first_lan_z_, 0.3);
-
     cam_angle_ = static_cast<double>(cam_angled_) * (M_PI/180);
+
+
+    pc_seg_obj_.reset(new point_cloud_segmentation(verbose_));
+    data_ass_obj_.reset(new data_association(verbose_));
+    graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
+    keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
+    inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
+    semantic_mapping_obj_ = new  mapping(cam_angle_);
+    semantic_mapping_th_ = new std::thread(&mapping::generateMap,semantic_mapping_obj_);
+
+    trans_odom2map_.setIdentity();
+    landmarks_vec_.clear();
+    robot_pose_.setIdentity();
+    vio_pose_.setIdentity();
+    prev_odom_.setIdentity();
+
     std::cout << "camera angle in radians: " <<  cam_angle_ << std::endl;
     std::cout << "update keyframe every detection: " << update_keyframes_using_detections_<< std::endl;
     std::cout << "add first landmark: " << add_first_lan_ << std::endl;
@@ -71,6 +75,10 @@ bool semantic_graph_slam::run()
             }
         }
 
+
+        //pass the keyframe to the mapping module
+        semantic_mapping_obj_->setKeyframes(new_keyframes_);
+
         //graph slam opitimization
         std::copy(new_keyframes_.begin(), new_keyframes_.end(), std::back_inserter(keyframes_));
         new_keyframes_.clear();
@@ -80,6 +88,7 @@ bool semantic_graph_slam::run()
         {
             if(verbose_)
                 std::cout << "optimizing the graph " << std::endl;
+
             //get and set the landmark covariances
             this->getAndSetLandmarkCov();
 
@@ -400,10 +409,12 @@ void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &s
     seg_obj_vec = seg_obj_vec_;
 }
 
-void semantic_graph_slam::get3DMap()
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr semantic_graph_slam::get3DMap()
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
-    cloud = semantic_mapping_obj_->generateMap(keyframes_);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud = semantic_mapping_obj_->getOutputMap();
+
+    return cloud;
 }
 
 void semantic_graph_slam::saveGraph(std::string save_graph_path)

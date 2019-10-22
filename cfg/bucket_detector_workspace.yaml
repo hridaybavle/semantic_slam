@@ -9,7 +9,8 @@ keyframe_delta_angle: 0.5
 keyframe_delta_time: 1.0
 #plane segmentation
 num_point_seg: 100
-norm_point_thres: 6000
+norm_point_thres: 5000
+planar_area: 0.01
 #data association related
 maha_dist_thres: 1.5
 use_maha_dist: false
@@ -24,4 +25,4 @@ const_stddev_q: 0.00001
 #graph slam related
 save_graph: false
 save_graph_path: /home/hriday/Desktop/semantic_graph.g2o
-compute_txt_for_ate: true
+compute_txt_for_ate: false
