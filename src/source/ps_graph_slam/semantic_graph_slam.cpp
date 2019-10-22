@@ -281,7 +281,7 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
     //donwsampling the point cloud
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (cloud);
-    sor.setLeafSize (0.1f, 0.1f, 0.1f);
+    sor.setLeafSize (0.5f, 0.5f, 0.5f);
     sor.filter (*cloud);
 
     std::vector<semantic_SLAM::ObjectInfo> obj_info; obj_info.clear();
