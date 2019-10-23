@@ -20,6 +20,7 @@
 
 //semantic mapping
 #include "ps_graph_slam/mapping.h"
+#include "ps_graph_slam/map_cloud.h"
 
 class semantic_graph_slam
 {
@@ -43,7 +44,7 @@ private:
 
 public:
     //mapping related params
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> get3DMap();
+    std::vector<map_cloud> get3DMap();
 
 
 private:

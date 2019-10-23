@@ -63,6 +63,7 @@
 
 #include "ps_graph_slam/semantic_graph_slam.h"
 
+#include "ps_graph_slam/map_cloud.h"
 
 class semantic_graph_slam_ros
 {

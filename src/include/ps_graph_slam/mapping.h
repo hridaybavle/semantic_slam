@@ -16,7 +16,7 @@
 #include <pcl/octree/octree_search.h>
 
 #include "ps_graph_slam/ros_utils.hpp"
-
+#include "ps_graph_slam/map_cloud.h"
 #include "tools.h"
 
 class mapping
@@ -26,7 +26,7 @@ public:
     mapping(float cam_angle)
     {
 
-        std::cout << "initialized mapping thread " << std::endl;
+        std::cout << "Initialized mapping thread " << std::endl;
         this->init();
     }
     ~mapping()
@@ -37,9 +37,11 @@ public:
 private:
     float cam_angle_;
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> out_cloud_;
+    std::vector<map_cloud> map_cloud_vec_;
+
     std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;
     std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_optimized_;
-    std::mutex keyframe_lock_, cloud_lock_;
+    std::mutex keyframe_lock_, cloud_lock_, opt_keyframe_lock_;
 
 
 private:
@@ -49,6 +51,7 @@ private:
     void init()
     {
         out_cloud_.clear();
+        map_cloud_vec_.clear();
         //out_cloud_ .reset(new pcl::PointCloud<pcl::PointXYZRGB>);
         //out_cloud_->points.clear();
         new_keyframes_.clear();
@@ -70,7 +73,9 @@ public:
 
     void optimizedKeyframes(std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_optimized)
     {
+        opt_keyframe_lock_.lock();
         keyframes_optimized_ = keyframes_optimized;
+        opt_keyframe_lock_.unlock();
     }
 
     void generateMap()
@@ -120,8 +125,12 @@ public:
                 cloud->height = 1;
                 cloud->is_dense = false;
 
+                map_cloud current_map_cloud;
+                current_map_cloud.keyframe_pose = pose;
+                current_map_cloud.out_cloud     = cloud;
+
                 cloud_lock_.lock();
-                out_cloud_.push_back(cloud);
+                map_cloud_vec_.push_back(current_map_cloud);
                 cloud_lock_.unlock();
 
                 //global_cloud_.push_back(out_cloud);
@@ -132,13 +141,47 @@ public:
 
     void opitmizeMap()
     {
+        //        while(1)
+        //        {
+        //            std::vector<ps_graph_slam::KeyFrame::Ptr> opt_keyframe;
+        //            opt_keyframe_lock_.lock();
+        //            opt_keyframe = keyframes_optimized_;
+        //            keyframes_optimized_.clear();
+        //            opt_keyframe_lock_.unlock();
 
+        //            cloud_lock_.lock();
+        //            for(int i=0; i< map_cloud_vec_.size(); ++i)
+        //            {
+        //                //pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+        //                Eigen::MatrixXf pose =  ps_graph_slam::matrix2vector(opt_keyframe[i]->robot_pose.matrix().cast<float>());
+
+        //                Eigen::Matrix4f transformation_mat;
+        //                semantic_tools sem_tool_obj;
+        //                sem_tool_obj.transformRobotToWorld(pose,
+        //                                                   transformation_mat);
+
+        //                for(int j = 0; j< map_cloud_vec_[i].out_cloud->cloud->points.size(); ++j)
+        //                {
+        //                    Eigen::Matrix4f cam_points, map_points;
+        //                    cam_points.setOnes(), map_points.setOnes();
+
+        //                    cam_points(0) = keyframes[i]->cloud->points[j].x;
+        //                    cam_points(1) = keyframes[i]->cloud->points[j].y;
+        //                    cam_points(2) = keyframes[i]->cloud->points[j].z;
+
+        //                    map_points = transformation_mat * cam_points;
+        //                }
+
+        //            }
+        //            cloud_lock_.unlock();
+
+        //    }
 
     }
 
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> getOutputMap()
+    std::vector<map_cloud> getOutputMap()
     {
-        return out_cloud_;
+        return map_cloud_vec_;
     }
 
 

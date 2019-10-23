@@ -174,6 +174,31 @@ public:
 
     }
 
+    void transformRobotToWorld(Eigen::VectorXf pose,
+                               Eigen::Matrix4f &transformation_mat)
+    {
+        Eigen::Matrix4f T_robot_world;
+        float roll = pose(3); float pitch = pose(4); float yaw = pose(5);
+
+        //rotation of the robot with respect to the world
+        T_robot_world(0,0) = cos(yaw)*cos(pitch);
+        T_robot_world(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
+        T_robot_world(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(pitch);
+
+        T_robot_world(1,0) = sin(yaw)*cos(pitch);
+        T_robot_world(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
+        T_robot_world(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
+
+        T_robot_world(2,0) = -sin(pitch);
+        T_robot_world(2,1) = cos(pitch)*sin(roll);
+        T_robot_world(2,2) = cos(pitch)*cos(roll);
+        T_robot_world(3,3) = 1;
+
+        transformation_mat = T_robot_world;
+
+    }
+
+
 
     inline float dist(float x1, float x2, float y1, float y2, float z1, float z2)
     {
