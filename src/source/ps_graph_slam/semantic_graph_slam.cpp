@@ -40,6 +40,8 @@ void semantic_graph_slam::init(bool verbose)
     inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
     semantic_mapping_obj_ = new  mapping(cam_angle_);
     semantic_mapping_th_ = new std::thread(&mapping::generateMap,semantic_mapping_obj_);
+    semantic_mapping_opt_th_ = new std::thread(&mapping::opitmizeMap,semantic_mapping_obj_);
+
 
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
@@ -88,6 +90,9 @@ bool semantic_graph_slam::run()
         {
             if(verbose_)
                 std::cout << "optimizing the graph " << std::endl;
+
+            //give the optimized keypoints to the mapping
+            semantic_mapping_obj_->setoptimizedKeyframes(keyframes_);
 
             //get and set the landmark covariances
             this->getAndSetLandmarkCov();
@@ -281,7 +286,7 @@ void semantic_graph_slam::VIOCallback(const ros::Time& stamp,
     //donwsampling the point cloud
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (cloud);
-    sor.setLeafSize (0.5f, 0.5f, 0.5f);
+    sor.setLeafSize (0.1f, 0.1f, 0.1f);
     sor.filter (*cloud);
 
     std::vector<semantic_SLAM::ObjectInfo> obj_info; obj_info.clear();

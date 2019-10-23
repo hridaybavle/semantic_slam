@@ -600,7 +600,6 @@ void semantic_graph_slam_ros::publish3DPointMap()
             cloud_map->points.push_back(cloud_map_vector[i].out_cloud->points[j]);
     }
 
-
     if(cloud_map->empty())
         return;
 
