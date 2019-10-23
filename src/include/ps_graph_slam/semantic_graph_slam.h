@@ -43,7 +43,7 @@ private:
 
 public:
     //mapping related params
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr get3DMap();
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> get3DMap();
 
 
 private:

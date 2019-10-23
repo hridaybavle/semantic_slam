@@ -36,11 +36,10 @@ public:
 
 private:
     float cam_angle_;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud_;
-    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> global_cloud_;
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> out_cloud_;
     std::deque<ps_graph_slam::KeyFrame::Ptr> new_keyframes_;
     std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_optimized_;
-    std::mutex keyframe_lock_, keyframe_lock_2_;
+    std::mutex keyframe_lock_, cloud_lock_;
 
 
 private:
@@ -49,9 +48,9 @@ private:
 private:
     void init()
     {
-        global_cloud_.clear();
-        out_cloud_ .reset(new pcl::PointCloud<pcl::PointXYZRGB>);
-        out_cloud_->points.clear();
+        out_cloud_.clear();
+        //out_cloud_ .reset(new pcl::PointCloud<pcl::PointXYZRGB>);
+        //out_cloud_->points.clear();
         new_keyframes_.clear();
         add_new_keyframe_ = false;
     }
@@ -60,10 +59,13 @@ private:
 public:
     void setKeyframes(std::deque<ps_graph_slam::KeyFrame::Ptr> keyframes)
     {
-        keyframe_lock_2_.lock();
-        new_keyframes_ = keyframes;
-        keyframe_lock_2_.unlock();
-        add_new_keyframe_ = true;
+        keyframe_lock_.lock();
+        for(int i = 0; i< keyframes.size(); ++i)
+        {
+            new_keyframes_.push_back(keyframes[i]);
+            keyframe_lock_.unlock();
+        }
+        keyframe_lock_.unlock();
     }
 
     void optimizedKeyframes(std::vector<ps_graph_slam::KeyFrame::Ptr> keyframes_optimized)
@@ -75,11 +77,18 @@ public:
     {
         while(1)
         {
-            for(int i=0; i< new_keyframes_.size(); ++i)
+            keyframe_lock_.lock();
+            std::deque<ps_graph_slam::KeyFrame::Ptr> keyframes;
+            keyframes = new_keyframes_;
+            new_keyframes_.clear();
+            keyframe_lock_.unlock();
+
+            for(int i=0; i< keyframes.size(); ++i)
             {
+                pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
 
                 //pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
-                Eigen::MatrixXf pose =  ps_graph_slam::matrix2vector(new_keyframes_[i]->robot_pose.matrix().cast<float>());
+                Eigen::MatrixXf pose =  ps_graph_slam::matrix2vector(keyframes[i]->robot_pose.matrix().cast<float>());
 
                 Eigen::Matrix4f transformation_mat;
                 semantic_tools sem_tool_obj;
@@ -87,14 +96,14 @@ public:
                                                      transformation_mat,
                                                      cam_angle_);
 
-                for(int j = 0; j< new_keyframes_[i]->cloud->points.size(); ++j)
+                for(int j = 0; j< keyframes[i]->cloud->points.size(); ++j)
                 {
                     Eigen::Matrix4f cam_points, map_points;
                     cam_points.setOnes(), map_points.setOnes();
 
-                    cam_points(0) = new_keyframes_[i]->cloud->points[j].x;
-                    cam_points(1) = new_keyframes_[i]->cloud->points[j].y;
-                    cam_points(2) = new_keyframes_[i]->cloud->points[j].z;
+                    cam_points(0) = keyframes[i]->cloud->points[j].x;
+                    cam_points(1) = keyframes[i]->cloud->points[j].y;
+                    cam_points(2) = keyframes[i]->cloud->points[j].z;
 
                     map_points = transformation_mat * cam_points;
 
@@ -102,25 +111,32 @@ public:
                     dst_pt.x = map_points(0) + pose(0);
                     dst_pt.y = map_points(1) + pose(1);
                     dst_pt.z = map_points(2) + pose(2);
-                    dst_pt.rgb = new_keyframes_[i]->cloud->points[j].rgb;
+                    dst_pt.rgb = keyframes[i]->cloud->points[j].rgb;
 
-                    out_cloud_->push_back(dst_pt);
+                    cloud->push_back(dst_pt);
                 }
 
-                out_cloud_->width = out_cloud_->size();
-                out_cloud_->height = 1;
-                out_cloud_->is_dense = false;
+                cloud->width = cloud->size();
+                cloud->height = 1;
+                cloud->is_dense = false;
+
+                cloud_lock_.lock();
+                out_cloud_.push_back(cloud);
+                cloud_lock_.unlock();
+
                 //global_cloud_.push_back(out_cloud);
             }
-
-            keyframe_lock_.lock();
-            new_keyframes_.clear();
-            keyframe_lock_.unlock();
 
         }
     }
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr getOutputMap()
+    void opitmizeMap()
+    {
+
+
+    }
+
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> getOutputMap()
     {
         return out_cloud_;
     }

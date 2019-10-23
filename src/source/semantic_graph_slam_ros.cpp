@@ -589,8 +589,17 @@ void semantic_graph_slam_ros::publish3DPointMap()
     if(!map_points_pub_.getNumSubscribers())
         return;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map (new pcl::PointCloud<pcl::PointXYZRGB>());
-    cloud_map = semantic_gslam_obj_->get3DMap();
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_map_vector;
+    cloud_map_vector = semantic_gslam_obj_->get3DMap();
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    for(int i =0; i < cloud_map_vector.size(); ++i)
+    {
+        for(int j= 0; j< cloud_map_vector[i]->points.size(); ++j)
+            cloud_map->points.push_back(cloud_map_vector[i]->points[j]);
+    }
+
 
     if(cloud_map->empty())
         return;

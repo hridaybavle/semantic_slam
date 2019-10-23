@@ -409,12 +409,12 @@ void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &s
     seg_obj_vec = seg_obj_vec_;
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr semantic_graph_slam::get3DMap()
+std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> semantic_graph_slam::get3DMap()
 {
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
-    cloud = semantic_mapping_obj_->getOutputMap();
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> cloud_map_vector;
+    cloud_map_vector = semantic_mapping_obj_->getOutputMap();
 
-    return cloud;
+    return cloud_map_vector;
 }
 
 void semantic_graph_slam::saveGraph(std::string save_graph_path)
