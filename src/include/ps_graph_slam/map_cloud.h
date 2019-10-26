@@ -9,7 +9,7 @@
 struct map_cloud {
 
 	  pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud;
-	  Eigen::MatrixXf keyframe_pose;
+      Eigen::Matrix4f keyframe_pose;
 
 };
 
