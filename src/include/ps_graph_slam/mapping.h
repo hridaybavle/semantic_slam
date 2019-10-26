@@ -187,6 +187,10 @@ public:
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr processPointCloud(sensor_msgs::PointCloud2 point_cloud_msg)
     {
+
+        if(point_cloud_msg.data.empty)
+         return null_ptr;
+
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
 
         std::vector<int> indices;
