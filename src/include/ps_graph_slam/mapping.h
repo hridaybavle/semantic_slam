@@ -27,7 +27,7 @@ public:
     {
 
         std::cout << "Initialized mapping thread " << std::endl;
-        this->init();
+        this->init(cam_angle);
     }
     ~mapping()
     {
@@ -45,17 +45,16 @@ private:
 
 
 private:
-    bool add_new_keyframe_;
+
+    semantic_tools sem_tool_obj_;
 
 private:
-    void init()
+    void init(float cam_angle)
     {
+        cam_angle_ = cam_angle;
         out_cloud_.clear();
         map_cloud_vec_.clear();
-        //out_cloud_ .reset(new pcl::PointCloud<pcl::PointXYZRGB>);
-        //out_cloud_->points.clear();
         new_keyframes_.clear();
-        add_new_keyframe_ = false;
     }
 
 
@@ -90,18 +89,18 @@ public:
 
             for(int i=0; i< keyframes.size(); ++i)
             {
-                pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+                pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+                cloud = this->processPointCloud(keyframes[i]->cloud_msg);
 
                 //pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
                 Eigen::MatrixXf pose =  ps_graph_slam::matrix2vector(keyframes[i]->robot_pose.matrix().cast<float>());
 
                 Eigen::Matrix4f transformation_mat;
-                semantic_tools sem_tool_obj;
-                sem_tool_obj.transformNormalsToWorld(pose,
-                                                     transformation_mat,
-                                                     cam_angle_);
+                sem_tool_obj_.transformMapPointsToWorld(pose,
+                                                        transformation_mat,
+                                                        cam_angle_);
 
-                for(int j = 0; j< keyframes[i]->cloud->points.size(); ++j)
+                for(int j = 0; j< cloud->points.size(); ++j)
                 {
                     Eigen::Matrix4f cam_points, map_points;
                     cam_points.setOnes(), map_points.setOnes();
@@ -113,9 +112,9 @@ public:
                     map_points = transformation_mat * cam_points;
 
                     pcl::PointXYZRGB dst_pt;
-                    dst_pt.x = map_points(0) + pose(0);
-                    dst_pt.y = map_points(1) + pose(1);
-                    dst_pt.z = map_points(2) + pose(2);
+                    dst_pt.x = map_points(0);
+                    dst_pt.y = map_points(1);
+                    dst_pt.z = map_points(2);
                     dst_pt.rgb = keyframes[i]->cloud->points[j].rgb;
 
                     cloud->push_back(dst_pt);
@@ -184,6 +183,29 @@ public:
             cloud_lock_.unlock();
         }
 
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr processPointCloud(sensor_msgs::PointCloud2 point_cloud_msg)
+    {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
+
+        std::vector<int> indices;
+        pcl::fromROSMsg(point_cloud_msg, *cloud);
+        pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
+        //donwsampling the point cloud
+        pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+        sor.setInputCloud (cloud);
+        sor.setLeafSize (0.2f, 0.2f, 0.2f);
+        sor.filter (*cloud);
+
+        pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor_out;
+        sor_out.setInputCloud (cloud);
+        sor_out.setMeanK (50);
+        sor_out.setStddevMulThresh (1.0);
+        sor_out.filter (*cloud);
+
+
+        return cloud;
     }
 
     std::vector<map_cloud> getOutputMap()
