@@ -51,6 +51,9 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     semantic_gslam_obj_.reset(new semantic_graph_slam());
     semantic_gslam_obj_->init(verbose_);
 
+    //publisher thread
+    semantic_mapping_pub_th_ = new std::thread(&semantic_graph_slam_ros::publish3DPointMap, this);
+
     //this is test run
     //    if(!counter_)
     //    {
@@ -71,7 +74,7 @@ void semantic_graph_slam_ros::run()
         this->publishLandmarks();
         this->publishKeyframePoses();
         this->publishDetectedLandmarks();
-        this->publish3DPointMap();
+        //this->publish3DPointMap();
     }
 
     this->publishCorresVIOPose();
@@ -586,29 +589,34 @@ void semantic_graph_slam_ros::publishCorresVIOPose()
 
 void semantic_graph_slam_ros::publish3DPointMap()
 {
-    if(!map_points_pub_.getNumSubscribers())
-        return;
 
-    std::vector<map_cloud> cloud_map_vector;
-    cloud_map_vector = semantic_gslam_obj_->get3DMap();
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    for(int i =0; i < cloud_map_vector.size(); ++i)
+    while(1)
     {
-        for(int j= 0; j< cloud_map_vector[i].out_cloud->points.size(); ++j)
-            cloud_map->points.push_back(cloud_map_vector[i].out_cloud->points[j]);
+        //if(!map_points_pub_.getNumSubscribers())
+        //return;
+
+        std::vector<map_cloud> cloud_map_vector;
+        cloud_map_vector = semantic_gslam_obj_->get3DMap();
+
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+        for(int i =0; i < cloud_map_vector.size(); ++i)
+        {
+            for(int j= 0; j< cloud_map_vector[i].out_cloud->points.size(); ++j)
+                cloud_map->points.push_back(cloud_map_vector[i].out_cloud->points[j]);
+        }
+
+        //        if(cloud_map->empty())
+        //            return;
+
+        sensor_msgs::PointCloud2 cloud_map_msg;
+        pcl::toROSMsg(*cloud_map, cloud_map_msg);
+        cloud_map_msg.header.frame_id = "map";
+        cloud_map_msg.header.stamp = ros::Time::now();
+
+        map_points_pub_.publish(cloud_map_msg);
+
     }
-
-    if(cloud_map->empty())
-        return;
-
-    sensor_msgs::PointCloud2 cloud_map_msg;
-    pcl::toROSMsg(*cloud_map, cloud_map_msg);
-    cloud_map_msg.header.frame_id = "map";
-    cloud_map_msg.header.stamp = ros::Time::now();
-
-    map_points_pub_.publish(cloud_map_msg);
 }
 
 void semantic_graph_slam_ros::saveGraph()

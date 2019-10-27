@@ -1,0 +1,30 @@
+#general params
+verbose: false
+camera_angle: 0
+update_key_using_det: false
+add_first_lan: false
+use_rovio_odom: true
+use_rtab_map_odom: false
+#keyframe
+keyframe_delta_trans: 0.5
+keyframe_delta_angle: 0.5
+keyframe_delta_time: 1.0
+#plane segmentation
+num_point_seg: 500
+norm_point_thres: 5000
+planar_area: 0.1
+#data association related
+maha_dist_thres: 2.36
+use_maha_dist: true
+use_eq_dist: false
+eq_dist_thres: 1.5
+land_noise_low: 0.5
+land_noise_high: 0.5
+#odom information cal
+use_const_inf_matrix: true
+const_stddev_x: 0.00067
+const_stddev_q: 0.00001
+#graph slam related
+save_graph: false
+save_graph_path: /home/hriday/Desktop/semantic_graph.g2o
+compute_txt_for_ate: true

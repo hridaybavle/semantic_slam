@@ -141,29 +141,31 @@ public:
     {
         while(1)
         {
+
             std::vector<ps_graph_slam::KeyFrame::Ptr> opt_keyframe;
             opt_keyframe_lock_.lock();
             opt_keyframe = keyframes_optimized_;
             keyframes_optimized_.clear();
             opt_keyframe_lock_.unlock();
 
+
             cloud_lock_.lock();
             for(int i=0; i < map_cloud_vec_.size(); ++i)
             {
+
                 if(opt_keyframe.size() > 0)
                 {
                     //pcl::PointCloud<pcl::PointXYZRGB>::Ptr out_cloud (new pcl::PointCloud<pcl::PointXYZRGB>());
-                    //Eigen::MatrixXf pose_opt  = ps_graph_slam::matrix2vector(opt_keyframe[i]->node->estimate().matrix().cast<float>());
-                    //Eigen::MatrixXf pose_old  = map_cloud_vec_[i].keyframe_pose;
-                    Eigen::Matrix4f pose_diff = map_cloud_vec_[i].keyframe_pose.inverse() * opt_keyframe[i]->node->estimate().matrix().cast<float>();
-                    Eigen::MatrixXf pose_diff_vec  = ps_graph_slam::matrix2vector(pose_diff);
+                    Eigen::VectorXf pose_opt  = ps_graph_slam::matrix2vector(opt_keyframe[i]->node->estimate().matrix().cast<float>());
+                    Eigen::VectorXf pose_old  = ps_graph_slam::matrix2vector(map_cloud_vec_[i].keyframe_pose);
 
-                    Eigen::Matrix4f transformation_mat;
-                    sem_tool_obj_.transformRobotToWorld(pose_diff_vec,
-                                                        transformation_mat);
+                    Eigen::VectorXf pose_diff = pose_opt - pose_old;
+
+                    //Eigen::Matrix4f pose_diff = opt_keyframe[i]->node->estimate().matrix().inverse().cast<float>() * map_cloud_vec_[i].keyframe_pose;
 
                     for(int j = 0; j< map_cloud_vec_[i].out_cloud->points.size(); ++j)
                     {
+
                         Eigen::Vector4f old_points, map_points;
                         old_points.setOnes(), map_points.setOnes();
 
@@ -171,11 +173,11 @@ public:
                         old_points(1) = map_cloud_vec_[i].out_cloud->points[j].y;
                         old_points(2) = map_cloud_vec_[i].out_cloud->points[j].z;
 
-                        map_points = transformation_mat * old_points;
+                        //map_points = pose_diff * old_points;
 
-                        map_cloud_vec_[i].out_cloud->points[j].x = map_points(0) - pose_diff_vec(0);
-                        map_cloud_vec_[i].out_cloud->points[j].y = map_points(1) - pose_diff_vec(1);
-                        map_cloud_vec_[i].out_cloud->points[j].z = map_points(2) - pose_diff_vec(2);
+                        map_cloud_vec_[i].out_cloud->points[j].x = old_points(0) + pose_diff(0);
+                        map_cloud_vec_[i].out_cloud->points[j].y = old_points(1) + pose_diff(1);
+                        map_cloud_vec_[i].out_cloud->points[j].z = old_points(2) + pose_diff(2);
                         map_cloud_vec_[i].keyframe_pose =  opt_keyframe[i]->node->estimate().matrix().cast<float>();
                     }
                 }
@@ -198,7 +200,7 @@ public:
         //donwsampling the point cloud
         pcl::VoxelGrid<pcl::PointXYZRGB> sor;
         sor.setInputCloud (cloud);
-        sor.setLeafSize (0.3f, 0.3f, 0.3f);
+        sor.setLeafSize (0.2f, 0.2f, 0.2f);
         sor.filter (*cloud);
 
         pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor_out;

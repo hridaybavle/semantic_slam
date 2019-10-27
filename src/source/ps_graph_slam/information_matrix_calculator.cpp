@@ -42,6 +42,7 @@ Eigen::MatrixXd InformationMatrixCalculator::calc_information_matrix() const {
         Eigen::MatrixXd inf = Eigen::MatrixXd::Identity(6, 6);
         inf.topLeftCorner(3, 3).array() /= const_stddev_x;
         inf.bottomRightCorner(3, 3).array() /= const_stddev_q;
+        //inf(2,2) = 9;
         return inf;
     }
 
