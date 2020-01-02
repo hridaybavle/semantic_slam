@@ -51,7 +51,7 @@ The point cloud required for planar surface extraction.
 - **/darknet_ros/bounding_boxes**([darknet_msgs_ros/BoundingBoxes](https://github.com/leggedrobotics/darknet_ros))  
 The detection bounding boxes published by yolo if using the yolo detector ros package. 
 
-- **/image_processed/bounding_boxes**([ShapeColor_ObjectDetection/DetectedObjects](https://hridaybavle@bitbucket.org/hridaybavle/bucket_detector.git)
+- **/image_processed/bounding_boxes**([ShapeColor_ObjectDetection/DetectedObjects](https://hridaybavle@bitbucket.org/hridaybavle/bucket_detector.git))
 The detection bounding boxes if using the bucket detector.
 
 
