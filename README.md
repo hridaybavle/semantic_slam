@@ -32,24 +32,29 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 - sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
 - sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
 
-**To try a simple example with blue bucket detector create a ros workspace and clone the following packages:**
+**To try a simple example with blue bucket detector, create a ros workspace and clone the following packages:**
+
+- Download the rosbag: 
+```    
+    git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git   
 ```
-    download the rosbag: git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git
-    
-    mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
-    
-    git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git
-    
+- Create a workspace, clone the repo and compile:
+```
+    mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/    
+    git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git   
     cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
-    
-    gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
-    *insert the rosbag location in the launcher*
-    source devel/setup.bash
-    
-    roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
-    
-    rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
+```    
+- Insert the rosbag location in the launcher
 ```
+    gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
+```    
+- Launch and visualize
+```    
+    source devel/setup.bash
+    roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch    
+    rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
+```    
+
 ### Subsribed Topics 
 
 - **/SQ04/snap_vislam/vislam/pose** ([geometry_msgs/PoseStamped](http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html))  
