@@ -1,6 +1,6 @@
 # README #
 
-This package can perform optimization of pose estimated from VO/VIO methods which tend to drift over time. It uses planar surfaces extracted from object detections in order to create a sparse semantic map of the environment, thus optimizing the drifr of the VO/VIO algorithms.
+This package can perform optimization of pose estimated from VO/VIO methods which tend to drift over time. It uses planar surfaces extracted from object detections in order to create a sparse semantic map of the environment, thus optimizing the drift of the VO/VIO algorithms.
 
 ### In order to run this package you will need two additional modules ###
 - A VO/VIO algorithm: [ROVIO](https://github.com/ethz-asl/rovio), [VINS_MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono), [OKVIS](https://github.com/ethz-asl/okvis) etc. 
@@ -21,7 +21,7 @@ Currently it can extract planar surfaces and create a semantic map from from the
 
 ### Video ###
 
-<a href="https://vimeo.com/368217703" target="_blank"><img src="" 
+<a href="https://vimeo.com/368217703" target="_blank"><img src="semantic_slam.png" 
 alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 ### How do I set it up? 
