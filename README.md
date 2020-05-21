@@ -55,6 +55,8 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
     rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
 ```    
 
+![](semantic.gif)
+
 ### Subsribed Topics 
 
 - **/SQ04/snap_vislam/vislam/pose** ([geometry_msgs/PoseStamped](http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html))  
