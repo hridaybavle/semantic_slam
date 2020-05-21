@@ -56,6 +56,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 ```    
 
 ![](semantic.gif)
+*Note: In the example above voxblox is used for mapping. 
 
 ### Subsribed Topics 
 
