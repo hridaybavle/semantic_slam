@@ -21,7 +21,7 @@ Currently it can extract planar surfaces and create a semantic map from from the
 
 ### Video ###
 
-<a href="https://vimeo.com/368217703" target="_blank"><img src="" 
+<a href="https://vimeo.com/368217703" target="_blank"><img src="semantic_slam.png" 
 alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 ### How do I set it up? 
