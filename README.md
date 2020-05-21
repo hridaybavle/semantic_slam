@@ -46,7 +46,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 ```    
 - Insert the rosbag location in the launcher
 ```
-    gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
+    gedit src/semantic_slam/launch/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 ```    
 - Launch and visualize
 ```    
