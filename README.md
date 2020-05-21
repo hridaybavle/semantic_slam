@@ -52,7 +52,7 @@ The point cloud required for planar surface extraction.
 The detection bounding boxes published by yolo if using the yolo detector ros package. 
 
 - **/image_processed/bounding_boxes**([ShapeColor_ObjectDetection/DetectedObjects](https://hridaybavle@bitbucket.org/hridaybavle/bucket_detector.git))
-The detection bounding boxes if using the bucket detector.
+The detection bounding boxes if using the bucket detector. It can be downloaded from the link above. 
 
 
 ### Published Topics
