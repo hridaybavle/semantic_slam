@@ -17,6 +17,10 @@ Currently it can extract planar surfaces and create a semantic map from from the
 - bucket
 - car
 
+**Related Paper:** 
+
+**[VPS-SLAM: Visual Planar Semantic SLAM for Aerial Robotic Systems](https://ieeexplore.ieee.org/document/9045978)**, Hriday Bavle, Paloma de la Puente, Jonathan How, Pascual Campoy, Journal of IEEE Access.
+
 ### How do I set it up? 
 
 **First install g2o following these instructions (assuming ROS kinetic distribution):**
@@ -26,7 +30,7 @@ Currently it can extract planar surfaces and create a semantic map from from the
 - sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
 
 **To try a simple example with blue bucket detector create a ros workspace and clone the following packages:**
-
+```
 - download the rosbag: git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git
 - mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
 - git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone https://bitbucket.org/hridaybavle/bucket_detector.git
@@ -36,7 +40,7 @@ Currently it can extract planar surfaces and create a semantic map from from the
 - source devel/setup.bash
 - roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
 - rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
-
+```
 ### Subsribed Topics 
 
 - **/SQ04/snap_vislam/vislam/pose** ([geometry_msgs/PoseStamped](http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html))  
