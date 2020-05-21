@@ -1,10 +1,8 @@
 # README #
 
-  ![](semantic.gif)
-
 This package can perform optimization of pose estimated from VO/VIO methods which tend to drift over time. It uses planar surfaces extracted from object detections in order to create a sparse semantic map of the environment, thus optimizing the drifr of the VO/VIO algorithms.
 
-**In order to run this package you will need two additional modules**
+### In order to run this package you will need two additional modules ###
 - A VO/VIO algorithm: [ROVIO](https://github.com/ethz-asl/rovio), [VINS_MONO](https://github.com/HKUST-Aerial-Robotics/VINS-Mono), [OKVIS](https://github.com/ethz-asl/okvis) etc. 
 - An Object Detector: [Yolo](https://github.com/leggedrobotics/darknet_ros), [Shape Color Detector](https://bitbucket.org/hridaybavle/bucket_detector)
 
@@ -17,9 +15,14 @@ Currently it can extract planar surfaces and create a semantic map from from the
 - bucket
 - car
 
-**Related Paper:** 
+### Related Paper: ###
 
 **[VPS-SLAM: Visual Planar Semantic SLAM for Aerial Robotic Systems](https://ieeexplore.ieee.org/document/9045978)**, Hriday Bavle, Paloma de la Puente, Jonathan How, Pascual Campoy, Journal of IEEE Access.
+
+### Video ###
+
+<a href="https://vimeo.com/368217703" target="_blank"><img src="" 
+alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 ### How do I set it up? 
 
