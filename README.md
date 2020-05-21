@@ -32,11 +32,13 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 - sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
 - sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
 
-**To try a simple example with blue bucket detector, create a ros workspace and clone the following packages:**
+**To try a simple example with pre-recorded VIO pose, a blue bucket detector.**
+
+- Create a ros workspace and clone the following packages:
 
 - Download the rosbag: 
 ```    
-    git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git   
+    https://www.dropbox.com/s/jnywuvcn2m9ubu2/entire_lab_3_rounds.bag?dl=0   
 ```
 - Create a workspace, clone the repo and compile:
 ```
