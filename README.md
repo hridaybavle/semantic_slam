@@ -1,4 +1,4 @@
-# README #
+# SEMANTIC SLAM #
 
 This package can perform optimization of pose estimated from VO/VIO methods which tend to drift over time. It uses planar surfaces extracted from object detections in order to create a sparse semantic map of the environment, thus optimizing the drift of the VO/VIO algorithms.
 
