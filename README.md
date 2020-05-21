@@ -27,10 +27,11 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 ### How do I set it up? 
 
 **First install g2o following these instructions (assuming ROS kinetic distribution):**
-
+```
 - sudo apt-get install ros-kinetic-libg2o
 - sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
 - sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
+```
 
 ### Try a simple example with pre-recorded VIO pose and a blue bucket detector:
 
