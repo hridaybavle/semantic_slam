@@ -2,8 +2,13 @@
 
   ![](semantic.gif)
 
-This package is for running the semantic SLAM algorithm using planar extracted planar surfaces and the received detections (under development). Currently the package can use the following objects to create a semantic map:
+This package can perform optimization of pose estimated from VO/VIO methods which tend to drift over time. It uses planar surfaces extracted from object detections in order to create a sparse semantic map of the environment, thus optimizing the drifr of the VO/VIO algorithms.
 
+**In order to run this package you will need two additional modules**
+- VO/VIO algorithm: (ROVIO[https://github.com/ethz-asl/rovio]), (VINS_MONO[https://github.com/HKUST-Aerial-Robotics/VINS-Mono]), (OKVIS[https://github.com/ethz-asl/okvis]) etc. 
+- Object Detectors: (Yolo[https://github.com/leggedrobotics/darknet_ros]), (Shape Color Detector[https://bitbucket.org/hridaybavle/bucket_detector])
+
+Currently it can extract planar surfaces and create a semantic map from from the following objects:
 - chair
 - tvmonitor
 - book
@@ -11,8 +16,6 @@ This package is for running the semantic SLAM algorithm using planar extracted p
 - laptop
 - bucket
 - car
-
-
 
 ### How do I set it up? 
 
