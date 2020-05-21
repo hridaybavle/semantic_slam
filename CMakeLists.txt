@@ -122,11 +122,6 @@ target_link_libraries(SEMANTIC_SLAM ${EIGEN3_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${G2O_LIBS})
 
-add_executable(${PROJECT_NAME}_node src/test/semantic_pf_SLAM_node.cpp)
-add_dependencies(${PROJECT_NAME}_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_node SEMANTIC_SLAM)
-target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBS})
-target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
 
 add_executable(semantic_graph_SLAM_node src/test/semantic_graph_SLAM_node.cpp)
 add_dependencies(semantic_graph_SLAM_node ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})

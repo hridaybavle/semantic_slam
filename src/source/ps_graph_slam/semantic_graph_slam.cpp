@@ -38,7 +38,7 @@ void semantic_graph_slam::init(bool verbose)
     graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
     keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
     inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
-    semantic_mapping_obj_ = new  mapping(cam_angle_);
+    semantic_mapping_obj_ = new mapping(cam_angle_);
     semantic_mapping_th_ = new std::thread(&mapping::generateMap,semantic_mapping_obj_);
     semantic_mapping_opt_th_ = new std::thread(&mapping::opitmizeMap,semantic_mapping_obj_);
 

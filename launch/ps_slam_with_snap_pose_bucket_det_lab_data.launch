@@ -1,7 +1,7 @@
 <!--launch file -->
 <launch>
 	
-	<arg name="bagfile" default="/media/hriday/0F2F8B1E48317A85/home/Documents/PhD/Rosbags/Semantic_SLAM/semantic_slam/ACL/lab/with_snap_pose/entire_lab/entire_lab_5_rounds.bag"/> 
+	<arg name="bagfile" default="/home/hb/Downloads/rosbag-semantic_slam/entire_lab_3_rounds.bag"/> 
 
 	<!-- Play the bagfile -->
   <node pkg="rosbag" type="play" name="rosbag" args="--clock $(arg bagfile)" />

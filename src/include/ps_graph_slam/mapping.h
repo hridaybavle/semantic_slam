@@ -133,7 +133,8 @@ public:
                 map_cloud_vec_.push_back(current_map_cloud);
                 cloud_lock_.unlock();
             }
-
+            std::chrono::milliseconds dur(5);
+            std::this_thread::sleep_for(dur);
         }
     }
 
@@ -159,6 +160,10 @@ public:
                     Eigen::VectorXf pose_opt  = ps_graph_slam::matrix2vector(opt_keyframe[i]->node->estimate().matrix().cast<float>());
                     Eigen::VectorXf pose_old  = ps_graph_slam::matrix2vector(map_cloud_vec_[i].keyframe_pose);
 
+                    //Eigen::Matrix3f r_old = map_cloud_vec_[i].keyframe_pose.block<3,3>(0,0);
+                    //Eigen::Matrix3f r_opt = opt_keyframe[i]->node->estimate().matrix().cast<float>().block<3,3>(0,0);
+                    //double yaw_drift = semantic_tools::R2ypr(r_opt).x() - semantic_tools::R2ypr(r_old).x();
+
                     Eigen::VectorXf pose_diff = pose_opt - pose_old;
 
                     //Eigen::Matrix4f pose_diff = opt_keyframe[i]->node->estimate().matrix().inverse().cast<float>() * map_cloud_vec_[i].keyframe_pose;
@@ -183,6 +188,8 @@ public:
                 }
             }
             cloud_lock_.unlock();
+            std::chrono::milliseconds dur(5);
+            std::this_thread::sleep_for(dur);
         }
 
     }
