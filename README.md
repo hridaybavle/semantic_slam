@@ -34,15 +34,21 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 **To try a simple example with blue bucket detector create a ros workspace and clone the following packages:**
 ```
-  download the rosbag: git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git
-  mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
-  git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git
-  cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
-  gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
- *insert the rosbag location in the launcher*
- source devel/setup.bash
- roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
- rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
+    download the rosbag: git clone https://bitbucket.org/hridaybavle/rosbag-semantic_slam.git
+    
+    mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/
+    
+    git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git
+    
+    cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
+    
+    gedit src/sematic_slam/launchers/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
+    *insert the rosbag location in the launcher*
+    source devel/setup.bash
+    
+    roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch 
+    
+    rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
 ```
 ### Subsribed Topics 
 
