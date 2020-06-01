@@ -465,10 +465,12 @@ void semantic_graph_slam_ros::publishRobotPose()
     geometry_msgs::PoseStamped robot_pose_msg = ps_graph_slam::matrix2posestamped(ros::Time::now(),
                                                                                   robot_pose.matrix().cast<float>(),
                                                                                   "map");
+    this->publishRobotPoseTF(robot_pose_msg);
+    
     geometry_msgs::TransformStamped robot_transform;
     robot_transform.header.stamp = pc_stamp_;
     robot_transform.header.frame_id = "map";
-    robot_transform.child_frame_id  = "cam";
+    robot_transform.child_frame_id  = "base_link";
     robot_transform.transform.translation.x = robot_pose_msg.pose.position.x;
     robot_transform.transform.translation.y = robot_pose_msg.pose.position.y;
     robot_transform.transform.translation.z = robot_pose_msg.pose.position.z;
@@ -477,6 +479,20 @@ void semantic_graph_slam_ros::publishRobotPose()
     robot_transform_pub_.publish(robot_transform);
     robot_pose_pub_.publish(robot_pose_msg);
 
+}
+
+void semantic_graph_slam_ros::publishRobotPoseTF(geometry_msgs::PoseStamped robot_pose)
+{
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(robot_pose.pose.position.x, robot_pose.pose.position.y, robot_pose.pose.position.z));
+    tf::Quaternion tf_quat;
+    tf_quat[0] = robot_pose.pose.orientation.x;
+    tf_quat[1] = robot_pose.pose.orientation.y;
+    tf_quat[2] = robot_pose.pose.orientation.z;
+    tf_quat[3] = robot_pose.pose.orientation.w;
+    transform.setRotation(tf_quat);
+    br.sendTransform(tf::StampedTransform(transform, robot_pose.header.stamp, "map", "base_link"));
 }
 
 void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
@@ -577,6 +593,7 @@ void semantic_graph_slam_ros::publishCorresVIOPose()
                                                                                        "map");
 
     corres_vio_pose_pub_.publish(corres_vio_pose_msg);
+    this->publishVIOTF(corres_vio_pose_msg);
 
     nav_msgs::Path vio_path;
     vio_path.header.stamp = current_time;
@@ -585,6 +602,21 @@ void semantic_graph_slam_ros::publishCorresVIOPose()
     vio_pose_vec_.push_back(corres_vio_pose_msg);
     vio_path.poses = vio_pose_vec_;
     corres_vio_path_.publish(vio_path);
+}
+
+void semantic_graph_slam_ros::publishVIOTF(geometry_msgs::PoseStamped vio_pose)
+{
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(vio_pose.pose.position.x, vio_pose.pose.position.y, vio_pose.pose.position.z));
+    tf::Quaternion tf_quat;
+    tf_quat[0] = vio_pose.pose.orientation.x;
+    tf_quat[1] = vio_pose.pose.orientation.y;
+    tf_quat[2] = vio_pose.pose.orientation.z;
+    tf_quat[3] = vio_pose.pose.orientation.w;
+    transform.setRotation(tf_quat);
+    //br.sendTransform(tf::StampedTransform(transform, vio_pose.header.stamp, "odom", "base_link"));
+
 }
 
 void semantic_graph_slam_ros::publish3DPointMap()

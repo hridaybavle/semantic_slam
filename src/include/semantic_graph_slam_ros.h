@@ -28,6 +28,7 @@
 #include "sensor_msgs/Image.h"
 #include <cv_bridge/cv_bridge.h>
 #include "tf/transform_listener.h"
+#include "tf/transform_broadcaster.h"
 //ros time synchronizer
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -174,6 +175,10 @@ protected:
     void publishKeyframePoses();
     void publishCorresVIOPose();
     void publish3DPointMap();
+
+protected:
+    void publishVIOTF(geometry_msgs::PoseStamped vio_pose);
+    void publishRobotPoseTF(geometry_msgs::PoseStamped robot_pose);
 
     //transform listener
 protected:

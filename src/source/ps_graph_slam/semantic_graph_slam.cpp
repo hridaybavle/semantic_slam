@@ -38,9 +38,9 @@ void semantic_graph_slam::init(bool verbose)
     graph_slam_.reset(new ps_graph_slam::GraphSLAM(verbose_));
     keyframe_updater_.reset(new ps_graph_slam::KeyframeUpdater());
     inf_calclator_.reset(new ps_graph_slam::InformationMatrixCalculator());
-    semantic_mapping_obj_ = new mapping(cam_angle_);
-    semantic_mapping_th_ = new std::thread(&mapping::generateMap,semantic_mapping_obj_);
-    semantic_mapping_opt_th_ = new std::thread(&mapping::opitmizeMap,semantic_mapping_obj_);
+    //semantic_mapping_obj_ = new mapping(cam_angle_);
+    //semantic_mapping_th_ = new std::thread(&mapping::generateMap,semantic_mapping_obj_);
+    //semantic_mapping_opt_th_ = new std::thread(&mapping::opitmizeMap,semantic_mapping_obj_);
 
 
     trans_odom2map_.setIdentity();
@@ -79,7 +79,7 @@ bool semantic_graph_slam::run()
 
 
         //pass the keyframe to the mapping module
-        semantic_mapping_obj_->setKeyframes(new_keyframes_);
+        //semantic_mapping_obj_->setKeyframes(new_keyframes_);
 
         //graph slam opitimization
         std::copy(new_keyframes_.begin(), new_keyframes_.end(), std::back_inserter(keyframes_));
@@ -92,7 +92,7 @@ bool semantic_graph_slam::run()
                 std::cout << "optimizing the graph " << std::endl;
 
             //give the optimized keypoints to the mapping
-            semantic_mapping_obj_->setoptimizedKeyframes(keyframes_);
+            //semantic_mapping_obj_->setoptimizedKeyframes(keyframes_);
 
             //get and set the landmark covariances
             this->getAndSetLandmarkCov();
@@ -409,7 +409,7 @@ void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &s
 std::vector<map_cloud> semantic_graph_slam::get3DMap()
 {
     std::vector<map_cloud> cloud_map_vector;
-    cloud_map_vector = semantic_mapping_obj_->getOutputMap();
+    //cloud_map_vector = semantic_mapping_obj_->getOutputMap();
 
     return cloud_map_vector;
 }
