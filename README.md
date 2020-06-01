@@ -57,7 +57,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
     roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=true  
 ```    
 
-![](octomap.gif)
+![](octomap.gif =250x250)
 
 **Note: In the example above [octomap](http://wiki.ros.org/octomap_server) is used for mapping. Right now at loop closure the complete map is not optimized and will be done in the future. 
 
