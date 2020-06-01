@@ -113,6 +113,15 @@ public:
     void setDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo> object_info);
     void getDetectedObjectInfo(std::vector<semantic_SLAM::ObjectInfo>& object_info);
 
+    //drift related
+private:
+    Eigen::Isometry3d drift_;
+
+    //set and get function for map to odom tf
+public:
+    void setDrift(Eigen::Isometry3d drift);
+    void getDrift(Eigen::Isometry3d &drift);
+
     //graph related
 public:
     void saveGraph(std::string save_graph_path);

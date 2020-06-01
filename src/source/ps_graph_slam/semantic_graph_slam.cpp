@@ -46,6 +46,7 @@ void semantic_graph_slam::init(bool verbose)
     trans_odom2map_.setIdentity();
     landmarks_vec_.clear();
     robot_pose_.setIdentity();
+    drift_.setIdentity();
     vio_pose_.setIdentity();
     prev_odom_.setIdentity();
 
@@ -102,6 +103,11 @@ bool semantic_graph_slam::run()
 
             robot_pose_ = keyframe->node->estimate();
 
+            Eigen::Isometry3d drift = keyframe->odom.inverse() * keyframe->node->estimate();
+            this->setDrift(drift);
+            std::cout << "odom: " << keyframe->odom.matrix() << std::endl;    
+            std::cout << "robot pose: " << keyframe->node->estimate().matrix() << std::endl;      
+            std::cout << "Drift from map to odom: " << drift.matrix() << std::endl;
         }
 
         first_key_added_ = true;
@@ -404,6 +410,16 @@ void semantic_graph_slam::setDetectedObjectsPose(std::vector<detected_object> se
 void semantic_graph_slam::getDetectedObjectsPose(std::vector<detected_object> &seg_obj_vec)
 {
     seg_obj_vec = seg_obj_vec_;
+}
+
+void semantic_graph_slam::setDrift(Eigen::Isometry3d drift)
+{   
+    drift_ = drift;
+}
+
+void semantic_graph_slam::getDrift(Eigen::Isometry3d &drift)
+{
+    drift = drift_;
 }
 
 std::vector<map_cloud> semantic_graph_slam::get3DMap()

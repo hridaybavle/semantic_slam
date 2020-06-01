@@ -79,6 +79,7 @@ void semantic_graph_slam_ros::run()
 
     this->publishCorresVIOPose();
     this->publishRobotPose();
+    this->publishMapToOdomTF();
 
     return;
 
@@ -465,7 +466,7 @@ void semantic_graph_slam_ros::publishRobotPose()
     geometry_msgs::PoseStamped robot_pose_msg = ps_graph_slam::matrix2posestamped(ros::Time::now(),
                                                                                   robot_pose.matrix().cast<float>(),
                                                                                   "map");
-    this->publishRobotPoseTF(robot_pose_msg);
+    //this->publishRobotPoseTF(robot_pose_msg);
     
     geometry_msgs::TransformStamped robot_transform;
     robot_transform.header.stamp = pc_stamp_;
@@ -480,7 +481,6 @@ void semantic_graph_slam_ros::publishRobotPose()
     robot_pose_pub_.publish(robot_pose_msg);
 
 }
-
 void semantic_graph_slam_ros::publishRobotPoseTF(geometry_msgs::PoseStamped robot_pose)
 {
     static tf::TransformBroadcaster br;
@@ -500,6 +500,30 @@ void semantic_graph_slam_ros::publishRobotPoseTF(geometry_msgs::PoseStamped robo
     //base_transform.setRotation(tf_quat);
     //br_base.sendTransform(tf::StampedTransform(base_transform, robot_pose.header.stamp, "base_link_stabilized", "base_link"));
 }
+
+
+void semantic_graph_slam_ros::publishMapToOdomTF()
+{
+    Eigen::Isometry3d drift;
+    semantic_gslam_obj_->getDrift(drift);
+
+    geometry_msgs::PoseStamped drift_msg = ps_graph_slam::matrix2posestamped(ros::Time::now(),
+                                                                            drift.matrix().cast<float>(),
+                                                                            "map");    
+
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(drift_msg.pose.position.x, drift_msg.pose.position.y, drift_msg.pose.position.z));
+    tf::Quaternion tf_quat;
+    tf_quat[0] = drift_msg.pose.orientation.x;
+    tf_quat[1] = drift_msg.pose.orientation.y;
+    tf_quat[2] = drift_msg.pose.orientation.z;
+    tf_quat[3] = drift_msg.pose.orientation.w;
+    transform.setRotation(tf_quat);
+    br.sendTransform(tf::StampedTransform(transform, drift_msg.header.stamp, "map", "odom"));                                                                                
+
+}
+
 
 void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)
 {
@@ -621,7 +645,7 @@ void semantic_graph_slam_ros::publishVIOTF(geometry_msgs::PoseStamped vio_pose)
     tf_quat[2] = vio_pose.pose.orientation.z;
     tf_quat[3] = vio_pose.pose.orientation.w;
     transform.setRotation(tf_quat);
-    //br.sendTransform(tf::StampedTransform(transform, vio_pose.header.stamp, "odom", "base_link"));
+    br.sendTransform(tf::StampedTransform(transform, vio_pose.header.stamp, "odom", "base_link"));
 
 }
 

@@ -175,6 +175,7 @@ protected:
     void publishKeyframePoses();
     void publishCorresVIOPose();
     void publish3DPointMap();
+    void publishMapToOdomTF();
 
 protected:
     void publishVIOTF(geometry_msgs::PoseStamped vio_pose);
