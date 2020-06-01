@@ -55,11 +55,18 @@
     <!-- data source to integrate (PointCloud2) -->
     <remap from="cloud_in" to="/depth_registered/points" />
     <param name="filter_ground" value="false" />
-</node>
-
+	</node>
 
 	<!--static tf of the camera to base_link-->
   <node pkg="tf" type="static_transform_publisher" name="cam_optical_to_cam" args="0 0 0 -0.2840155 0 0 0.9588197 camera camera_color_optical_frame 0" />
   <node pkg="tf" type="static_transform_publisher" name="cam_to_base_link" args="0 0 0 -0.5 0.499999999998 -0.5 0.50000000000 base_link camera 0" />
+
+	 <!-- Show Rviz -->
+	<arg name="show_rviz" default="true"/> 
+  <group if="$(arg show_rviz)">
+    <arg name="rviz_file" default="$(find semantic_SLAM)/rviz/graph_semantic_slam.rviz" />
+    <node pkg="rviz" type="rviz" name="$(anon rviz)" output="screen"
+          args="-d $(arg rviz_file)" />
+  </group>
 
 </launch>
