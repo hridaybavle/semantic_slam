@@ -32,6 +32,10 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 - sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
 - sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
 ```
+**Install OctopMap server for map generation capabilities:**
+```
+- sudo apt install ros-kinetic-octomap*
+```
 
 ### Try a simple example with pre-recorded VIO pose and a blue bucket detector:
 
@@ -39,23 +43,18 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 - Download the rosbag: 
 ```    
-    https://www.dropbox.com/s/jnywuvcn2m9ubu2/entire_lab_3_rounds.bag?dl=0   
+    wget -P ~/Downloads/ https://www.dropbox.com/s/jnywuvcn2m9ubu2/entire_lab_3_rounds.bag?dl=0  
 ```
 - Create a workspace, clone the repo and compile:
 ```
     mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/    
     git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git   
     cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
-```    
-- Insert the rosbag location in the launcher
-```
-    gedit src/semantic_slam/launch/ps_slam_with_snap_pose_bucket_det_lab_data.launch 
-```    
+```     
 - Launch and visualize
 ```    
     source devel/setup.bash
-    roslaunch semantic_slam ps_slam_with_snap_pose_bucket_det_lab_data.launch    
-    rviz -d src/semantic_slam/rviz/graph_semantic_slam.rviz
+    roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=true  
 ```    
 
 ![](semantic.gif)
@@ -101,8 +100,6 @@ The mapped semantic planar surfaces.
 The detected landmarks in the current frame. 
 
 The configurations of the algorithms can be found inside the cfg folder in order to be changed accordingly.
-
-
 
 
 
