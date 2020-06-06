@@ -54,7 +54,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 - Launch and visualize
 ```    
     source devel/setup.bash
-    roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=true  
+    roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data_with_octomap.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=true  
 ```    
 
 ![test](octomap.gif)
