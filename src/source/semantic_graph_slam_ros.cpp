@@ -52,7 +52,7 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n)
     semantic_gslam_obj_->init(verbose_);
 
     //publisher thread
-    semantic_mapping_pub_th_ = new std::thread(&semantic_graph_slam_ros::publish3DPointMap, this);
+    //semantic_mapping_pub_th_ = new std::thread(&semantic_graph_slam_ros::publish3DPointMap, this);
 
     //this is test run
     //    if(!counter_)
