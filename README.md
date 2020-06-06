@@ -43,7 +43,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 - Download the rosbag: 
 ```    
-    wget -P ~/Downloads/ https://www.dropbox.com/s/jnywuvcn2m9ubu2/entire_lab_3_rounds.bag?dl=0  
+    wget -P ~/Downloads/ https://www.dropbox.com/s/jnywuvcn2m9ubu2/entire_lab_3_rounds.bag
 ```
 - Create a workspace, clone the repo and compile:
 ```
