@@ -482,7 +482,7 @@ void semantic_graph_slam_ros::publishRobotPose()
 }
 
 void semantic_graph_slam_ros::publishRobotPoseTF(geometry_msgs::PoseStamped robot_pose)
-{
+{   
     static tf::TransformBroadcaster br;
     tf::Transform transform;
     transform.setOrigin(tf::Vector3(robot_pose.pose.position.x, robot_pose.pose.position.y, robot_pose.pose.position.z));
@@ -494,11 +494,6 @@ void semantic_graph_slam_ros::publishRobotPoseTF(geometry_msgs::PoseStamped robo
     transform.setRotation(tf_quat);
     br.sendTransform(tf::StampedTransform(transform, robot_pose.header.stamp, "map", "base_link"));
 
-    //static tf::TransformBroadcaster br_base;
-    //tf::Transform base_transform;
-    //base_transform.setOrigin(tf::Vector3(0,0,0));
-    //base_transform.setRotation(tf_quat);
-    //br_base.sendTransform(tf::StampedTransform(base_transform, robot_pose.header.stamp, "base_link_stabilized", "base_link"));
 }
 
 void semantic_graph_slam_ros::optitrackPoseCallback(const nav_msgs::Odometry &msg)

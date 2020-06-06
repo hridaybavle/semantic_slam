@@ -38,9 +38,9 @@ private:
 private:
     std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
     std::unique_ptr<data_association> data_ass_obj_;
-    mapping* semantic_mapping_obj_;
-    std::thread* semantic_mapping_th_;
-    std::thread* semantic_mapping_opt_th_;
+    //mapping* semantic_mapping_obj_;
+    //std::thread* semantic_mapping_th_;
+    //std::thread* semantic_mapping_opt_th_;
 
 public:
     //mapping related params

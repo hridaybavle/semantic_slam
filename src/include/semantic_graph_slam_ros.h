@@ -95,7 +95,7 @@ private:
     std::string save_graph_path_;
 
 private:
-    std::thread* semantic_mapping_pub_th_;
+    //std::thread* semantic_mapping_pub_th_;
 
 private:
     bool verbose_;

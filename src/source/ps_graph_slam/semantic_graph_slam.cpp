@@ -21,6 +21,7 @@ void semantic_graph_slam::init(bool verbose)
     first_key_added_                   = false;
     update_keyframes_using_detections_ = false;
     max_keyframes_per_update_   = 10;
+    new_keyframes_.clear();
     seg_obj_vec_.clear();
 
 
