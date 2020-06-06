@@ -48,7 +48,7 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 - Create a workspace, clone the repo and compile:
 ```
     mkdir -p workspace/ros/semantic_slam_ws/src/ && cd workspace/ros/semantic_slam_ws/src/    
-    git clone https://bitbucket.org/hridaybavle/semantic_slam.git && git clone  https://bitbucket.org/hridaybavle/bucket_detector.git   
+    git clone https://github.com/hridaybavle/semantic_slam && git clone https://bitbucket.org/hridaybavle/bucket_detector.git   
     cd .. && catkin_make -DCMAKE_BUILD_TYPE=Release
 ```     
 - Launch and visualize
