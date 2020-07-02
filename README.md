@@ -65,9 +65,9 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 If the code is giving problems with you local machine, you can try the docker image created with the repo and the required settings. 
 
-**Download Docker from: [Docker](https://docs.docker.com/engine/install/ubuntu/)
+**Download Docker from: [Docker](https://docs.docker.com/engine/install/ubuntu/)**
 
-**Follow the commands to run the algorithm with the docker
+**Follow the commands to run the algorithm with the docker**
 ```
   docker pull hridaybavle/semantic_slam:v1 	
   docker run --rm -it --net="host" -p 11311:11311 hridaybavle/semantic_slam:v1 bash
@@ -75,7 +75,7 @@ If the code is giving problems with you local machine, you can try the docker im
   source devel/setup.bash
   roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data_with_octomap.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=false  
 ```
-**Open a new terminal and rviz in local machine
+**Open a new terminal and rviz in local machine**
 ```
   cd ~/Downloads/ && wget https://raw.githubusercontent.com/hridaybavle/semantic_slam/master/rviz/graph_semantic_slam.rviz
   rviz -d graph_semantic_slam.rviz	
