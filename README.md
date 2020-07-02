@@ -61,6 +61,26 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 
 **Note: In the example above [octomap](http://wiki.ros.org/octomap_server) is used for mapping. Right now at loop closure the complete map is not optimized and will be done in the future. 
 
+### Using Docker Image
+
+If the code is giving problems with you local machine, you can try the docker image created with the repo and the required settings. 
+
+**Download Docker from: [Docker](https://docs.docker.com/engine/install/ubuntu/)
+
+**Follow the commands to run the algorithm with the docker
+```
+  docker pull hridaybavle/semantic_slam:v1 	
+  docker run --rm -it --net="host" -p 11311:11311 hridaybavle/semantic_slam:v1 bash
+  cd ~/workspace/ros/semantic_slam_ws/
+  source devel/setup.bash
+  roslaunch semantic_SLAM ps_slam_with_snap_pose_bucket_det_lab_data_with_octomap.launch bagfile:=${HOME}/Downloads/entire_lab_3_rounds.bag show_rviz:=false  
+```
+**Open a new terminal and rviz in local machine
+```
+  cd ~/Downloads/ && wget https://raw.githubusercontent.com/hridaybavle/semantic_slam/master/rviz/graph_semantic_slam.rviz
+  rviz -d graph_semantic_slam.rviz	
+```
+
 ### Subsribed Topics 
 
 - **/SQ04/snap_vislam/vislam/pose** ([geometry_msgs/PoseStamped](http://docs.ros.org/api/geometry_msgs/html/msg/PoseStamped.html))  
