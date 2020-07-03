@@ -1,7 +1,7 @@
 
 os: linux
 language: shell
-dist: bionic
+dist: xenial
 before_install:
 
 install: 
@@ -12,10 +12,8 @@ script:
 - docker pull hridaybavle/semantic_slam:v1
 - docker container create --name dockervm -t -i hridaybavle/semantic_slam:v1 bash
 - docker start dockervm
-- docker exec -it dockervm /bin/bash mkdir -p workspace/ros/semantic_slam_build_ws/src
-- docker exec -it dockervm /bin/bash cd workspace/ros/semantic_slam_build_ws/src
-- docker exec -it dockervm /bin/bash git clone https://github.com/hridaybavle/semantic_slam.git 
-- docker exec -it dockervm /bin/bash catkin build
+- docker cp travis_build.sh dockervm:/root/
+- docker exec -it dockervm /bin/bash /root/travis_build.sh
 
 after_success:
 
