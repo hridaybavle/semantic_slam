@@ -1,0 +1,25 @@
+
+os: linux
+language: shell
+dist: bionic
+before_install:
+
+install: 
+
+services:
+- docker
+script:
+- docker pull hridaybavle/semantic_slam:v1
+- docker run --rm -it --net="host" -p 11311:11311 hridaybavle/semantic_slam:v1 bash
+- docker container create --name dockervm -t -i hridaybavle/semantic_slam:v1 bash
+- docker start dockervm
+- docker exec -it dockervm /bin/bash mkdir -p workspace/ros/semantic_slam_build_ws/src
+- docker exec -it dockervm /bin/bash cd workspace/ros/semantic_slam_build_ws/src
+- docker exec -it dockervm /bin/bash git clone https://github.com/hridaybavle/semantic_slam.git 
+- docker exec -it dockervm /bin/bash catkin build
+
+after_success:
+
+before_deploy:
+
+deploy:
