@@ -12,7 +12,8 @@ set(CMAKE_BUILD_TYPE "RELEASE")
 
 FILE(GLOB_RECURSE SEMANTIC_SLAM_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/planar_segmentation/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ps_graph_slam/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ps_graph_slam/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 
 find_package(catkin REQUIRED
