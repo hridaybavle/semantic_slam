@@ -7,6 +7,9 @@
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/core/linear_solver.h>
 
+#include <boost/format.hpp>
+
+
 namespace g2o {
 class VertexSE3;
 class VertexPointXYZ;
