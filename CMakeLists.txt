@@ -23,7 +23,7 @@ find_package(PCL 1.7 REQUIRED
     COMPONENTS common io sample_consensus segmentation filters)
 
 find_package(G2O REQUIRED)
-include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIR})
+include_directories(SYSTEM PUBLIC ${G2O_INCLUDE_DIRS})
 link_directories(${G2O_LIBRARY_DIRS})
 
 FIND_PACKAGE(Cholmod)
@@ -85,7 +85,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-SET(G2O_LIBS g2o_cli g2o_ext_freeglut_minimal g2o_simulator g2o_solver_slam2d_linear g2o_types_icp g2o_types_slam2d g2o_core g2o_interface g2o_solver_csparse g2o_solver_structure_only g2o_types_sba g2o_types_slam3d g2o_csparse_extension g2o_opengl_helper g2o_solver_dense g2o_stuff g2o_types_sclam2d g2o_parser g2o_solver_pcg g2o_types_data g2o_types_sim3 cxsparse )
+#SET(G2O_LIBS g2o_cli g2o_ext_freeglut_minimal g2o_simulator g2o_solver_slam2d_linear g2o_types_icp g2o_types_slam2d g2o_core g2o_interface g2o_solver_csparse g2o_solver_structure_only g2o_types_sba g2o_types_slam3d g2o_csparse_extension g2o_opengl_helper g2o_solver_dense g2o_stuff g2o_types_sclam2d g2o_parser g2o_solver_pcg g2o_types_data g2o_types_sim3 cxsparse )
 
 add_library(SEMANTIC_SLAM ${SEMANTIC_SLAM_SOURCE_FILES})
 add_dependencies(SEMANTIC_SLAM ${PROJECT_NAME}_gencpp)
@@ -93,7 +93,15 @@ add_dependencies(SEMANTIC_SLAM ${catkin_EXPORTED_TARGETS})
 target_link_libraries(SEMANTIC_SLAM ${catkin_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${EIGEN3_LIBRARIES})
 target_link_libraries(SEMANTIC_SLAM ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES} ${PCL_SAMPLE_CONSENSUS_LIBRARIES} ${PCL_SEGMENTATION_LIBRARIES} ${PCL_FILTERS_LIBRARIES})
-target_link_libraries(SEMANTIC_SLAM ${G2O_LIBS})
+target_link_libraries(SEMANTIC_SLAM ${G2O_TYPES_DATA}
+                                    ${G2O_CORE_LIBRARY}
+                                    ${G2O_STUFF_LIBRARY}
+                                    ${G2O_SOLVER_PCG}
+                                    ${G2O_SOLVER_CSPARSE}   # be aware of that CSPARSE is released under LGPL
+                                    ${G2O_SOLVER_CHOLMOD}   # be aware of that cholmod is released under GPL
+                                    ${G2O_TYPES_SLAM3D}
+                                    ${G2O_TYPES_SLAM3D_ADDONS}
+                    )
 
 
 add_executable(semantic_graph_SLAM_node src/semantic_graph_SLAM_node.cpp)

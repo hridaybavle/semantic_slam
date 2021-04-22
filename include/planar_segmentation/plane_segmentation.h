@@ -35,6 +35,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui/highgui_c.h>
+
 
 const int num_centroids_normals = 4;
 const int num_centroids_distance = 2;
