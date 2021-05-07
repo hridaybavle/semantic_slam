@@ -17,12 +17,22 @@ Currently it can extract planar surfaces and create a semantic map from from the
 
 ### Related Paper: ###
 
-**[VPS-SLAM: Visual Planar Semantic SLAM for Aerial Robotic Systems](https://ieeexplore.ieee.org/document/9045978)**, Hriday Bavle, Paloma de la Puente, Jonathan How, Pascual Campoy, Journal of IEEE Access.
+```latex
+@ARTICLE{9045978,
+  author={Bavle, Hriday and De La Puente, Paloma and How, Jonathan P. and Campoy, Pascual},
+  journal={IEEE Access}, 
+  title={VPS-SLAM: Visual Planar Semantic SLAM for Aerial Robotic Systems}, 
+  year={2020},
+  volume={8},
+  number={},
+  pages={60704-60718},
+  doi={10.1109/ACCESS.2020.2983121}}
+```
 
 ### Video ###
 
 <a href="https://vimeo.com/368217703" target="_blank"><img src="semantic_slam.png" 
-alt="Semantic SLAM" width="320" height="240" border="10" /></a>
+alt="Semantic SLAM" width="" height="240" border="10" /></a>
 
 ### How do I set it up? 
 
@@ -58,8 +68,6 @@ alt="Semantic SLAM" width="320" height="240" border="10" /></a>
 ```    
 
 ![test](octomap.gif)
-
-**Note: In the example above [octomap](http://wiki.ros.org/octomap_server) is used for mapping. Right now at loop closure the complete map is not optimized and will be done in the future. 
 
 ### Using Docker Image
 
@@ -121,6 +129,11 @@ The detected landmarks in the current frame.
 
 The configurations of the algorithms can be found inside the cfg folder in order to be changed accordingly.
 
+### Published TFs
+
+- **map to odom transform:** The transform published between the map frame and the odom frame after the corrections from the semantic SLAM.
+
+- **base_link to odom transform:** The transform published between the base_link (on the robot) frame and the odom frame as estimated by the VO/VIO algorithm.
 
 
 
