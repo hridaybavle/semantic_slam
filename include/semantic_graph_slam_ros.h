@@ -169,6 +169,7 @@ protected:
 
 protected:
   void publishRobotPose();
+  void publishMap2Odom();
   void publishVIOkeyframes(ros::Time current_time);
   void publishgtKeyframes(ros::Time current_time);
   void publishgtKeyframes();
@@ -181,6 +182,7 @@ protected:
 protected:
   void publishVIOTF(geometry_msgs::PoseStamped vio_pose);
   void publishRobotPoseTF(geometry_msgs::PoseStamped robot_pose);
+  void publishMap2OdomTF(geometry_msgs::PoseStamped map2odom_pose);
 
   // transform listener
 protected:

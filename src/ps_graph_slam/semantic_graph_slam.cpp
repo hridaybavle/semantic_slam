@@ -91,6 +91,7 @@ bool semantic_graph_slam::run() {
       const auto &keyframe = keyframes_.back();
 
       robot_pose_ = keyframe->node->estimate();
+      map2odom_   = keyframe->node->estimate() * keyframe->odom.inverse();
     }
 
     first_key_added_ = true;
@@ -372,6 +373,10 @@ void semantic_graph_slam::getKeyframes(
 
 void semantic_graph_slam::getRobotPose(Eigen::Isometry3d &robot_pose) {
   robot_pose = robot_pose_;
+}
+
+void semantic_graph_slam::getMap2OdomTrans(Eigen::Isometry3d &map2odom){
+  map2odom = map2odom_;
 }
 
 void semantic_graph_slam::setDetectedObjectsPose(

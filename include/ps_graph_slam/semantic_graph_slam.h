@@ -66,13 +66,15 @@ public:
 protected:
   // robot pose related
   Eigen::Isometry3d robot_pose_;
+  Eigen::Isometry3d map2odom_;
   double cam_angled_;
   float cam_angle_;
   bool add_first_lan_;
   double first_lan_x_, first_lan_y_, first_lan_z_;
 
 public:
-  void getRobotPose(Eigen::Isometry3d &robot_pose);
+  void getRobotPose(Eigen::Isometry3d &robot_pose) ;
+  void getMap2OdomTrans(Eigen::Isometry3d &map2odom);
 
 private:
   // landmark related functions

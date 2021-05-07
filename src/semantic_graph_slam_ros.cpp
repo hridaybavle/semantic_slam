@@ -46,48 +46,24 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n) {
 
   semantic_gslam_obj_.reset(new semantic_graph_slam());
   semantic_gslam_obj_->init(verbose_);
-
-  // publisher thread
-  // semantic_mapping_pub_th_ = new
-  // std::thread(&semantic_graph_slam_ros::publish3DPointMap, this);
-
-  // this is test run
-  //    if(!counter_)
-  //    {
-  //        //this->add_odom_increments();
-  //        this->add_odom_pose_increments();
-  //        counter_ = true;
-  //    }
 }
 
 void semantic_graph_slam_ros::run() {
-
   if (semantic_gslam_obj_->run()) {
-    if (use_rtab_map_odom_)
-      this->transformListener();
+    if (use_rtab_map_odom_) this->transformListener();
     this->publishLandmarks();
     this->publishKeyframePoses();
     this->publishDetectedLandmarks();
-    // this->publish3DPointMap();
   }
 
   this->publishCorresVIOPose();
   this->publishRobotPose();
-
+  this->publishMap2Odom();
   return;
 }
 
 void semantic_graph_slam_ros::open(ros::NodeHandle n) {
-
   init(n);
-
-  // time synchronization of messages
-  //    odom_msg_sub_.subscribe(n,"/rovio/odometry",10);
-  //    point_cloud_msg_sub_.subscribe(n,"/depth_registered/points",10);
-  //    bb_sub_.subscribe(n,"/darknet_ros/bounding_boxes",10);
-  //    sync.connectInput(odom_msg_sub_,point_cloud_msg_sub_, bb_sub_);
-  //    sync.registerCallback(boost::bind(&semantic_graph_slam::synMsgsCallback,
-  //    this, _1, _2, _3));
 
   // subscribers
   rvio_odom_pose_sub_ = n.subscribe(
@@ -134,20 +110,9 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n) {
   map_points_pub_ = n.advertise<sensor_msgs::PointCloud2>("map_points", 1);
 }
 
-// void semantic_graph_slam::synMsgsCallback(const nav_msgs::OdometryConstPtr
-// &odom_msg,
-//                                          const
-//                                          sensor_msgs::PointCloud2ConstPtr
-//                                          &cloud_msg, const
-//                                          darknet_ros_msgs::BoundingBoxesConstPtr
-//                                          &bbs_msg)
-//{
-//    std::cout << "odom msg " << odom_msg << std::endl;
-//}
-
 void semantic_graph_slam_ros::rovioVIOCallback(
-    const nav_msgs::Odometry::ConstPtr &odom_msg) {
-  const ros::Time &stamp = odom_msg->header.stamp;
+    const nav_msgs::Odometry::ConstPtr& odom_msg) {
+  const ros::Time& stamp = odom_msg->header.stamp;
   Eigen::Isometry3d odom;
   Eigen::MatrixXf odom_cov;
 
@@ -168,12 +133,11 @@ void semantic_graph_slam_ros::rovioVIOCallback(
 }
 
 void semantic_graph_slam_ros::snapVIOCallback(
-    const geometry_msgs::PoseStamped &pose_msg) {
-
-  const ros::Time &stamp = ros::Time::now();
+    const geometry_msgs::PoseStamped& pose_msg) {
+  const ros::Time& stamp = ros::Time::now();
   Eigen::Isometry3d odom;
   Eigen::MatrixXf odom_cov;
-  odom_cov.setIdentity(6, 6); // manually adding pose cov
+  odom_cov.setIdentity(6, 6);  // manually adding pose cov
 
   if (use_snap_pose_) {
     geometry_msgs::PoseStamped pose_enu = ps_graph_slam::poseNED2ENU(pose_msg);
@@ -188,16 +152,15 @@ void semantic_graph_slam_ros::snapVIOCallback(
 }
 
 void semantic_graph_slam_ros::orbslamPoseCallback(
-    const geometry_msgs::PoseStamped &pose_msg) {
+    const geometry_msgs::PoseStamped& pose_msg) {
   orb_slam_pose_vec_.push_back(pose_msg);
 
   return;
 }
 
 void semantic_graph_slam_ros::jackalOdomCallback(
-    const nav_msgs::OdometryConstPtr &odom_msg) {
-
-  const ros::Time &stamp = odom_msg->header.stamp;
+    const nav_msgs::OdometryConstPtr& odom_msg) {
+  const ros::Time& stamp = odom_msg->header.stamp;
   nav_msgs::OdometryPtr odom_msg_convert =
       ps_graph_slam::RotPoseZ(odom_msg, jack_yaw_transform_);
   if (!first_jack_pose_) {
@@ -213,7 +176,7 @@ void semantic_graph_slam_ros::jackalOdomCallback(
                                      jack_y_transform_, jack_z_transform_);
   Eigen::Isometry3d odom = ps_graph_slam::odom2isometry(odom_msg_orig);
   Eigen::MatrixXf odom_cov;
-  odom_cov.setIdentity(6, 6); // jackal pose covariance is bad
+  odom_cov.setIdentity(6, 6);  // jackal pose covariance is bad
 
   semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
 
@@ -221,13 +184,13 @@ void semantic_graph_slam_ros::jackalOdomCallback(
 }
 
 void semantic_graph_slam_ros::PointCloudCallback(
-    const sensor_msgs::PointCloud2 &msg) {
+    const sensor_msgs::PointCloud2& msg) {
   semantic_gslam_obj_->setPointCloudData(msg);
   pc_stamp_ = msg.header.stamp;
 }
 
 void semantic_graph_slam_ros::detectedObjectDarknetCallback(
-    const semantic_SLAM::BoundingBoxes &msg) {
+    const semantic_SLAM::BoundingBoxes& msg) {
   std::vector<semantic_SLAM::ObjectInfo> object_info;
   object_info.resize(msg.bounding_boxes.size());
 
@@ -246,7 +209,7 @@ void semantic_graph_slam_ros::detectedObjectDarknetCallback(
 }
 
 void semantic_graph_slam_ros::detectedObjectSimpleCallback(
-    const semantic_SLAM::DetectedObjects &msg) {
+    const semantic_SLAM::DetectedObjects& msg) {
   std::vector<semantic_SLAM::ObjectInfo> object_info;
   object_info.resize(msg.objects.size());
 
@@ -263,14 +226,12 @@ void semantic_graph_slam_ros::detectedObjectSimpleCallback(
 }
 
 void semantic_graph_slam_ros::publishLandmarks() {
-
   visualization_msgs::MarkerArray marker_arrays;
   int marker_id = 0;
   std::vector<landmark> l_vec;
   semantic_gslam_obj_->getMappedLandmarks(l_vec);
 
   for (int i = 0; i < l_vec.size(); ++i) {
-
     Eigen::Vector3d lan_node_pose = l_vec[i].node->estimate();
 
     visualization_msgs::Marker marker;
@@ -299,43 +260,37 @@ void semantic_graph_slam_ros::publishLandmarks() {
     }
 
     if (l_vec[i].type == "chair") {
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
     } else if (l_vec[i].type == "tvmonitor") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 1.0;
       marker.color.g = 0.0;
       marker.color.b = 0.0;
     } else if (l_vec[i].type == "laptop") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 1.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
     } else if (l_vec[i].type == "keyboard") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 1.0;
       marker.color.g = 0.0;
       marker.color.b = 1.0;
     } else if (l_vec[i].type == "book") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 0.0;
       marker.color.g = 0.0;
       marker.color.b = 1.0;
     } else if (l_vec[i].type == "bucket") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 0.0;
       marker.color.g = 0.0;
       marker.color.b = 1.0;
     } else if (l_vec[i].type == "car") {
-
-      marker.color.a = 1.0; // Don't forget to set the alpha!
+      marker.color.a = 1.0;  // Don't forget to set the alpha!
       marker.color.r = 1.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
@@ -370,7 +325,7 @@ void semantic_graph_slam_ros::publishDetectedLandmarks() {
     marker.pose.orientation.y = 0.0;
     marker.pose.orientation.z = 0.0;
     marker.pose.orientation.w = 1.0;
-    marker.color.a = 1.0; // Don't forget to set the alpha!
+    marker.color.a = 1.0;  // Don't forget to set the alpha!
     marker.color.r = 1.0;
     marker.color.g = 1.0;
     marker.color.b = 1.0;
@@ -439,7 +394,7 @@ void semantic_graph_slam_ros::publishRobotPose() {
 
   geometry_msgs::PoseStamped robot_pose_msg = ps_graph_slam::matrix2posestamped(
       ros::Time::now(), robot_pose.matrix().cast<float>(), "map");
-  this->publishRobotPoseTF(robot_pose_msg);
+  // this->publishRobotPoseTF(robot_pose_msg);
 
   geometry_msgs::TransformStamped robot_transform;
   robot_transform.header.stamp = pc_stamp_;
@@ -471,8 +426,34 @@ void semantic_graph_slam_ros::publishRobotPoseTF(
                                         "map", "base_link"));
 }
 
+void semantic_graph_slam_ros::publishMap2Odom() {
+  Eigen::Isometry3d map2odom;
+  semantic_gslam_obj_->getMap2OdomTrans(map2odom);
+
+  geometry_msgs::PoseStamped map2odom_msg = ps_graph_slam::matrix2posestamped(
+      ros::Time::now(), map2odom.matrix().cast<float>(), "map");
+  this->publishMap2OdomTF(map2odom_msg);
+}
+
+void semantic_graph_slam_ros::publishMap2OdomTF(
+    geometry_msgs::PoseStamped map2odom_pose) {
+  static tf::TransformBroadcaster br;
+  tf::Transform transform;
+  transform.setOrigin(tf::Vector3(map2odom_pose.pose.position.x,
+                                  map2odom_pose.pose.position.y,
+                                  map2odom_pose.pose.position.z));
+  tf::Quaternion tf_quat;
+  tf_quat[0] = map2odom_pose.pose.orientation.x;
+  tf_quat[1] = map2odom_pose.pose.orientation.y;
+  tf_quat[2] = map2odom_pose.pose.orientation.z;
+  tf_quat[3] = map2odom_pose.pose.orientation.w;
+  transform.setRotation(tf_quat);
+  br.sendTransform(tf::StampedTransform(transform, map2odom_pose.header.stamp,
+                                        "map", "odom"));
+}
+
 void semantic_graph_slam_ros::optitrackPoseCallback(
-    const nav_msgs::Odometry &msg) {
+    const nav_msgs::Odometry& msg) {
   geometry_msgs::PoseStamped optitrack_pose;
   optitrack_pose.header.stamp = ros::Time::now();
   optitrack_pose.header.frame_id = "map";
@@ -489,7 +470,7 @@ void semantic_graph_slam_ros::optitrackPoseCallback(
 }
 
 void semantic_graph_slam_ros::viconPoseSubCallback(
-    const semantic_SLAM::ViconState &msg) {
+    const semantic_SLAM::ViconState& msg) {
   if (!first_gt_pose_) {
     gt_x_transform_ = -msg.pose.position.x;
     gt_y_transform_ = -msg.pose.position.y;
@@ -526,7 +507,7 @@ void semantic_graph_slam_ros::transformListener() {
   try {
     gt_pose_listener_.lookupTransform("/world", "/openni_camera", ros::Time(0),
                                       transform);
-  } catch (tf::TransformException &ex) {
+  } catch (tf::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
     // ros::Duration(1.0).sleep();
   }
@@ -559,15 +540,15 @@ void semantic_graph_slam_ros::publishCorresVIOPose() {
 
   ros::Time current_time = ros::Time::now();
   geometry_msgs::PoseStamped corres_vio_pose_msg =
-      ps_graph_slam::matrix2posestamped(current_time,
-                                        vio_pose.matrix().cast<float>(), "map");
+      ps_graph_slam::matrix2posestamped(
+          current_time, vio_pose.matrix().cast<float>(), "odom");
 
   corres_vio_pose_pub_.publish(corres_vio_pose_msg);
   this->publishVIOTF(corres_vio_pose_msg);
 
   nav_msgs::Path vio_path;
   vio_path.header.stamp = current_time;
-  vio_path.header.frame_id = "map";
+  vio_path.header.frame_id = "odom";
 
   vio_pose_vec_.push_back(corres_vio_pose_msg);
   vio_path.poses = vio_pose_vec_;
@@ -587,47 +568,16 @@ void semantic_graph_slam_ros::publishVIOTF(
   tf_quat[2] = vio_pose.pose.orientation.z;
   tf_quat[3] = vio_pose.pose.orientation.w;
   transform.setRotation(tf_quat);
-  // br.sendTransform(tf::StampedTransform(transform, vio_pose.header.stamp,
-  // "odom", "base_link"));
-}
-
-void semantic_graph_slam_ros::publish3DPointMap() {
-
-  while (1) {
-    // if(!map_points_pub_.getNumSubscribers())
-    // return;
-
-    std::vector<map_cloud> cloud_map_vector;
-    cloud_map_vector = semantic_gslam_obj_->get3DMap();
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_map(
-        new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    for (int i = 0; i < cloud_map_vector.size(); ++i) {
-      for (int j = 0; j < cloud_map_vector[i].out_cloud->points.size(); ++j)
-        cloud_map->points.push_back(cloud_map_vector[i].out_cloud->points[j]);
-    }
-
-    //        if(cloud_map->empty())
-    //            return;
-
-    sensor_msgs::PointCloud2 cloud_map_msg;
-    pcl::toROSMsg(*cloud_map, cloud_map_msg);
-    cloud_map_msg.header.frame_id = "map";
-    cloud_map_msg.header.stamp = ros::Time::now();
-
-    map_points_pub_.publish(cloud_map_msg);
-  }
+  br.sendTransform(tf::StampedTransform(transform, vio_pose.header.stamp,
+                                        "odom", "base_link"));
 }
 
 void semantic_graph_slam_ros::saveGraph() {
-  if (save_graph_)
-    semantic_gslam_obj_->saveGraph(save_graph_path_);
+  if (save_graph_) semantic_gslam_obj_->saveGraph(save_graph_path_);
 }
 
 void semantic_graph_slam_ros::computeATE() {
   if (compute_txt_for_ate_) {
-
     // writing the txt for robot
     std::ofstream robot_data;
     robot_data.open("/home/hriday/Desktop/robot_pose.txt",
@@ -713,96 +663,3 @@ void semantic_graph_slam_ros::computeATE() {
     }
   }
 }
-
-// void semantic_graph_slam_ros::add_odom_pose_increments()
-//{
-
-//    Eigen::Isometry3d odom_iso;
-//    Eigen::Quaterniond quat; quat.setIdentity();
-
-//    odom_iso.linear() = quat.toRotationMatrix();
-//    double x,y,z;
-//    x=y=z=0;
-
-//    g2o::VertexSE3* prev_node;
-//    for(int i= 0; i < odom_increments_; ++i)
-//    {
-
-//        g2o::VertexSE3* node;
-//        //adding odom measurements to the graph
-//        odom_iso.translation() = Eigen::Vector3d(2*i, y, z);
-//        node = graph_slam_->add_se3_node(odom_iso);
-
-//        if(i >0)
-//        {
-//            Eigen::Matrix3d information; information.setIdentity(6,6);
-//            Eigen::Isometry3d rel_pose;
-//            rel_pose.linear() = quat.toRotationMatrix();
-//            rel_pose.translation() = Eigen::Vector3d(2, 0, 0);
-//            g2o::EdgeSE3* edge = graph_slam_->add_se3_edge(prev_node, node,
-//            rel_pose, information);
-//        }
-
-//        prev_node = node;
-
-//    }
-
-//    graph_slam_->optimize();
-//    std::cout << "optimized graph " << std::endl;
-//}
-
-// void semantic_graph_slam::add_odom_position_increments()
-//{
-
-//    g2o::SparseOptimizer graph;
-
-//    typedef g2o::BlockSolver<g2o::BlockSolverTraits<3, 3> >  SlamBlockSolver;
-//    typedef g2o::LinearSolverCSparse<SlamBlockSolver::PoseMatrixType>
-//    SlamLinearSolver;
-
-//    auto linearSolver = g2o::make_unique<SlamLinearSolver>();
-//    linearSolver->setBlockOrdering(false);
-//    g2o::OptimizationAlgorithmGaussNewton* solver = new
-//    g2o::OptimizationAlgorithmGaussNewton(
-//                g2o::make_unique<SlamBlockSolver>(std::move(linearSolver)));
-//    graph.setAlgorithm(solver);
-
-//    double x,y,z;
-//    x=y=z=0;
-
-//    g2o::VertexPointXYZ*  prev_node;
-//    for(int i= 0; i < odom_increments_; ++i)
-//    {
-
-//        g2o::VertexPointXYZ* node (new g2o::VertexPointXYZ);
-//        //adding odom measurements to the graph
-//        Eigen::Vector3d position;
-//        position = Eigen::Vector3d(x+2*i, y, z);
-//        node->setId(graph.vertices().size());
-//        node->setEstimate(position);
-//        graph.addVertex(node);
-
-//        if(i >0)
-//        {
-//            Eigen::Matrix3d information; information.setIdentity();
-//            Eigen::Vector3d rel_pose;
-//            rel_pose = Eigen::Vector3d(2, 0, 0);
-
-//            g2o::EdgePointXYZ* edge(new g2o::EdgePointXYZ());
-//            edge->setMeasurement(rel_pose);
-//            edge->setInformation(information);
-//            edge->vertices()[0] = prev_node;
-//            edge->vertices()[1] = node;
-//            edge->setParameterId(0, 0);
-//            graph.addEdge(edge);
-//        }
-
-//        prev_node = node;
-
-//    }
-
-//    graph.initializeOptimization();
-//    int iterations = graph.optimize(1024);
-//    std::cout << "optimized graph " << std::endl;
-
-//}
