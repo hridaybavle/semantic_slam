@@ -26,7 +26,7 @@
 			<remap from="depth_registered/image_rect" to="/camera/aligned_depth_to_color/image_rect"/>
   	</node>
 		
-  <!--shape color object detector 
+  <!--shape color object detector-->
 	<arg name="front_camera_image_topic_name" 										default="/camera/color/image_raw" />
   <arg name="object_recognized_front_camera_topic_name" 				default="/image_processed/object_recognized_front_camera" />
 	<arg name="config_file"																				default="$(find ShapeColor_ObjectDetection)/cfg/objectDetector_configFile.xml"/>
@@ -35,11 +35,11 @@
 				<param name="front_camera_image_topic_name"											value="$(arg front_camera_image_topic_name)" 									type="string"/>
 				<param name="object_recognized_front_camera_topic_name" 				value="$(arg object_recognized_front_camera_topic_name)" 			type="string"/>
 				<param name="config_file"																				value="$(arg config_file)"																		type="string"/>
-		</node>-->
+		</node>
 	
   <!--launching the semantic slam node -->	
 	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
-	 <rosparam file="$(find semantic_SLAM)/cfg/bucket_detector_workspace.yaml" command="load"/>			
+	 <rosparam file="$(find semantic_SLAM)/config/bucket_detector_workspace.yaml" command="load"/>			
 	</node>
   
 	<!-- ocotomap node -->

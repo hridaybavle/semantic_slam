@@ -35,7 +35,7 @@
 
  <!--launching the semantic slam node -->	
 	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
- 		<rosparam file="$(find semantic_SLAM)/cfg/yolo_detector_rotonda.yaml" command="load"/>			
+ 		<rosparam file="$(find semantic_SLAM)/config/yolo_detector_rotonda.yaml" command="load"/>			
 	</node>
   
 </launch>

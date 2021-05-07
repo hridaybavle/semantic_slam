@@ -38,7 +38,7 @@
 	
   <!--launching the semantic slam node -->	
 	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
-	 <rosparam file="$(find semantic_SLAM)/cfg/bucket_detector_workspace.yaml" command="load"/>			
+	 <rosparam file="$(find semantic_SLAM)/config/bucket_detector_workspace.yaml" command="load"/>			
 	</node>
   
 </launch>
