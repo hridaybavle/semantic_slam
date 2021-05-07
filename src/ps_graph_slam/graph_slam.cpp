@@ -179,42 +179,6 @@ g2o::EdgePointXYZ *GraphSLAM::add_point_xyz_point_xyz_edge(
   return edge;
 }
 
-// g2o::EdgeSE3Plane* GraphSLAM::add_se3_plane_edge(g2o::VertexSE3* v_se3,
-// g2o::VertexPlane* v_plane, const Eigen::Vector4d& plane_coeffs, const
-// Eigen::MatrixXd& information_matrix) {
-//    g2o::EdgeSE3Plane* edge(new g2o::EdgeSE3Plane());
-//    edge->setMeasurement(plane_coeffs);
-//    edge->setInformation(information_matrix);
-//    edge->vertices()[0] = v_se3;
-//    edge->vertices()[1] = v_plane;
-//    graph->addEdge(edge);
-
-//    return edge;
-//}
-
-// g2o::EdgeSE3PriorXY* GraphSLAM::add_se3_prior_xy_edge(g2o::VertexSE3* v_se3,
-// const Eigen::Vector2d& xy, const Eigen::MatrixXd& information_matrix) {
-//    g2o::EdgeSE3PriorXY* edge(new g2o::EdgeSE3PriorXY());
-//    edge->setMeasurement(xy);
-//    edge->setInformation(information_matrix);
-//    edge->vertices()[0] = v_se3;
-//    graph->addEdge(edge);
-
-//    return edge;
-//}
-
-// g2o::EdgeSE3PriorXYZ* GraphSLAM::add_se3_prior_xyz_edge(g2o::VertexSE3*
-// v_se3, const Eigen::Vector3d& xyz, const Eigen::MatrixXd& information_matrix)
-// {
-//    g2o::EdgeSE3PriorXYZ* edge(new g2o::EdgeSE3PriorXYZ());
-//    edge->setMeasurement(xyz);
-//    edge->setInformation(information_matrix);
-//    edge->vertices()[0] = v_se3;
-//    graph->addEdge(edge);
-
-//    return edge;
-//}
-
 bool GraphSLAM::optimize() {
 
   if (graph->edges().size() < 10) {

@@ -126,7 +126,6 @@ void semantic_graph_slam_ros::rovioVIOCallback(
     odom_cov = ps_graph_slam::arrayToMatrix(odom_msg);
   }
 
-  // this->VIOCallback(stamp, odom, odom_cov);
   semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
 
   return;
@@ -486,11 +485,6 @@ void semantic_graph_slam_ros::viconPoseSubCallback(
   vicon_pose.pose.position.y = msg.pose.position.y + gt_y_transform_;
   vicon_pose.pose.position.z = msg.pose.position.z + gt_z_transform_;
   vicon_pose.pose.orientation = msg.pose.orientation;
-
-  // vicon_pose.pose.position.x = cos(-0.074) * vicon_pose.pose.position.x   -
-  // sin(-0.074) * vicon_pose.pose.position.y; vicon_pose.pose.position.y =
-  // sin(-0.074) * vicon_pose.pose.position.x   + cos(-0.074) *
-  // vicon_pose.pose.position.y;
 
   optitrack_pose_pub_.publish(vicon_pose);
   optitrack_pose_vec_.push_back(vicon_pose);

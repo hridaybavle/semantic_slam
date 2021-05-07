@@ -9,8 +9,6 @@ int main(int argc, char **argv) {
   mySemanticGraphSLAM.open(n);
 
   ros::Rate r(30);
-
-  //   while(!mySemanticSLAM.pclViewer->wasStopped())
   {
 
     while (ros::ok()) {
@@ -23,8 +21,6 @@ int main(int argc, char **argv) {
 
     mySemanticGraphSLAM.computeATE();
     mySemanticGraphSLAM.saveGraph();
-
-    //   mySemanticSLAM.pclViewer->spinOnce(100);
   }
   return 0;
 }

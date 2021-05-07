@@ -102,15 +102,6 @@ plane_segmentation::computeNormalsFromPointCloud(
   ne.setInputCloud(point_cloud);
   // ne.setIndices(inliers);
   ne.compute(*normal_cloud);
-
-  //    pcl::NormalEstimationOMP<pcl::PointXYZRGB, pcl::Normal> ne_omp;
-  //    ne_omp.setInputCloud(point_cloud);
-  //    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new
-  //    pcl::search::KdTree<pcl::PointXYZRGB> ()); ne_omp.setSearchMethod(tree);
-  //    ne_omp.setRadiusSearch(0.03);
-  //    ne_omp.setNumberOfThreads(4);
-  //    ne_omp.compute(*normal_cloud);
-
   return normal_cloud;
 }
 
@@ -281,9 +272,6 @@ std::vector<cv::Mat> plane_segmentation::clusterAndSegmentAllPlanes(
       point_cloud, point_normal, transformation_mat,
       segmented_points_using_first_kmeans);
 
-  // std::cout << "filtered horizontal centroids from clustering " <<
-  // filtered_centroids << std::endl;
-
   if (filtered_centroids.empty())
     return empty_final_pose_vec;
 
@@ -301,12 +289,6 @@ std::vector<cv::Mat> plane_segmentation::clusterAndSegmentAllPlanes(
 
   std::vector<cv::Mat> final_pose_vec = this->getFinalPoseWithNormals(
       segmented_points_using_second_kmeans, final_normals_with_distances);
-
-  //    for(int i = 0; i < final_pose_vec.size(); ++i)
-  //    {
-  //        std::cout << "final poses from clustering " << final_pose_vec[i] <<
-  //        std::endl;
-  //    }
 
   return final_pose_vec;
 }
@@ -361,17 +343,12 @@ cv::Mat plane_segmentation::NormalBasedClusteringAndSegmentation(
   normals_of_the_horizontal_plane_in_cam =
       transformation_mat.transpose().eval() *
       normals_of_the_horizontal_plane_in_world;
-  // std::cout << "normals of the horizontal plane in cam using clustering " <<
-  // normals_of_the_horizontal_plane_in_cam << std::endl;
 
   std::vector<int> filtered_centroids_id;
   cv::Mat filtered_centroids = this->filterCentroids(
       normal_centroids, normals_of_the_horizontal_plane_in_cam,
       filtered_centroids_id);
 
-  //------------------segmenting the pointcloud using the labels from the 1st
-  // kmeans------------------------//
-  // segmented_points_using_first_kmeans.resize(filtered_centroids_id.size());
 
   for (int i = 0; i < filtered_centroids_id.size(); ++i) {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud(
@@ -581,9 +558,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::preprocessPointCloud(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud,
     pcl::PointIndices::Ptr &inliers) {
   point_cloud = this->downsamplePointcloud(point_cloud, inliers);
-  // point_cloud = this->removeOutliers(point_cloud, inliers);
-  // point_cloud = this->distance_filter(point_cloud);
-
   return point_cloud;
 }
 
@@ -686,10 +660,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_segmentation::compute2DConvexHull(
   pcl::ConvexHull<pcl::PointXYZRGB> chull;
   chull.setInputCloud(projected_cloud);
   chull.reconstruct(*cloud_hull);
-
-  // std::cout << "Final point cloud size " << filtered_point_cloud->size() <<
-  // std::endl; std::cout << "cloud size after convex hull " <<
-  // cloud_hull->size() << std::endl;
-
+  
   return cloud_hull;
 }
