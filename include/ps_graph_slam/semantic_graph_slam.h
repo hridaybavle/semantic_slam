@@ -18,10 +18,6 @@
 // segmented pointcloud acc to detection
 #include "planar_segmentation/point_cloud_segmentation.h"
 
-// semantic mapping
-#include "ps_graph_slam/map_cloud.h"
-#include "ps_graph_slam/mapping.h"
-
 class semantic_graph_slam {
 public:
   semantic_graph_slam();
@@ -37,13 +33,6 @@ private:
 private:
   std::unique_ptr<point_cloud_segmentation> pc_seg_obj_;
   std::unique_ptr<data_association> data_ass_obj_;
-  // mapping* semantic_mapping_obj_;
-  // std::thread* semantic_mapping_th_;
-  // std::thread* semantic_mapping_opt_th_;
-
-public:
-  // mapping related params
-  std::vector<map_cloud> get3DMap();
 
 private:
   bool empty_keyframe_queue();

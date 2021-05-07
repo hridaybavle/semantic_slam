@@ -389,13 +389,6 @@ void semantic_graph_slam::getDetectedObjectsPose(
   seg_obj_vec = seg_obj_vec_;
 }
 
-std::vector<map_cloud> semantic_graph_slam::get3DMap() {
-  std::vector<map_cloud> cloud_map_vector;
-  // cloud_map_vector = semantic_mapping_obj_->getOutputMap();
-
-  return cloud_map_vector;
-}
-
 void semantic_graph_slam::saveGraph(std::string save_graph_path) {
   graph_slam_->save(save_graph_path);
   std::cout << "saved the graph at " << save_graph_path << std::endl;
