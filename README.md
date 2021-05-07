@@ -36,15 +36,15 @@ alt="Semantic SLAM" width="" height="240" border="10" /></a>
 
 ### How do I set it up? 
 
-**First install g2o following these instructions (assuming ROS kinetic distribution):**
+**First install g2o following these instructions (Tested on Kinetic and Melodic Distributions):**
 ```
-- sudo apt-get install ros-kinetic-libg2o
-- sudo cp -r /opt/ros/kinetic/lib/libg2o_* /usr/local/lib
-- sudo cp -r /opt/ros/kinetic/include/g2o /usr/local/include
+- sudo apt-get install ros-$ROS_DISTRO-libg2o
+- sudo cp -r /opt/ros/$ROS_DISTRO/lib/libg2o_* /usr/local/lib
+- sudo cp -r /opt/ros/$ROS_DISTRO/include/g2o /usr/local/include
 ```
 **Install OctopMap server for map generation capabilities:**
 ```
-- sudo apt install ros-kinetic-octomap*
+- sudo apt install ros-$ROS_DISTRO-octomap*
 ```
 
 ### Try a simple example with pre-recorded VIO pose and a blue bucket detector:
