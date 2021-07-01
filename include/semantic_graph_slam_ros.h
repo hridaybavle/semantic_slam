@@ -88,6 +88,7 @@ private:
   bool compute_txt_for_ate_;
   bool use_snap_pose_;
   bool use_orb_slam_odom_;
+  bool use_gt_fake_odom_;
   bool save_graph_;
   std::string save_graph_path_;
 
@@ -186,6 +187,9 @@ protected:
 protected:
   tf::TransformListener gt_pose_listener_;
   void transformListener();
+
+  tf::TransformListener gt_odom_listener_;
+  void fakeGTOdomListener();
 
   // robot pose related
 private:

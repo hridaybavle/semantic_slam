@@ -1,0 +1,11 @@
+<!-- Launches: altitude_from_rgbd_node -->
+<launch>
+	<param name ="/use_sim_time" value="true"/>
+	<node name="tf_remapper" pkg="tf" type="tf_remap">
+        <rosparam param="mappings">[{old: world, new: map}]</rosparam>
+    </node>
+
+	<node name="semantic_graph_slam_node" pkg="semantic_SLAM" type="semantic_graph_SLAM_node" output="screen">
+	</node>
+	<node pkg="tf" type="static_transform_publisher" name="cam_center_to_optitrack" args="0 0 0 0 1.57 3.14 /Robot_1/base_link /oak-d_frame 100" />
+</launch>

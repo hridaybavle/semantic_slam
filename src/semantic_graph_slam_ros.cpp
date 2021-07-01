@@ -35,6 +35,7 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n) {
   ros::param::param<bool>("~use_rovio_odom", use_rovio_odom_, true);
   ros::param::param<bool>("~use_rtab_map_odom", use_rtab_map_odom_, false);
   ros::param::param<bool>("~compute_txt_for_ate", compute_txt_for_ate_, false);
+  ros::param::param<bool>("~use_gt_fake_odom_", use_gt_fake_odom_, true);
 
   std::cout << "should save graph: " << save_graph_ << std::endl;
   std::cout << "saving graph path: " << save_graph_path_ << std::endl;
@@ -43,12 +44,15 @@ void semantic_graph_slam_ros::init(ros::NodeHandle n) {
   std::cout << "using rovio odom " << use_rovio_odom_ << std::endl;
   std::cout << "using rtab map odom " << use_rtab_map_odom_ << std::endl;
   std::cout << "computing txt for ate " << compute_txt_for_ate_ << std::endl;
+  std::cout << "use gt fake odom  " << use_gt_fake_odom_ << std::endl;
 
   semantic_gslam_obj_.reset(new semantic_graph_slam());
   semantic_gslam_obj_->init(verbose_);
 }
 
 void semantic_graph_slam_ros::run() {
+  if (use_gt_fake_odom_) this->fakeGTOdomListener();
+
   if (semantic_gslam_obj_->run()) {
     if (use_rtab_map_odom_) this->transformListener();
     this->publishLandmarks();
@@ -129,6 +133,43 @@ void semantic_graph_slam_ros::rovioVIOCallback(
   semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
 
   return;
+}
+
+void semantic_graph_slam_ros::fakeGTOdomListener() {
+  tf::StampedTransform transform;
+  const ros::Time& stamp = ros::Time::now();
+  try {
+    gt_odom_listener_.lookupTransform("/map", "/oak-d_frame", ros::Time(0),
+                                      transform);
+  } catch (tf::TransformException& ex) {
+    ROS_ERROR("%s", ex.what());
+    // ros::Duration(1.0).sleep();
+    return;
+  }
+
+    // Define random generator with Gaussian distribution
+    const double mean = 0.0;
+    const double stddev = 0.1;
+    std::default_random_engine generator;
+    std::normal_distribution<double> dist(mean, stddev);
+
+  Eigen::Isometry3d odom;
+  Eigen::MatrixXf odom_cov;
+  odom_cov.setIdentity(6, 6);  // manually adding pose cov
+  geometry_msgs::PoseStamped pose_msg;
+  pose_msg.pose.position.x = transform.getOrigin().x() + dist(generator);
+  pose_msg.pose.position.y = transform.getOrigin().y() + dist(generator);
+  pose_msg.pose.position.z = transform.getOrigin().z() + dist(generator);
+  pose_msg.pose.orientation.x = transform.getRotation().x();
+  pose_msg.pose.orientation.y = transform.getRotation().y();
+  pose_msg.pose.orientation.z = transform.getRotation().z();
+  pose_msg.pose.orientation.w = transform.getRotation().w();
+
+  odom = ps_graph_slam::pose2isometry(pose_msg);
+  semantic_gslam_obj_->VIOCallback(stamp, odom, odom_cov);
+
+  return;
+
 }
 
 void semantic_graph_slam_ros::snapVIOCallback(
