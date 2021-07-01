@@ -89,7 +89,7 @@ void semantic_graph_slam_ros::open(ros::NodeHandle n) {
       n.subscribe("/image_processed/bounding_boxes", 1,
                   &semantic_graph_slam_ros::detectedObjectSimpleCallback, this);
   optitrack_pose_sub_ =
-      n.subscribe("/vrpn_client_node/realsense/pose", 1,
+      n.subscribe("/mocap_node/Robot_1/Odom", 1,
                   &semantic_graph_slam_ros::optitrackPoseCallback, this);
   vicon_pose_sub_ = n.subscribe(
       "/SQ04/vicon", 1, &semantic_graph_slam_ros::viconPoseSubCallback, this);
