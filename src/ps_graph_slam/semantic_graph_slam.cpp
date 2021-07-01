@@ -44,7 +44,8 @@ void semantic_graph_slam::init(bool verbose) {
   robot_pose_.setIdentity();
   vio_pose_.setIdentity();
   prev_odom_.setIdentity();
-
+  map2odom_.setIdentity();
+  
   std::cout << "camera angle in radians: " << cam_angle_ << std::endl;
   std::cout << "update keyframe every detection: "
             << update_keyframes_using_detections_ << std::endl;
